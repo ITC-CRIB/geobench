@@ -1,8 +1,11 @@
 import argparse
+import ansible_runner
+import os
 
 class CommandLineTool:
     def __init__(self):
         self.parser = argparse.ArgumentParser(description="Toolkit for benchmarking the geospatial processing workload")
+        self.parser.add_argument('-i', '--inventory', type=str, help='Inventory file', default='inventory.yml')
         self.subparsers = self.parser.add_subparsers(dest="command")
 
         # Create subparsers for "test" command
@@ -47,20 +50,29 @@ class CommandLineTool:
 
     def run(self):
         args = self.parser.parse_args()
+        inventory_path = os.path.abspath(args.inventory)
         
         if args.command == 'test':
-            self.handle_test(args)
+            self.handle_test(args, inventory_path)
         elif args.command == 'snapshot':
-            self.handle_snapshot(args)
+            self.handle_snapshot(args, inventory_path)
         else:
             self.parser.print_help()
 
-    def handle_test(self, args):
-        print(args)
-        #print(f"{args.greet}, {args.name}!")
+    def handle_test(self, args, inventory_path):
+        if args.subcommand == "run":
+            # Running the playbook
+            r = ansible_runner.interface.run(
+                private_data_dir = 'ansible' ,
+                playbook='run-scenario.yml',
+                #extravars={'src_dir': src_dir, 'dest_dir': dest_dir},
+                inventory=inventory_path
+            )
+            print(args.subcommand)
+            #print(f"{args.greet}, {args.name}!")
     
-    def handle_snapshot(self, args):
-        print(args.snapshot)
+    def handle_snapshot(self, args, inventory_path):
+        print(args.subcommand)
         #print(f"{args.greet}, {args.name}!")
 
 

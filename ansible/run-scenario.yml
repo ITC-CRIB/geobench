@@ -1,0 +1,19 @@
+---
+- hosts: server
+  tasks:
+    - name: Ping server
+      ping:
+    # - name: Copy script directory
+    #   copy:
+    #     src: ./script/
+    #     dest: ~/script/
+    # - name: Change permission to be executable
+    #   file:
+    #     dest: /home/tester/script
+    #     mode: a+x
+    #     recurse: yes
+    # - name: "Execute scenario WITHOUT flushing cache"
+    #   include_tasks: include/scenario-buffer.yml
+    #   loop: "{{ scenario }}"
+    #   vars:
+    #     myitem: "{{ item }}"

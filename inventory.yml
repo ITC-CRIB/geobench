@@ -1,0 +1,5 @@
+server:
+  hosts:
+    node:
+      ansible_host: 158.220.113.243
+      ansible_user: ubuntu
