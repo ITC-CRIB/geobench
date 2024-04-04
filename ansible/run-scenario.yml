@@ -30,4 +30,9 @@
       command: 
         cmd: python3 taskrunner.py {{ scenario_name }} {{ repeat }} ~/{{ dir_name }}/{{ script_file }}
         chdir: ~/{{ dir_name }}
+    - name: Download testing report
+      fetch:
+        src: "~/{{ dir_name }}/process_times.csv"
+        dest: "./.result/{{ dir_name }}/process_times.csv"
+        flat: true
       
