@@ -1,0 +1,4 @@
+---
+- name: Name of the test
+  repeat: 10
+  
