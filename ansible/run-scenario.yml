@@ -1,19 +1,33 @@
 ---
 - hosts: server
   tasks:
-    - name: Ping server
-      ping:
-    # - name: Copy script directory
-    #   copy:
-    #     src: ./script/
-    #     dest: ~/script/
-    # - name: Change permission to be executable
-    #   file:
-    #     dest: /home/tester/script
-    #     mode: a+x
-    #     recurse: yes
-    # - name: "Execute scenario WITHOUT flushing cache"
-    #   include_tasks: include/scenario-buffer.yml
-    #   loop: "{{ scenario }}"
-    #   vars:
-    #     myitem: "{{ item }}"
+    # - name: Ping server
+    #   ping:
+    - name: Copy input directory
+      copy:
+        src: "{{ src_dir }}"
+        dest: ~/
+      register: copy_result
+    # - name: Extract directory path
+    #   set_fact:
+    #     directory_path: "{{ copy_result.dest | dirname }}"
+    # - name: Print full path of copied directory
+    #   debug:
+    #     msg: "Full path of copied directory: {{ copy_result.dest }}"
+    - name: Copy script file
+      copy:
+        src: ./script/taskrunner.py
+        dest: ~/{{ dir_name }}
+    - name: Change permission to be executable
+      file:
+        dest: "~/{{ dir_name }}/{{ script_file }}"
+        mode: a+x
+        #recurse: yes
+    # - name: Print full path of script file
+    #   debug:
+    #     msg: "Full path of script file: {{ directory_path }}/{{ script_file }}"
+    - name: "Execute testing runner script"
+      command: 
+        cmd: python3 taskrunner.py {{ scenario_name }} {{ repeat }} ~/{{ dir_name }}/{{ script_file }}
+        chdir: ~/{{ dir_name }}
+      
