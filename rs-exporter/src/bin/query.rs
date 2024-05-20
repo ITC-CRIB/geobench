@@ -10,7 +10,6 @@ struct VMData {
     vm_type: String,
     idle: f64,
     usage_10: f64,
-    usage_25: f64,
     usage_50: f64,
     usage_100: f64,
 }
@@ -28,15 +27,14 @@ fn read_csv(filename: &str, vm_type: &str) -> Result<VMData, Box<dyn Error>> {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let vm_type = "vm1"; // Specify the VM type
+    let vm_type = "a1.large"; // Specify the VM type
     let vm_data = read_csv("vm_data.csv", vm_type)?;
 
     // Create the data for regression
-    let x_values = vec![0.0, 10.0, 25.0, 50.0, 100.0];
+    let x_values = vec![0.0, 10.0, 50.0, 100.0];
     let y_values = vec![
         vm_data.idle,
         vm_data.usage_10,
-        vm_data.usage_25,
         vm_data.usage_50,
         vm_data.usage_100,
     ];
