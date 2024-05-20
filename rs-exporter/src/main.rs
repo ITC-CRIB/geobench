@@ -4,7 +4,6 @@ use axum::{
 use linregress::{FormulaRegressionBuilder, RegressionDataBuilder};
 use prometheus::{register_gauge, Encoder, Gauge, TextEncoder};
 use sysinfo::System;
-use std::env;
 use std::sync::{Arc, Mutex};
 
 use csv::Reader;
@@ -12,6 +11,24 @@ use serde::Deserialize;
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
+
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    // Bind address in format IP:PORT
+    #[arg(short, long, default_value="0.0.0.0:9500")]
+    bind_address: String,
+
+    // CSV file with VM dataset
+    #[arg(short, long, default_value="vm_data.csv")]
+    csv_file: String,
+
+    // VM type
+    #[arg(short, long, default_value="a1.large")]
+    vm_type: String,
+}
 
 struct AppState {
     cpu_usage: f64,
@@ -58,10 +75,7 @@ fn read_csv(filename: &str, vm_type: &str) -> Result<VMData, Box<dyn Error>> {
 
 #[tokio::main]
 async fn main() {
-    // Read the app port from the environment variable
-    let app_port = env::var("APP_PORT").unwrap_or("0.0.0.0:9100".to_owned());
-    // Read the VM type from the environment variable
-    let vm_type = env::var("VM_TYPE").unwrap_or("a1.large".to_owned());
+    let args = Args::parse();
 
     // Init the metrics registry
     let mut sys = System::new();
@@ -69,7 +83,7 @@ async fn main() {
     let cpu_gauge = register_gauge!("cpu_usage", "Average CPU utilization for all cores").unwrap();
 
     // Read the CSV file and find the row for the specified VM type
-    let vm_data = read_csv("vm_data.csv", &vm_type).unwrap();
+    let vm_data = read_csv(&args.csv_file, &args.vm_type).unwrap();
     // Create the data for regression
     let x_values = vec![0.0, 10.0, 50.0, 100.0];
     let y_values = vec![
@@ -130,8 +144,8 @@ async fn main() {
         .with_state(cloned_state);
 
     // Start the server
-    println!("Daemon is running on {}", &app_port);
-    let listener = tokio::net::TcpListener::bind(&app_port).await.unwrap();
+    println!("Daemon is running on {}", &args.bind_address);
+    let listener = tokio::net::TcpListener::bind(&args.bind_address).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
 

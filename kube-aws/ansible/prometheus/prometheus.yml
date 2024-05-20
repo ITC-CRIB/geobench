@@ -12,10 +12,9 @@ scrape_configs:
           - 'localhost:9100'
           - 'worker-0:9100'
           - 'worker-1:9100'
-
-  - job_name: 'powerapi'
+  - job_name: 'energy_exporter'
     static_configs:
       - targets:
-          - 'localhost:9000'
-          - 'worker-0:9000'
-          - 'worker-1:9000'
+          - 'localhost:9500'
+          - 'worker-0:9500'
+          - 'worker-1:9500'

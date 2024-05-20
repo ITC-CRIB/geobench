@@ -76,21 +76,52 @@
     - name: Run Node Exporter container
       docker_container:
         name: node_exporter
-        image: prom/node-exporter
+        image: quay.io/prometheus/node-exporter:latest
+        command:
+          - '--path.rootfs=/host'
         restart: always
         ports:
           - "9100:9100"
-
-    - name: Run PowerAPI Agent container
-      docker_container:
-        name: powerapi
-        image: powerapi/powerapi
-        command: |
-          powerapi start formulas
-            --frequency 5000
-            --verbose
-            --output prometheus
-            --stream influxdb --uri http://localhost:9096/write?db=powerapi
         volumes:
-          - /var/lib/docker/containers:/var/lib/docker/containers:ro
-          - /sys:/sys:ro
+          - '/:/host:ro,rslave'
+
+- name: Deploy custom Rust tool on all nodes
+  hosts: all
+  become: yes
+  tasks:
+    - name: Determine architecture
+      ansible.builtin.setup:
+        filter: ansible_architecture
+
+    - name: Copy Rust binary
+      copy:
+        src: "{{ item }}"
+        dest: /usr/local/bin/energy-exporter
+        mode: '0755'
+      with_items:
+        - "{{ 'target/x86_64-unknown-linux-gnu/release/rs-exporter' if ansible_architecture == 'x86_64' else 'target/aarch64-unknown-linux-gnu/release/rs-exporter' }}"
+
+    - name: Create systemd service file for Rust tool
+      copy:
+        dest: /etc/systemd/system/energy-exporter.service
+        content: |
+          [Unit]
+          Description=My Rust Tool
+          After=network.target
+
+          [Service]
+          ExecStart=/usr/local/bin/energy-exporter
+          Restart=always
+          User=root
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd to recognize new service
+      command: systemctl daemon-reload
+
+    - name: Enable and start Rust tool service
+      systemd:
+        name: energy-exporter
+        enabled: yes
+        state: started
