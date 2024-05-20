@@ -1,0 +1,30 @@
+---
+- name: Configure K3s Cluster
+  hosts: master
+  become: yes
+  vars_files:
+    - token.yml
+  tasks:
+    - name: Install K3s server
+      shell: |
+        curl -sfL https://get.k3s.io | K3S_KUBECONFIG_MODE="644" INSTALL_K3S_EXEC="--disable traefik" sh -s - server --cluster-init --token {{ k3s_token }}
+      environment:
+        K3S_TOKEN: "{{ k3s_token }}"
+      register: k3s_install_output
+
+    - name: Set master IP fact
+      set_fact:
+        master_ip: "{{ hostvars['master'].local_ipv4 }}"
+
+- name: Join worker nodes to K3s cluster
+  hosts: hosts
+  become: yes
+  vars_files:
+    - vault.yml
+  tasks:
+    - name: Install K3s agent
+      shell: |
+        curl -sfL https://get.k3s.io | K3S_URL=https://{{ master_ip }}:6443 sh -s - agent --server https://{{ master_ip }}:6443 --token {{ k3s_token }}
+      environment:
+        K3S_TOKEN: "{{ k3s_token }}"
+        K3S_URL: "https://{{ master_ip }}:6443"

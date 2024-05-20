@@ -1,0 +1,19 @@
+master:
+  hosts:
+    master-4d6897a:
+      ansible_host: 2a05:d014:1808:b000:3c73:3ef4:2357:18fe
+      ansible_ssh_private_key_file: ~/.ssh/id_rsa
+      ansible_user: ubuntu
+      local_ipv4: 172.26.14.219
+worker:
+  hosts:
+    node-0-602322c:
+      ansible_host: 2a05:d014:1808:b000:490f:6da7:b422:2a61
+      ansible_ssh_private_key_file: ~/.ssh/id_rsa
+      ansible_user: ubuntu
+      local_ipv4: 172.26.8.185
+    node-1-cca925f:
+      ansible_host: 2a05:d014:1808:b000:f26c:718b:2c2b:8bd2
+      ansible_ssh_private_key_file: ~/.ssh/id_rsa
+      ansible_user: ubuntu
+      local_ipv4: 172.26.6.233

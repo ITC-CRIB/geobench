@@ -1,0 +1,10 @@
+name: kubeinfra
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: kubeinfra
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: aws-python

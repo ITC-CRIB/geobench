@@ -1,0 +1,15 @@
+all:
+  hosts:
+    node-0-2293c96:
+      ansible_host: 2a05:d014:1808:b000:149d:951d:791a:2191
+      ansible_user: ubuntu
+      local_ipv4: 172.26.9.22
+    node-1-540b7f3:
+      ansible_host: 2a05:d014:1808:b000:789:8c0c:4165:8849
+      ansible_user: ubuntu
+      local_ipv4: 172.26.6.73
+  master:
+    master-f07d725:
+      ansible_host: 2a05:d014:1808:b000:11a6:1ec3:d98d:f584
+      ansible_user: ubuntu
+      local_ipv4: 172.26.8.205
