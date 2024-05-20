@@ -14,12 +14,23 @@ private_key_path = "~/.ssh/id_rsa"  # Update this with the path to your private 
 instances = []
 
 # Create 1 Master Instance
-master_instance = lightsail.Instance(f"master",
+master_instance = lightsail.Instance(f"master-0",
         availability_zone=f"{region}a",
         blueprint_id="ubuntu_22_04",
         bundle_id=instance_size,
         ip_address_type="ipv6",
+        key_pair_name="id_rsa",
     )
+# Create Security Group to open necessary ports
+master_sg = lightsail.InstancePublicPorts("master-ports",
+    instance_name=master_instance.name,
+    port_infos=[
+        lightsail.InstancePublicPortsPortInfoArgs(from_port=22, to_port=22, protocol="tcp"),
+        lightsail.InstancePublicPortsPortInfoArgs(from_port=6443, to_port=6443, protocol="tcp"),  # Kubernetes API server
+        lightsail.InstancePublicPortsPortInfoArgs(from_port=3000, to_port=3000, protocol="tcp"),  # Grafana
+        lightsail.InstancePublicPortsPortInfoArgs(from_port=9090, to_port=9090, protocol="tcp"),  # Prometheus
+    ]
+)
 
 # Create 2 Worker Instances
 for i in range(2):
@@ -28,6 +39,13 @@ for i in range(2):
         blueprint_id="ubuntu_22_04",
         bundle_id=instance_size,
         ip_address_type="ipv6",
+        key_pair_name="id_rsa",
+    )
+    worker_sg = lightsail.InstancePublicPorts(f"worker-port-{i}",
+        instance_name=instance.name,
+        port_infos=[
+            lightsail.InstancePublicPortsPortInfoArgs(from_port=22, to_port=22, protocol="tcp"),
+        ]
     )
     instances.append(instance)
 

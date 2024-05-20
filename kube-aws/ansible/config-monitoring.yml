@@ -36,6 +36,8 @@
 - name: Deploy Prometheus and Grafana on master node
   hosts: master
   become: yes
+  vars_files:
+    - vault.yml
   tasks:
     - name: Create Prometheus configuration directory
       file:
@@ -51,25 +53,27 @@
       docker_container:
         name: prometheus
         image: prom/prometheus
-        restart: always
+        restart_policy: always
         ports:
-          - "9090:9090"
+          - "[::]:9090:9090"
         volumes:
           - /etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      tags: run_prometheus
 
     - name: Run Grafana container
       docker_container:
         name: grafana
         image: grafana/grafana
-        restart: always
+        restart_policy: always
         ports:
-          - "3000:3000"
+          - "[::]:3000:3000"
         env:
-          GF_SECURITY_ADMIN_PASSWORD: "admin"  # Change this password
+          GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_pass }}"  # Change this password
         volumes:
           - grafana-data:/var/lib/grafana
+      tags: run_grafana
 
-- name: Deploy Node Exporter and PowerAPI Agent on all nodes
+- name: Deploy Node Exporter on all nodes
   hosts: all
   become: yes
   tasks:
@@ -79,13 +83,13 @@
         image: quay.io/prometheus/node-exporter:latest
         command:
           - '--path.rootfs=/host'
-        restart: always
+        restart_policy: always
         ports:
           - "9100:9100"
         volumes:
           - '/:/host:ro,rslave'
 
-- name: Deploy custom Rust tool on all nodes
+- name: Deploy custom energy exporter on all nodes
   hosts: all
   become: yes
   tasks:
@@ -105,7 +109,7 @@
         dest: /usr/local/bin/energy-exporter
         mode: '0755'
       with_items:
-        - "{{ 'target/x86_64-unknown-linux-gnu/release/rs-exporter' if ansible_architecture == 'x86_64' else 'target/aarch64-unknown-linux-gnu/release/rs-exporter' }}"
+        - "{{ '../../rs-exporter/target/x86_64-unknown-linux-gnu/release/rs-exporter' if ansible_architecture == 'x86_64' else '.../../rs-exporter/target/aarch64-unknown-linux-gnu/release/rs-exporter' }}"
 
     - name: Create systemd service file for Rust tool
       copy:
@@ -117,7 +121,7 @@
 
           [Service]
           ExecStart=/usr/local/bin/energy-exporter -c /usr/share/vm_data.csv
-          Restart=always
+          Restart=yes
           User=root
 
           [Install]

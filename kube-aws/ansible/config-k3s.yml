@@ -3,7 +3,7 @@
   hosts: master
   become: yes
   vars_files:
-    - token.yml
+    - vault.yml
   tasks:
     - name: Install K3s server
       shell: |
