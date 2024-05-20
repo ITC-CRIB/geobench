@@ -93,6 +93,12 @@
       ansible.builtin.setup:
         filter: ansible_architecture
 
+    - name: Copy dataset
+      copy:
+        src: "./dataset/vm_data.csv"
+        dest: /usr/share/vm_data.csv
+        mode: '0644'
+
     - name: Copy Rust binary
       copy:
         src: "{{ item }}"
@@ -106,11 +112,11 @@
         dest: /etc/systemd/system/energy-exporter.service
         content: |
           [Unit]
-          Description=My Rust Tool
+          Description=Energy exporter
           After=network.target
 
           [Service]
-          ExecStart=/usr/local/bin/energy-exporter
+          ExecStart=/usr/local/bin/energy-exporter -c /usr/share/vm_data.csv
           Restart=always
           User=root
 
