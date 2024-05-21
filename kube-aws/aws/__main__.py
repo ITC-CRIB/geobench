@@ -7,6 +7,7 @@ import yaml
 
 # Configuration
 # instance_size = "small_ipv6_3_0"  # 2 GB RAM instance type
+master_instance_size = "small_3_0"
 instance_size = "micro_ipv6_3_0" 
 region = "eu-central-1"
 private_key_path = "~/.ssh/id_rsa"  # Update this with the path to your private key
@@ -17,8 +18,8 @@ instances = []
 master_instance = lightsail.Instance(f"master-0",
         availability_zone=f"{region}a",
         blueprint_id="ubuntu_22_04",
-        bundle_id=instance_size,
-        ip_address_type="ipv6",
+        bundle_id=master_instance_size,
+        ip_address_type="dualstack",
         key_pair_name="id_rsa",
     )
 # Create Security Group to open necessary ports
@@ -31,6 +32,9 @@ master_sg = lightsail.InstancePublicPorts("master-ports",
         lightsail.InstancePublicPortsPortInfoArgs(from_port=9090, to_port=9090, protocol="tcp"),  # Prometheus
     ]
 )
+
+# Export instance details
+pulumi.export("master_instance_ip", master_instance.public_ip_address)
 
 # Create 2 Worker Instances
 for i in range(2):
@@ -71,6 +75,7 @@ def create_inventory_file(instance_info):
     def write_inventory(info):
         inventory = {"master": {"hosts": {}}, "worker": {"hosts": {}}}
         hosts_content = ""
+        hosts_list = {}
         for instance in info:
             name = instance["name"]
             public_ipv6 = instance["ipv6"]
@@ -83,10 +88,14 @@ def create_inventory_file(instance_info):
                 "ansible_ssh_private_key_file": private_key_path
             }
             hosts_content += f"{local_ipv4} {name}\n"
+            hosts_list[name] = local_ipv4
         with open("../ansible/inventory.yml", "w") as f:
             yaml.dump(inventory, f)
         with open("../ansible/hosts", "w") as f:
             f.write(hosts_content)
+        with open("../ansible/hosts.yml", "w") as f:
+            hosts_dict = {"hosts" : hosts_list}
+            yaml.dump(hosts_dict, f)
     pulumi.Output.all(*instance_info).apply(write_inventory)
 
 create_inventory_file(instance_info)

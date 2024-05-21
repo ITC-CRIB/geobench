@@ -38,6 +38,9 @@
   become: yes
   vars_files:
     - vault.yml
+    - hosts.yml
+  vars:
+    retention_period: "7d"
   tasks:
     - name: Create Prometheus configuration directory
       file:
@@ -55,9 +58,14 @@
         image: prom/prometheus
         restart_policy: always
         ports:
-          - "[::]:9090:9090"
+          - "9090:9090"
         volumes:
           - /etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+          - prometheus-data:/prometheus
+        command:
+          - '--config.file=/etc/prometheus/prometheus.yml'
+          - '--storage.tsdb.retention.time={{ retention_period }}'
+        etc_hosts: "{{ additional_hosts }}"
       tags: run_prometheus
 
     - name: Run Grafana container
@@ -66,16 +74,19 @@
         image: grafana/grafana
         restart_policy: always
         ports:
-          - "[::]:3000:3000"
+          - "3000:3000"
         env:
           GF_SECURITY_ADMIN_PASSWORD: "{{ grafana_admin_pass }}"  # Change this password
         volumes:
           - grafana-data:/var/lib/grafana
+        etc_hosts: "{{ additional_hosts }}"
       tags: run_grafana
 
 - name: Deploy Node Exporter on all nodes
   hosts: all
   become: yes
+  vars_files:
+    - hosts.yml
   tasks:
     - name: Run Node Exporter container
       docker_container:
@@ -88,6 +99,7 @@
           - "9100:9100"
         volumes:
           - '/:/host:ro,rslave'
+        etc_hosts: "{{ additional_hosts }}"
 
 - name: Deploy custom energy exporter on all nodes
   hosts: all
