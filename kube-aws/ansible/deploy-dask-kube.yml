@@ -1,0 +1,17 @@
+- name: Configure dask cluster
+  hosts: master
+  tasks:
+    - name: Copy cluster.yaml file
+      copy:
+        src: dask-kube/cluster.yaml
+        dest: /tmp/cluster.yaml
+
+    - name: Apply cluster.yaml
+      shell: kubectl apply -f /tmp/cluster.yaml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+    - name: Run port forward for Dask scheduler
+      shell: nohup kubectl port-forward svc/simple-scheduler 8786:8786 &
+      ignore_errors: yes
+    
