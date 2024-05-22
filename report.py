@@ -40,19 +40,17 @@ class PrometheusMetricsReporter:
                     processed_data[node][metric_name] = df
         return processed_data
 
-    def generate_plots(self, data):
+    def generate_plots(self, data, test_name=""):
         plots = []
-        os.makedirs('reports', exist_ok=True)
+        reports_path = f'reports/{test_name}'
+        os.makedirs(reports_path, exist_ok=True)
         for node, metrics in data.items():
             for metric_name, df in metrics.items():
                 fig = px.line(df, x='timestamp', y=metric_name, title=f'{metric_name} for {node}')
                 plot_name = f'{node}_{metric_name}.html'
-                plot_path = f'reports/{plot_name}'
+                plot_path = f'{reports_path}/{plot_name}'
                 fig.write_html(plot_path)
                 plots.append(plot_name)
-        return plots
-
-    def render_html(self, plots):
         html_template = """
         <!DOCTYPE html>
         <html lang="en">
@@ -74,16 +72,15 @@ class PrometheusMetricsReporter:
         """
         template = Template(html_template)
         html_content = template.render(plots=plots)
-        with open('reports/metrics_report.html', 'w') as f:
+        with open(f'{reports_path}/metrics_report.html', 'w') as f:
             f.write(html_content)
-
-    def generate_report(self, start_time, end_time):
+        
+    def generate_report(self, start_time, end_time, test_name=""):
         self.end_time = end_time
         self.start_time = start_time
         self._fetch_data()
         processed_data = self.process_data()
-        plots = self.generate_plots(processed_data)
-        self.render_html(plots)
+        self.generate_plots(processed_data, test_name=test_name)
 
 # Usage
 # end_time = datetime.datetime.now()

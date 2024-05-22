@@ -1,3 +1,4 @@
 .result/
 reports/
 benchmark_results.csv
+*.pyc

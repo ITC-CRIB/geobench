@@ -77,6 +77,7 @@ class Benchmark:
             record = df[df['test_name'] == test_name].to_dict('records')
             if record:
                 instance = {}
+                instance["test_name"] = test_name
                 instance["start_time"] = record[0]['start_time'] 
                 instance["end_time"] = record[0]['end_time']
                 instance["execution_time"] = record[0]['execution_time']

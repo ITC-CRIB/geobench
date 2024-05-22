@@ -98,10 +98,13 @@ class CommandLineTool:
             benchmark = Benchmark()
             instance = benchmark.get_test_instance(scenario_name)
             if instance is not None:
-                start_time = datetime.datetime.fromtimestamp(instance["start_time"])
-                end_time = datetime.datetime.fromtimestamp(instance["end_time"])
+                test_name  = instance["test_name"]
+                # start_time = datetime.datetime.fromtimestamp(instance["start_time"])
+                # end_time = datetime.datetime.fromtimestamp(instance["end_time"])
+                end_time = datetime.datetime.now()
+                start_time = end_time - datetime.timedelta(hours=1)
                 reporter = PrometheusMetricsReporter(url="http://3.66.166.68:9090", disable_ssl=True)
-                reporter.generate_report(start_time=start_time, end_time=end_time)
+                reporter.generate_report(start_time=start_time, end_time=end_time, test_name=test_name)
         else:
             self.parser.print_help()
     
