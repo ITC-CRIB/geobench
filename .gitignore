@@ -2,3 +2,4 @@
 reports/
 benchmark_results.csv
 *.pyc
+__pycache__/
