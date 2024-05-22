@@ -8,7 +8,8 @@ import yaml
 # Configuration
 # instance_size = "small_ipv6_3_0"  # 2 GB RAM instance type
 master_instance_size = "small_3_0"
-instance_size = "micro_ipv6_3_0" 
+# instance_size = "micro_ipv6_3_0"
+instance_size = "micro_3_0" 
 region = "eu-central-1"
 private_key_path = "~/.ssh/id_rsa"  # Update this with the path to your private key
 
@@ -42,7 +43,8 @@ for i in range(2):
         availability_zone=f"{region}a",
         blueprint_id="ubuntu_22_04",
         bundle_id=instance_size,
-        ip_address_type="ipv6",
+        # ip_address_type="ipv6",
+        ip_address_type="dualstack",
         key_pair_name="id_rsa",
     )
     worker_sg = lightsail.InstancePublicPorts(f"worker-port-{i}",
@@ -56,7 +58,8 @@ for i in range(2):
 # Collect instance information
 instance_info = [{
     "name": instance._name,
-    "ipv6": instance.ipv6_addresses.apply(lambda ips: ips[0]),
+    "public_ipv6": instance.ipv6_addresses.apply(lambda ips: ips[0]),
+    "public_ipv4": instance.public_ip_address,
     "ipv4": instance.private_ip_address,
     "group": "worker",
 } for instance in instances]
@@ -64,25 +67,30 @@ instance_info = [{
 instance_info.append(
     {
         "name": master_instance._name,
-        "ipv6": master_instance.ipv6_addresses.apply(lambda ips: ips[0]),
+        "public_ipv6": master_instance.ipv6_addresses.apply(lambda ips: ips[0]),
+        "public_ipv4": master_instance.public_ip_address,
         "ipv4": master_instance.private_ip_address,
         "group": "master",
     }
 )
 
+
+
 # Write the inventory.yaml file
 def create_inventory_file(instance_info):
     def write_inventory(info):
-        inventory = {"master": {"hosts": {}}, "worker": {"hosts": {}}}
+        master_ip = info[-1]["ipv4"]
+        inventory = {"all": {"vars": {"master_ip": master_ip}} ,"master": {"hosts": {}}, "worker": {"hosts": {}}}
         hosts_content = ""
         hosts_list = {}
         for instance in info:
             name = instance["name"]
-            public_ipv6 = instance["ipv6"]
+            # public_ipv6 = instance["public_ipv6"]
+            public_ipv4 = instance["public_ipv4"]
             local_ipv4 = instance["ipv4"]
             group = instance["group"]
             inventory[group]["hosts"][name] = {
-                "ansible_host": public_ipv6,
+                "ansible_host": public_ipv4,
                 "local_ipv4": local_ipv4,
                 "ansible_user": "ubuntu",
                 "ansible_ssh_private_key_file": private_key_path
@@ -94,7 +102,7 @@ def create_inventory_file(instance_info):
         with open("../ansible/hosts", "w") as f:
             f.write(hosts_content)
         with open("../ansible/hosts.yml", "w") as f:
-            hosts_dict = {"hosts" : hosts_list}
+            hosts_dict = {"additional_hosts" : hosts_list}
             yaml.dump(hosts_dict, f)
     pulumi.Output.all(*instance_info).apply(write_inventory)
 

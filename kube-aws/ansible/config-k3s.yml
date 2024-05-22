@@ -12,19 +12,37 @@
         K3S_TOKEN: "{{ k3s_token }}"
       register: k3s_install_output
 
-    - name: Set master IP fact
-      set_fact:
-        master_ip: "{{ hostvars['master'].local_ipv4 }}"
-
 - name: Join worker nodes to K3s cluster
-  hosts: hosts
+  hosts: all
   become: yes
   vars_files:
     - vault.yml
   tasks:
     - name: Install K3s agent
       shell: |
-        curl -sfL https://get.k3s.io | K3S_URL=https://{{ master_ip }}:6443 sh -s - agent --server https://{{ master_ip }}:6443 --token {{ k3s_token }}
+        curl -sfL https://get.k3s.io | K3S_URL=https://{{ master_ip }}:6443 K3S_TOKEN={{ k3s_token }} sh -
       environment:
         K3S_TOKEN: "{{ k3s_token }}"
         K3S_URL: "https://{{ master_ip }}:6443"
+
+- name: Configure environment
+  hosts: master
+  vars_files:
+    - vault.yml
+  tasks:
+    - name: Export KUBECONFIG
+      shell: export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+    - name: Download Helm installation script
+      get_url:
+        url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+        dest: /tmp/get_helm.sh
+        mode: '0755'
+
+    - name: Install Helm
+      shell: /tmp/get_helm.sh
+
+    - name: Install Dask Kubernetes Operator using Helm
+      shell: helm install --repo https://helm.dask.org --create-namespace -n dask-operator --generate-name dask-kubernetes-operator

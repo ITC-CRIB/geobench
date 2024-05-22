@@ -1,19 +1,22 @@
+all:
+  vars:
+    master_ip: 172.26.7.127
 master:
   hosts:
     master-0:
-      ansible_host: 2a05:d014:1808:b000:761c:4a21:2f55:dd34
+      ansible_host: 3.66.166.68
       ansible_ssh_private_key_file: ~/.ssh/id_rsa
       ansible_user: ubuntu
       local_ipv4: 172.26.7.127
 worker:
   hosts:
     worker-0:
-      ansible_host: 2a05:d014:1808:b000:de6b:ebd2:a:547d
+      ansible_host: 3.125.49.207
       ansible_ssh_private_key_file: ~/.ssh/id_rsa
       ansible_user: ubuntu
-      local_ipv4: 172.26.6.136
+      local_ipv4: 172.26.0.108
     worker-1:
-      ansible_host: 2a05:d014:1808:b000:2d22:84ef:5897:bafd
+      ansible_host: 35.159.85.17
       ansible_ssh_private_key_file: ~/.ssh/id_rsa
       ansible_user: ubuntu
-      local_ipv4: 172.26.1.213
+      local_ipv4: 172.26.7.100
