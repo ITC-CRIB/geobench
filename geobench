@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
+import datetime
 import ansible_runner
 import os
+
+from benchmark import Benchmark
+from report import PrometheusMetricsReporter
 
 class CommandLineTool:
     def __init__(self):
@@ -15,11 +19,14 @@ class CommandLineTool:
         self.run_subparsers = self.test_parser.add_subparsers(dest="subcommand")
         # Subparser for the 'test run <scenario> <id>' subcommand
         self.run_parser = self.run_subparsers.add_parser('run', help='Run the benchmarking test. test run <scenario_name> <scenario_path> ')
-        self.run_parser.add_argument('name', type=str, help='The scenario unique name identifier')
-        self.run_parser.add_argument('path', type=str, help='Path of input directory in local computer')
-        self.run_parser.add_argument('-f', '--file', type=str, help='Path of scenario file. The file can be in the form of shell script, QGIS json, or QGIS python. This file will be placed in similar directory with the input.', default="scenario.sh")
+        self.run_parser.add_argument('-n','--name', type=str, help='The scenario unique name identifier')
+        self.run_parser.add_argument('-i','--input-dir', type=str, help='Path of input directory in local computer')
+        self.run_parser.add_argument('-f', '--file', type=str, help='Scenario file name. The file can be in the form of shell script, QGIS json, or QGIS python. This file will be placed in similar directory with the input.')
         self.run_parser.add_argument('-r', '--repeat', type=int, help='The number of execution repeat', default=1)
         self.run_parser.add_argument('-c', '--converge', type=int, help='The number of converging percentage (in percent)', default=10)
+        # Subparser for the 'test report' subcommand
+        self.run_parser = self.run_subparsers.add_parser('report', help='Generate report for a benchmarking scenario')
+        self.run_parser.add_argument('-n','--name', type=str, help='The scenario unique name identifier')
         # Subparser for the 'test list' subcommand
         self.run_parser = self.run_subparsers.add_parser('list', help='List all benchmarking scenario')
         # Subparser for the 'test remove <id>' subcommand
@@ -71,24 +78,32 @@ class CommandLineTool:
     def handle_test(self, args, inventory_path):
         if args.subcommand == "run":
             # Get the input directory
-            input_dir = os.path.abspath(args.path)
-            # Get base directory name
-            dir_name = os.path.basename(input_dir)
+            input_dir = os.path.abspath(args.input_dir)
             # Get the repetition parameter
             repeat = args.repeat
             # Get the script file name
             script_file = args.file
             # Get scenario name 
             scenario_name = args.name
-            # Running the playbook
-            r = ansible_runner.interface.run(
-                private_data_dir = 'ansible' ,
-                playbook='run-scenario.yml',
-                extravars={'src_dir': input_dir, 'repeat': repeat, 'script_file': script_file, 'scenario_name': scenario_name, 'dir_name': dir_name},
-                inventory=inventory_path
-            )
+            
+            benchmark = Benchmark()
+            benchmark.run(test_name=scenario_name, script_file=script_file, input_dir=input_dir, repeat=repeat, inventory_path=inventory_path)
             print(args.subcommand)
-            #print(f"{args.greet}, {args.name}!")
+        elif args.subcommand == "list":
+            benchmark = Benchmark()
+            benchmark.list_all_results()
+        elif args.subcommand == "report":
+            # Get scenario name
+            scenario_name = args.name
+            benchmark = Benchmark()
+            instance = benchmark.get_test_instance(scenario_name)
+            if instance is not None:
+                start_time = datetime.datetime.fromtimestamp(instance["start_time"])
+                end_time = datetime.datetime.fromtimestamp(instance["end_time"])
+                reporter = PrometheusMetricsReporter(url="http://3.66.166.68:9090", disable_ssl=True)
+                reporter.generate_report(start_time=start_time, end_time=end_time)
+        else:
+            self.parser.print_help()
     
     def handle_snapshot(self, args, inventory_path):
         print(args.subcommand)
