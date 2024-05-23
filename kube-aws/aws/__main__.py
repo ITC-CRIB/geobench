@@ -7,9 +7,9 @@ import yaml
 
 # Configuration
 # instance_size = "small_ipv6_3_0"  # 2 GB RAM instance type
-master_instance_size = "small_3_0"
+master_instance_size = "large_3_0"
 # instance_size = "micro_ipv6_3_0"
-instance_size = "micro_3_0" 
+instance_size = "medium_3_0" 
 region = "eu-central-1"
 private_key_path = "~/.ssh/id_rsa"  # Update this with the path to your private key
 

@@ -16,7 +16,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "ddmcjtio2nv9cd"
+            "uid": "ddmlto8qk3vuoa"
           },
           "enable": false,
           "expr": "ALERTS{alias=\"$host\", alertstate=\"firing\"}",
@@ -29,7 +29,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "ddmcjtio2nv9cd"
+            "uid": "ddmlto8qk3vuoa"
           },
           "enable": false,
           "expr": "ALERTS{alias=\"$host\",alertstate=\"pending\"}",
@@ -52,7 +52,7 @@
       {
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "fieldConfig": {
           "defaults": {
@@ -106,7 +106,7 @@
             "calculatedInterval": "10m",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -127,7 +127,7 @@
       {
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "fieldConfig": {
           "defaults": {
@@ -191,7 +191,7 @@
           {
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "expr": "count(count(node_cpu_seconds_total{node=\"$host\"}) by (cpu))",
             "format": "time_series",
@@ -207,7 +207,7 @@
       {
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "fieldConfig": {
           "defaults": {
@@ -272,7 +272,7 @@
           {
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "expr": "node_memory_MemAvailable_bytes{node=\"$host\"}",
             "format": "time_series",
@@ -290,7 +290,7 @@
       {
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "fieldConfig": {
           "defaults": {
@@ -350,7 +350,7 @@
             "calculatedInterval": "10m",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -375,7 +375,7 @@
         "dashes": false,
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "decimals": 2,
         "editable": true,
@@ -488,7 +488,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "editorMode": "code",
@@ -542,7 +542,7 @@
       {
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "fieldConfig": {
           "defaults": {
@@ -621,7 +621,7 @@
           {
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "disableTextWrap": false,
             "editorMode": "builder",
@@ -645,7 +645,7 @@
         "dashes": false,
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "decimals": 2,
         "editable": true,
@@ -771,7 +771,7 @@
             "calculatedInterval": "10s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -789,7 +789,7 @@
             "calculatedInterval": "10s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -807,7 +807,7 @@
             "calculatedInterval": "10s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -863,7 +863,7 @@
         "dashes": false,
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "decimals": 2,
         "editable": true,
@@ -991,7 +991,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "editorMode": "code",
@@ -1011,7 +1011,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -1029,7 +1029,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -1085,7 +1085,7 @@
         "dashes": false,
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "decimals": 2,
         "editable": true,
@@ -1198,7 +1198,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -1216,7 +1216,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -1234,7 +1234,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -1252,7 +1252,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -1308,7 +1308,7 @@
         "dashes": false,
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "decimals": 2,
         "editable": true,
@@ -1425,7 +1425,7 @@
             "calculatedInterval": "2m",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -1481,7 +1481,7 @@
         "dashes": false,
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "decimals": 2,
         "editable": true,
@@ -1602,7 +1602,7 @@
             "calculatedInterval": "2m",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -1620,7 +1620,7 @@
             "calculatedInterval": "2m",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -1676,7 +1676,7 @@
         "dashes": false,
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "decimals": 2,
         "editable": true,
@@ -1724,7 +1724,7 @@
             "calculatedInterval": "2m",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -1780,7 +1780,7 @@
         "dashes": false,
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "decimals": 2,
         "editable": true,
@@ -1833,7 +1833,7 @@
             "calculatedInterval": "2m",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -1889,7 +1889,7 @@
         "dashes": false,
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "decimals": 2,
         "editable": true,
@@ -1937,7 +1937,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -1955,7 +1955,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -2011,7 +2011,7 @@
         "dashes": false,
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "decimals": 2,
         "editable": true,
@@ -2061,7 +2061,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -2080,7 +2080,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -2138,7 +2138,7 @@
         "dashes": false,
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "decimals": 2,
         "editable": true,
@@ -2195,7 +2195,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -2213,7 +2213,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -2269,7 +2269,7 @@
         "dashes": false,
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "decimals": 2,
         "editable": true,
@@ -2317,7 +2317,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -2335,7 +2335,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -2391,7 +2391,7 @@
         "dashes": false,
         "datasource": {
           "type": "prometheus",
-          "uid": "ddmcjtio2nv9cd"
+          "uid": "ddmlto8qk3vuoa"
         },
         "decimals": 2,
         "editable": true,
@@ -2439,7 +2439,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -2457,7 +2457,7 @@
             "calculatedInterval": "2s",
             "datasource": {
               "type": "prometheus",
-              "uid": "ddmcjtio2nv9cd"
+              "uid": "ddmlto8qk3vuoa"
             },
             "datasourceErrors": {},
             "errors": {},
@@ -2591,7 +2591,7 @@
           },
           "datasource": {
             "type": "prometheus",
-            "uid": "ddmcjtio2nv9cd"
+            "uid": "ddmlto8qk3vuoa"
           },
           "definition": "label_values(node)",
           "hide": 0,

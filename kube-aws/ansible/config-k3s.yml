@@ -13,7 +13,7 @@
       register: k3s_install_output
 
 - name: Join worker nodes to K3s cluster
-  hosts: all
+  hosts: worker
   become: yes
   vars_files:
     - vault.yml
@@ -29,11 +29,38 @@
   hosts: master
   vars_files:
     - vault.yml
+  vars:
+    kubeconfig_path: "/etc/rancher/k3s/k3s.yaml"
+    profile_file: "/home/{{ ansible_user }}/.bash_profile"
   tasks:
-    - name: Export KUBECONFIG
-      shell: export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-      environment:
-        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    - name: Ensure the KUBECONFIG file exists
+      stat:
+        path: "{{ kubeconfig_path }}"
+      register: kubeconfig_file
+
+    - name: Fail if the KUBECONFIG file does not exist
+      fail:
+        msg: "KUBECONFIG file does not exist at {{ kubeconfig_path }}"
+      when: not kubeconfig_file.stat.exists
+
+    - name: Set permissions for the KUBECONFIG file
+      file:
+        path: "{{ kubeconfig_path }}"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+      become: yes
+
+    - name: Set KUBECONFIG variable in profile
+      lineinfile:
+        path: "{{ profile_file }}"
+        line: 'export KUBECONFIG={{ kubeconfig_path }}'
+        create: yes
+        state: present
+
+    # - name: Apply profile changes
+    #   shell: source {{ profile_file }}
+    #   ignore_errors: yes  # Ignore errors because the playbook will run this task non-interactively
 
     - name: Download Helm installation script
       get_url:
@@ -46,3 +73,5 @@
 
     - name: Install Dask Kubernetes Operator using Helm
       shell: helm install --repo https://helm.dask.org --create-namespace -n dask-operator --generate-name dask-kubernetes-operator
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
