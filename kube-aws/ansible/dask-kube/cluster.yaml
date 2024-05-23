@@ -11,9 +11,6 @@ spec:
       - name: worker
         image: "ghcr.io/dask/dask:latest"
         imagePullPolicy: "IfNotPresent"
-        env:
-          - name: EXTRA_CONDA_PACKAGES
-            value: "rioxarray"
         args:
           - dask-worker
           - --name
@@ -31,9 +28,6 @@ spec:
       - name: scheduler
         image: "ghcr.io/dask/dask:latest"
         imagePullPolicy: "IfNotPresent"
-        env:
-          - name: EXTRA_CONDA_PACKAGES
-            value: "rioxarray"
         args:
           - dask-scheduler
         ports:
