@@ -1,0 +1,46 @@
+---
+- name: Setup Python Environment and Run Script
+  hosts: all
+  become: yes
+
+  vars:
+    requirements_file_src: ../../example/dask/requirements.txt
+    requirements_file: /tmp/requirements.txt
+    python_script_src: ../../example/dask/daskbenchmark.py
+    python_script_dest: /tmp/myscript.py
+
+  tasks:
+    - name: Ensure Python is installed
+      apt:
+        name: python3
+        state: present
+        update_cache: yes
+
+    - name: Ensure pip is installed
+      apt:
+        name: python3-pip
+        state: present
+
+    - name: Copy requirements.txt on target
+      copy:
+        src: "{{ requirements_file_src }}"
+        dest: "{{ requirements_file }}"
+
+    - name: Install pip packages from requirements.txt
+      pip:
+        requirements: "{{ requirements_file }}"
+        executable: pip3
+
+    - name: Copy the Python script to the target machine
+      copy:
+        src: "{{ python_script_src }}"
+        dest: "{{ python_script_dest }}"
+        mode: '0755'
+
+    - name: Run the Python script
+      command: python3 "{{ python_script_dest }}"
+      register: script_output
+
+    - name: Display script output
+      debug:
+        var: script_output.stdout

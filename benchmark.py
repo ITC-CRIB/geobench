@@ -80,6 +80,8 @@ class Benchmark:
                 instance["test_name"] = test_name
                 instance["start_time"] = record[0]['start_time'] 
                 instance["end_time"] = record[0]['end_time']
+                instance["start_time_hr"] = record[0]['start_time_hr'] 
+                instance["end_time_hr"] = record[0]['end_time_hr']
                 instance["execution_time"] = record[0]['execution_time']
                 return instance
             else:

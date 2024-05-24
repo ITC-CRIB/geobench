@@ -7,9 +7,9 @@ from dask.distributed import Client
 from pystac_client import Client as STACClient
 
 # Initialize the Dask client
-client = Client("localhost:8786")
+# client = Client("localhost:8786")
 
-print("Connected to Dask cluster")
+# print("Connected to Dask cluster")
 
 from shapely.geometry import Point
 

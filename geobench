@@ -20,7 +20,7 @@ class CommandLineTool:
         # Subparser for the 'test run <scenario> <id>' subcommand
         self.run_parser = self.run_subparsers.add_parser('run', help='Run the benchmarking test. test run <scenario_name> <scenario_path> ')
         self.run_parser.add_argument('-n','--name', type=str, help='The scenario unique name identifier')
-        self.run_parser.add_argument('-i','--input-dir', type=str, help='Path of input directory in local computer')
+        self.run_parser.add_argument('-d','--input-dir', type=str, help='Path of input directory in local computer')
         self.run_parser.add_argument('-f', '--file', type=str, help='Scenario file name. The file can be in the form of shell script, QGIS json, or QGIS python. This file will be placed in similar directory with the input.')
         self.run_parser.add_argument('-r', '--repeat', type=int, help='The number of execution repeat', default=1)
         self.run_parser.add_argument('-c', '--converge', type=int, help='The number of converging percentage (in percent)', default=10)
@@ -99,11 +99,12 @@ class CommandLineTool:
             instance = benchmark.get_test_instance(scenario_name)
             if instance is not None:
                 test_name  = instance["test_name"]
-                # start_time = datetime.datetime.fromtimestamp(instance["start_time"])
-                # end_time = datetime.datetime.fromtimestamp(instance["end_time"])
-                end_time = datetime.datetime.now()
-                start_time = end_time - datetime.timedelta(hours=1)
-                reporter = PrometheusMetricsReporter(url="http://3.66.166.68:9090", disable_ssl=True)
+                start_time = datetime.datetime.fromtimestamp(instance["start_time"])
+                end_time = datetime.datetime.fromtimestamp(instance["end_time"])
+                # end_time = datetime.datetime.now()
+                # start_time = end_time - datetime.timedelta(hours=1)
+                print(f"Start time: {start_time}. End time: {end_time}")
+                reporter = PrometheusMetricsReporter(url="http://18.197.58.197:9090", disable_ssl=True)
                 reporter.generate_report(start_time=start_time, end_time=end_time, test_name=test_name)
         else:
             self.parser.print_help()
