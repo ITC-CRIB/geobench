@@ -2,94 +2,96 @@
 
 import argparse
 import datetime
+import sys
 import ansible_runner
 import os
 
 from benchmark import Benchmark
+from error import MissingParameterError
 from report import PrometheusMetricsReporter
+import utils
+
+import scenario
 
 class CommandLineTool:
     def __init__(self):
         self.parser = argparse.ArgumentParser(description="Toolkit for benchmarking the geospatial processing workload")
-        self.parser.add_argument('-i', '--inventory', type=str, help='Inventory file', default='inventory.yml')
+        # self.parser.add_argument('-i', '--inventory', type=str, help='Inventory file', default='inventory.yml')
         self.subparsers = self.parser.add_subparsers(dest="command")
 
         # Create subparsers for "test" command
-        self.test_parser = self.subparsers.add_parser("test", help='Manage the benchmarking tests')
-        self.run_subparsers = self.test_parser.add_subparsers(dest="subcommand")
+        self.run_parser = self.subparsers.add_parser("run", help='Run the benchmarking tests')
+        # self.run_subparsers = self.test_parser.add_subparsers(dest="subcommand")
         # Subparser for the 'test run <scenario> <id>' subcommand
-        self.run_parser = self.run_subparsers.add_parser('run', help='Run the benchmarking test. test run <scenario_name> <scenario_path> ')
+        # self.run_parser = self.run_subparsers.add_parser('run', help='Run the benchmarking test. test run <scenario_name> <scenario_path> ')
         self.run_parser.add_argument('-n','--name', type=str, help='The scenario unique name identifier')
         self.run_parser.add_argument('-d','--input-dir', type=str, help='Path of input directory in local computer')
-        self.run_parser.add_argument('-f', '--file', type=str, help='Scenario file name. The file can be in the form of shell script, QGIS json, or QGIS python. This file will be placed in similar directory with the input.')
+        self.run_parser.add_argument('-f', '--file', type=str, help='Scenario file name')
         self.run_parser.add_argument('-r', '--repeat', type=int, help='The number of execution repeat', default=1)
         self.run_parser.add_argument('-c', '--converge', type=int, help='The number of converging percentage (in percent)', default=10)
-        # Subparser for the 'test report' subcommand
-        self.run_parser = self.run_subparsers.add_parser('report', help='Generate report for a benchmarking scenario')
-        self.run_parser.add_argument('-n','--name', type=str, help='The scenario unique name identifier')
-        # Subparser for the 'test list' subcommand
-        self.run_parser = self.run_subparsers.add_parser('list', help='List all benchmarking scenario')
-        # Subparser for the 'test remove <id>' subcommand
-        self.run_parser = self.run_subparsers.add_parser('remove', help='Delete benchmarking scenario given the scenario id')
-        self.run_parser.add_argument('id', type=str, help='The scenario id')
+        
+        # Subparser for the 'result' subcommand
+        self.result_parser = self.subparsers.add_parser('result', help='Manage benchmarking report result')
+        # self.result_parser.add_argument('-n','--name', type=str, help='The scenario unique name identifier')
+        self.result_subparsers = self.result_parser.add_subparsers(dest="subcommand")
+        # Subparser for the 'result list' subcommand
+        self.result_subparsers.add_parser('list', help='List all benchmarking scenario')
+        # Subparser for the 'result remove <id>' subcommand
+        self.result_remove_parser = self.result_subparsers.add_parser('remove', help='Delete benchmarking scenario given the scenario id')
+        self.result_remove_parser.add_argument('id', type=str, help='The scenario id')
         # Subparser for the 'test save <id>' subcommand
-        self.run_parser = self.run_subparsers.add_parser('save', help='Save benchmarking scenario to a specific local folder given the scenario id')
-        self.run_parser.add_argument('id', type=str, help='The scenario id')
+        self.result_save_parser = self.result_subparsers.add_parser('save', help='Save benchmarking scenario to a specific local folder given the scenario id')
+        self.result_save_parser.add_argument('id', type=str, help='The scenario id')
         # Subparser for the 'test save <id>' subcommand
-        self.run_parser = self.run_subparsers.add_parser('inspect', help='Show benchmarking report result given the scenario id')
-        self.run_parser.add_argument('id', type=str, help='The scenario id')
+        self.result_inspect_parser = self.result_subparsers.add_parser('inspect', help='Show benchmarking report result given the scenario id')
+        self.result_inspect_parser.add_argument('id', type=str, help='The scenario id')
         # Subparser for the 'test display <id>' subcommand
-        self.run_parser = self.run_subparsers.add_parser('display', help='Open Grafana dashboard given the scenario id')
-        self.run_parser.add_argument('id', type=str, help='The scenario id')
-
-        # Create subparsers for "snapshot" command
-        self.snapshot_parser = self.subparsers.add_parser("snapshot", help='Manage snapshot')
-        self.snapshot_subparsers = self.snapshot_parser.add_subparsers(dest="subsubcommand")
-        # Subparser for the 'snapshot list' subcommand
-        self.snapshot_parser = self.snapshot_subparsers.add_parser('list', help='List all snapshots')
-        # Subparser for the 'snapshot remove <id>' subcommand
-        self.snapshot_parser = self.snapshot_subparsers.add_parser('remove', help='Delete snapshot given the snapshot id')
-        self.snapshot_parser.add_argument('id', type=str, help='The snapshot id')
-        # Subparser for the 'snapshot save <id>' subcommand
-        self.snapshot_parser = self.snapshot_subparsers.add_parser('save', help='Save snapshot to a specific local folder given the scenario id')
-        self.snapshot_parser.add_argument('id', type=str, help='The snapshot id')
-        # Subparser for the 'snapshot inspect <id>' subcommand
-        self.snapshot_parser = self.snapshot_subparsers.add_parser('inspect', help='Show snapshot given the scenario id')
-        self.snapshot_parser.add_argument('id', type=str, help='The snapshot id')
+        self.result_save_parser = self.result_subparsers.add_parser('display', help='Open Grafana dashboard given the scenario id')
+        self.result_save_parser.add_argument('id', type=str, help='The scenario id')
 
         # Create subparsers for "install" command
         self.snapshot_parser = self.subparsers.add_parser("install", help='Install required packages')
         
+        # Create subparsers for "monitor" command
+        self.snapshot_parser = self.subparsers.add_parser("monitor", help='Monitor the benchmarking')
 
     def run(self):
         args = self.parser.parse_args()
-        inventory_path = os.path.abspath(args.inventory)
+        # inventory_path = os.path.abspath(args.inventory)
         
-        if args.command == 'test':
-            #print(args)
-            self.handle_test(args, inventory_path)
-        elif args.command == 'snapshot':
-            self.handle_snapshot(args, inventory_path)
+        if args.command == 'run':
+            self.handle_run(args)
+            # print(args)
+        elif args.command == 'result':
+            # self.handle_snapshot(args, "")
+            print(args)
         elif args.command == 'install':
-            self.handle_install(args, inventory_path)
+            # self.handle_install(args, "")
+            print(args)
+        elif args.command == 'monitor':
+            # self.handle_install(args, "")
+            print(args)
         else:
             self.parser.print_help()
 
-    def handle_test(self, args, inventory_path):
-        if args.subcommand == "run":
-            # Get the input directory
-            input_dir = os.path.abspath(args.input_dir)
-            # Get the repetition parameter
-            repeat = args.repeat
-            # Get the script file name
-            script_file = args.file
-            # Get scenario name 
-            scenario_name = args.name
-            
+    def handle_run(self, args, inventory_path=""):
+        # Get the script file name
+        scenario_file = os.path.abspath(args.file)
+
+        try:
+            # Load testing scenario
+            test_scenario = scenario.load_scenario(scenario_file, args)
+            # Run the bencmark based on parsed scenario
             benchmark = Benchmark()
-            benchmark.run(test_name=scenario_name, script_file=script_file, input_dir=input_dir, repeat=repeat, inventory_path=inventory_path)
-            print(args.subcommand)
-        elif args.subcommand == "list":
+            benchmark.run(test_scenario)
+            # print(args.subcommand)
+            print(test_scenario)
+        except MissingParameterError as e:
+            print(e)
+            sys.exit(1)
+    
+    def handle_report(self, args):
+        if args.subcommand == "list":
             benchmark = Benchmark()
             benchmark.list_all_results()
         elif args.subcommand == "report":

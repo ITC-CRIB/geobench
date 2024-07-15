@@ -5,23 +5,66 @@ import pandas as pd
 from datetime import datetime
 import ansible_runner
 
-class Benchmark:
-    CSV_FILE = 'benchmark_results.csv'
+from scenario import Scenario
+import recording
 
-    def run(self, test_name, script_file, input_dir, inventory_path, repeat=1):
-        # Get base directory name
-        dir_name = os.path.basename(input_dir)
+CSV_FILE = 'benchmark_results.csv'
+
+class Benchmark:
+
+    def __init__(self) -> None:
+        pass
+    
+    def _makedirs_if_not_exists(self, dir_path):
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+
+    def _create_directories_for_scenarios(self, base_output, name, scenario_combination, repeat):
+        base_dir  =  os.path.join(base_output, name)
+        self._makedirs_if_not_exists(base_dir)
+
+        for idx, scenario in enumerate(scenario_combination):
+            base_dir = os.path.join(base_dir, f"set_{idx + 1}")
+            self._makedirs_if_not_exists(base_dir)
+            
+            for i in range(1, repeat + 1):
+                repeat_dir = os.path.join(base_dir, f"run_{i}")
+                self._makedirs_if_not_exists(repeat_dir)
+
+    # Run the benchmark according to methodology
+    def run(self, scenario: Scenario):
+        # Get or create base directory based on the temporary directory and testing scenario name
+        base_dir  =  os.path.join(scenario.temp_directory, scenario.name)
+        self._makedirs_if_not_exists(base_dir)
+
+        # Record system configuration. Store recorded data on the file.
+        system_info = recording.get_system_info()
+
+
         # Measure start time
         start_time = time.time()
         start_time_hr = datetime.fromtimestamp(start_time).strftime('%Y-%m-%d %H:%M:%S')
 
         # Running the playbook
-        r = ansible_runner.interface.run(
-            private_data_dir = 'ansible' ,
-            playbook='run-scenario.yml',
-            extravars={'src_dir': input_dir, 'repeat': repeat, 'script_file': script_file, 'scenario_name': test_name, 'dir_name': dir_name},
-            inventory=inventory_path
-        )
+        # r = ansible_runner.interface.run(
+        #     private_data_dir = 'ansible' ,
+        #     playbook='run-scenario.yml',
+        #     extravars={'src_dir': input_dir, 'repeat': repeat, 'script_file': script_file, 'scenario_name': test_name, 'dir_name': dir_name},
+        #     inventory=inventory_path
+        # )
+
+        # Run any combination of testing
+        for idx, params in enumerate(scenario.combination):
+            # Get or create scenario directory
+            scen_dir = os.path.join(base_dir, f"set_{idx + 1}")
+            self._makedirs_if_not_exists(scen_dir)
+            
+            for i in range(1, scenario.repeat + 1):
+                # Get or create test run directory
+                repeat_dir = os.path.join(scen_dir, f"run_{i}")
+                self._makedirs_if_not_exists(repeat_dir)
+                # Print for debugging
+                print(f"Running scenario with params {params} for repetition {i}. Output saved on {repeat_dir}")
 
         # Measure end time
         end_time = time.time()
@@ -32,7 +75,7 @@ class Benchmark:
 
         # Store results in CSV
         record = {
-            'test_name': test_name,
+            'test_name': scenario.name,
             'start_time': start_time,
             'end_time': end_time,
             'start_time_hr': start_time_hr,
@@ -43,15 +86,16 @@ class Benchmark:
         df = pd.DataFrame([record])
         
         try:
-            existing_df = pd.read_csv(self.CSV_FILE)
-            existing_df = existing_df[existing_df['test_name'] != test_name]  # Remove existing entry if any
+            existing_df = pd.read_csv(CSV_FILE)
+            existing_df = existing_df[existing_df['test_name'] != scenario.name]  # Remove existing entry if any
             df = pd.concat([existing_df, df], ignore_index=True)
         except FileNotFoundError:
             pass  # If file doesn't exist, we will create a new one
         
-        df.to_csv(self.CSV_FILE, index=False)
-        print(f'Test result for "{test_name}" saved.')
+        df.to_csv(CSV_FILE, index=False)
+        print(f'Test result for "{scenario.name}" saved.')
 
+class Results:
     @classmethod
     def delete_test_result(cls, test_name):
         try:

@@ -1,0 +1,20 @@
+name: ExampleBenchmark
+repeat: 10
+type: script
+command: "python test_script.py"
+command-file: "path/to/command_file.sh"
+inputs:
+  - "path/to/input1.txt"
+  - "path/to/input2.csv"
+outputs:
+  OUTPUT: output.tiff
+  SUMMARY: summary.html
+  log: "path/to/log.txt"
+temp-directory: "./sample-output"
+parameters:
+  param1: 
+    - value1
+  param2:
+    - value2
+    - value3
+output-structure: nested
