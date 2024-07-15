@@ -15,7 +15,7 @@ Follow these steps to set up GeoBench:
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/geobench.git
+   git clone https://github.com/ITC-CRIB/geobench
    cd geobench
    ```
 
