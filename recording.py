@@ -1,3 +1,4 @@
+import time
 import psutil
 import platform
 
@@ -95,10 +96,89 @@ def get_process_info():
             pass
     return process_list
 
+def _record_process_info(duration=30, interval=1):
+    process_info = {}
+
+    for _ in range(int(duration / interval)):
+        for proc in psutil.process_iter(['pid', 'name', 'username', 'cpu_percent', 'memory_percent', 'status']):
+            try:
+                proc_info = proc.info
+                pid = proc_info['pid']
+                name = proc_info['name']
+                cpu_usage = proc_info['cpu_percent']
+                memory_usage = proc_info['memory_percent']
+
+                # Disk usage (I/O)
+                try:
+                    io_counters = proc.io_counters()
+                    read_bytes = io_counters.read_bytes // (1024 * 1024)  # Convert bytes to MB
+                    write_bytes = io_counters.write_bytes // (1024 * 1024)  # Convert bytes to MB
+                except (psutil.AccessDenied, AttributeError):
+                    read_bytes = write_bytes = 0
+
+                if pid not in process_info:
+                    process_info[pid] = {
+                        'name': name,
+                        'cpu_usage': [],
+                        'memory_usage': [],
+                        'read_bytes': [],
+                        'write_bytes': [],
+                        'username': proc_info.get('username', 'N/A')
+                    }
+                
+                if cpu_usage is not None:
+                    process_info[pid]['cpu_usage'].append(cpu_usage)
+                if memory_usage is not None:
+                    process_info[pid]['memory_usage'].append(memory_usage)
+                if read_bytes is not None:
+                    process_info[pid]['read_bytes'].append(read_bytes)
+                if write_bytes is not None:
+                    process_info[pid]['write_bytes'].append(write_bytes)
+
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+
+        time.sleep(interval)
+
+    return process_info
+
+def _average(sum, len):
+    if len > 0:
+        return sum / len
+    return 0
+
+def _calculate_average_usage(process_info):
+    average_info = []
+
+    for pid, info in process_info.items():
+        avg_cpu =  _average( sum(info['cpu_usage']) , len(info['cpu_usage']) )
+        avg_memory = _average( sum(info['memory_usage']) , len(info['memory_usage']) )
+        avg_read_bytes = _average( sum(info['read_bytes']) , len(info['read_bytes']) )
+        avg_write_bytes = _average( sum(info['write_bytes']) , len(info['write_bytes']) )
+
+        average_info.append({
+            'pid': pid,
+            'name': info['name'],
+            'avg_cpu_usage': avg_cpu,
+            'avg_memory_usage': avg_memory,
+            'avg_read_bytes': avg_read_bytes,
+            'avg_write_bytes': avg_write_bytes,
+            'username': info['username']
+        })
+
+    # Sort by average CPU usage in descending order
+    average_info.sort(key=lambda x: x['avg_memory_usage'], reverse=True)
+    return average_info
+
+# Record process for specific duration, then calculate the average
+def record_process_info(duration=30):
+    process_info = _record_process_info(duration=duration, interval=1)
+    average_info = _calculate_average_usage(process_info)
+
+    return average_info
+
 def main():
-    process_list = get_process_info()
-    print(f"{'PID':<10} {'Name':<25} {'Username':<20} {'CPU%':<10} {'Memory%':<10} {'Status':<15}")
-    print("="*90)
+    process_list = record_process_info()
     for proc in process_list:
         print(proc)
         # print(f"{proc['pid']:<10} {proc['name']:<25} {proc['username']:<20} {proc['cpu_percent']:<10} {proc['memory_percent']:<10} {proc['status']:<15}")
@@ -108,10 +188,10 @@ def print_system_config():
     print(sys_config)
 
 def print_process_info():
-    proc_info = get_process_info()
+    proc_info = record_process_info()
     print(proc_info)
 
 if __name__ == "__main__":
     # main()
-    print_system_config()
-    # print_process_info()
+    # print_system_config()
+    print_process_info()

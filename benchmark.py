@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 import time
@@ -12,8 +13,11 @@ CSV_FILE = 'benchmark_results.csv'
 
 class Benchmark:
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, scenario: Scenario) -> None:
+        self.scenario = scenario
+        self.result = {
+            "name": scenario.name
+        }
     
     def _makedirs_if_not_exists(self, dir_path):
         if not os.path.exists(dir_path):
@@ -31,15 +35,29 @@ class Benchmark:
                 repeat_dir = os.path.join(base_dir, f"run_{i}")
                 self._makedirs_if_not_exists(repeat_dir)
 
+    def _save_result(self):
+        output_file  =  os.path.join(self.scenario.temp_directory, self.scenario.name, "output.json")
+        with open(output_file, 'w') as json_file:
+            json.dump(self.result, json_file, indent=4)
+
     # Run the benchmark according to methodology
-    def run(self, scenario: Scenario):
+    def run(self):
         # Get or create base directory based on the temporary directory and testing scenario name
-        base_dir  =  os.path.join(scenario.temp_directory, scenario.name)
+        base_dir  =  os.path.join(self.scenario.temp_directory, self.scenario.name)
         self._makedirs_if_not_exists(base_dir)
 
         # Record system configuration. Store recorded data on the file.
+        print("Recording system configuration")
         system_info = recording.get_system_info()
+        self.result["system"] = system_info
+        self._save_result()
 
+        # Record process info for specific duration in seconds (e.x. 15 sec). Store recorded data on the file.
+        recording_duration = 15
+        print(f"Recording running process for {recording_duration} seconds")
+        running_process = recording.record_process_info(duration=recording_duration)
+        self.result["process"] = running_process
+        self._save_result()
 
         # Measure start time
         start_time = time.time()
@@ -54,12 +72,12 @@ class Benchmark:
         # )
 
         # Run any combination of testing
-        for idx, params in enumerate(scenario.combination):
+        for idx, params in enumerate(self.scenario.combination):
             # Get or create scenario directory
             scen_dir = os.path.join(base_dir, f"set_{idx + 1}")
             self._makedirs_if_not_exists(scen_dir)
             
-            for i in range(1, scenario.repeat + 1):
+            for i in range(1, self.scenario.repeat + 1):
                 # Get or create test run directory
                 repeat_dir = os.path.join(scen_dir, f"run_{i}")
                 self._makedirs_if_not_exists(repeat_dir)
@@ -75,7 +93,7 @@ class Benchmark:
 
         # Store results in CSV
         record = {
-            'test_name': scenario.name,
+            'test_name': self.scenario.name,
             'start_time': start_time,
             'end_time': end_time,
             'start_time_hr': start_time_hr,
@@ -87,13 +105,13 @@ class Benchmark:
         
         try:
             existing_df = pd.read_csv(CSV_FILE)
-            existing_df = existing_df[existing_df['test_name'] != scenario.name]  # Remove existing entry if any
+            existing_df = existing_df[existing_df['test_name'] != self.scenario.name]  # Remove existing entry if any
             df = pd.concat([existing_df, df], ignore_index=True)
         except FileNotFoundError:
             pass  # If file doesn't exist, we will create a new one
         
         df.to_csv(CSV_FILE, index=False)
-        print(f'Test result for "{scenario.name}" saved.')
+        print(f'Test result for "{self.scenario.name}" saved.')
 
 class Results:
     @classmethod

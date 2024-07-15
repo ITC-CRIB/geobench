@@ -82,10 +82,8 @@ class CommandLineTool:
             # Load testing scenario
             test_scenario = scenario.load_scenario(scenario_file, args)
             # Run the bencmark based on parsed scenario
-            benchmark = Benchmark()
-            benchmark.run(test_scenario)
-            # print(args.subcommand)
-            print(test_scenario)
+            benchmark = Benchmark(test_scenario)
+            benchmark.run()
         except MissingParameterError as e:
             print(e)
             sys.exit(1)
