@@ -3,13 +3,11 @@
 import argparse
 import datetime
 import sys
-import ansible_runner
 import os
 
 from benchmark import Benchmark
 from error import MissingParameterError
 from report import PrometheusMetricsReporter
-import utils
 
 import scenario
 
@@ -113,12 +111,12 @@ class CommandLineTool:
         print(args.subcommand)
         #print(f"{args.greet}, {args.name}!")
 
-    def handle_install(self, args, inventory_path):
-        r = ansible_runner.interface.run(
-                private_data_dir = 'ansible' ,
-                playbook='install.yml',
-                inventory=inventory_path
-            )
+    # def handle_install(self, args, inventory_path):
+    #     r = ansible_runner.interface.run(
+    #             private_data_dir = 'ansible' ,
+    #             playbook='install.yml',
+    #             inventory=inventory_path
+    #         )
 
 
 
