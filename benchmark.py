@@ -105,6 +105,7 @@ class Benchmark:
                     result = {
                         "command": decoded_command,
                         "repeat": i,
+                        "success": exec_result["success"],
                         "start_time": exec_result["start_time"],
                         "end_time": exec_result["end_time"],
                         "exec_time": exec_result["end_time"] - exec_result["start_time"],

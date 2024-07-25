@@ -41,7 +41,9 @@ def execute_command(command):
     exec_start_time = time.time()
     try:
         subprocess.run(command, shell=True, check=True)
+        results["success"] = True
     except subprocess.CalledProcessError as e:
+        results["success"] = False
         print(f"Command failed with {e.returncode}")
     results["finished"] = True
     monitor_thread.join()
