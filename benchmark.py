@@ -59,17 +59,14 @@ class Benchmark:
         self.result["process"] = running_process
         self._save_result()
 
-        # Measure start time
+        # Record software configuration
+        print("Recording software configuration")
+        software_config = recording.record_software_config()
+        self.result["software"] = software_config
+
+        # Measure start time of the whole tests
         start_time = time.time()
         start_time_hr = datetime.fromtimestamp(start_time).strftime('%Y-%m-%d %H:%M:%S')
-
-        # Running the playbook
-        # r = ansible_runner.interface.run(
-        #     private_data_dir = 'ansible' ,
-        #     playbook='run-scenario.yml',
-        #     extravars={'src_dir': input_dir, 'repeat': repeat, 'script_file': script_file, 'scenario_name': test_name, 'dir_name': dir_name},
-        #     inventory=inventory_path
-        # )
 
         # Decode user defined command string in yaml scenario file
         decoded_command = command.decode_qgis_command(self.scenario.command)
@@ -77,10 +74,10 @@ class Benchmark:
         # Store results
         result_list = []
 
-        # Run for any input combination
+        # Generate test for any input combination
         for idx_input, input in enumerate(self.scenario.inputs):
             decoded_command["INPUT"] = os.path.abspath(input)
-            # Run any combination of testing
+            # Generate test for any combination of parameters
             for idx, params in enumerate(self.scenario.combination):
                 # Get or create scenario directory
                 scen_dir = os.path.join(base_dir, f"set_{idx + 1}")
@@ -90,6 +87,7 @@ class Benchmark:
                 for key_param, value_param in params.items():
                     decoded_command[key_param] = value_param
 
+                # Generate for each repeatable test run
                 for i in range(1, self.scenario.repeat + 1):
                     # Get or create test run directory
                     repeat_dir = os.path.join(scen_dir, f"run_{i}")
@@ -123,7 +121,7 @@ class Benchmark:
                     print(command_string)
                     print()
 
-        # Measure end time
+        # Measure end time of a whole tests
         end_time = time.time()
         end_time_hr = datetime.fromtimestamp(end_time).strftime('%Y-%m-%d %H:%M:%S')
 
