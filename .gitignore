@@ -5,3 +5,4 @@ benchmark_results.csv
 __pycache__
 sample-output/
 sample-input/
+scenario.yaml

@@ -45,10 +45,19 @@ Follow these steps to set up GeoBench:
 
 ## Running
 
-An example YAML file, `example-scenario.yml`, is provided. To run the benchmark, use the following command:
+An example YAML file, `example-scenario.yml`, is provided. 
+
+Prepare the data and place it to `sample-input` directory.
+
+Create `scenario.yaml` file. You can copy from the example yaml file. You can also modify the scenario depending on the need.
+```
+cp example-scenario.yaml scenario.yaml
+```
+
+To run the benchmark, use the following command:
 
 ```bash
-python geobench run -f example-scenario.yml
+python geobench run -f scenario.yaml
 ```
 
 This will execute the benchmark as specified in the `example-scenario.yml` file.
