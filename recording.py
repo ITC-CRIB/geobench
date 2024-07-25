@@ -1,6 +1,6 @@
 import time
-import psutil
 import platform
+import psutil
 
 def get_system_info():
     # OS information
@@ -176,6 +176,15 @@ def record_process_info(duration=30):
     average_info = _calculate_average_usage(process_info)
 
     return average_info
+
+def monitor_usage(results):
+    cpu_usage = []
+    mem_usage = []
+    while not results.get("finished"):
+        cpu_usage.append(psutil.cpu_percent(interval=1))
+        mem_usage.append(psutil.virtual_memory().percent)
+    results["avg_cpu"] = sum(cpu_usage) / len(cpu_usage) if cpu_usage else 0
+    results["avg_mem"] = sum(mem_usage) / len(mem_usage) if mem_usage else 0
 
 def main():
     process_list = record_process_info()

@@ -18,8 +18,13 @@ Follow these steps to set up GeoBench:
    git clone https://github.com/ITC-CRIB/geobench
    cd geobench
    ```
+2. **Pull the repository**:
+   ```bash
+   cd geobench
+   git pull
+   ```
 
-2. **Set up and activate the Python environment**:
+3. **Set up and activate the Python environment**:
    - **Using `venv`**:
      ```bash
      python3 -m venv venv
@@ -33,7 +38,7 @@ Follow these steps to set up GeoBench:
      source .venv/bin/activate   # On Windows, use `venv\Scripts\activate`
      ```
 
-3. **Install required packages**:
+4. **Install required packages**:
    ```bash
    pip install -r requirements.txt
    ```
@@ -43,7 +48,7 @@ Follow these steps to set up GeoBench:
 An example YAML file, `example-scenario.yml`, is provided. To run the benchmark, use the following command:
 
 ```bash
-./geobench run -f example-scenario.yml
+python geobench run -f example-scenario.yml
 ```
 
 This will execute the benchmark as specified in the `example-scenario.yml` file.

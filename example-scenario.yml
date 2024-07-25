@@ -1,20 +1,18 @@
 name: ExampleBenchmark
-repeat: 10
-type: script
-command: "python test_script.py"
+repeat: 2
+type: qgis-command
+command: "qgis_process run native:buffer --distance_units=meters --area_units=m2 --ellipsoid=EPSG:7030 --INPUT='.../point_data.shp' --DISTANCE=0.001 --SEGMENTS=19 --END_CAP_STYLE=0 --JOIN_STYLE=0 --MITER_LIMIT=2 --DISSOLVE=false --SEPARATE_DISJOINT=false --OUTPUT='.../Result.shp"
 command-file: "path/to/command_file.sh"
 inputs:
-  - "path/to/input1.txt"
-  - "path/to/input2.csv"
+  - "./sample-input/enschede/point.shp"
 outputs:
-  OUTPUT: output.tiff
-  SUMMARY: summary.html
-  log: "path/to/log.txt"
+  OUTPUT: output.shp
+  SUMMARY: output.json
 temp-directory: "./sample-output"
 parameters:
-  param1: 
-    - value1
-  param2:
-    - value2
-    - value3
+  DISTANCE: 
+    - 0.001
+    - 0.002
+  DISSOLVE:
+    - "false"
 output-structure: nested

@@ -1,13 +1,13 @@
 import json
 import os
-import subprocess
 import time
 import pandas as pd
 from datetime import datetime
-import ansible_runner
+# import ansible_runner
 
 from scenario import Scenario
 import recording
+import command
 
 CSV_FILE = 'benchmark_results.csv'
 
@@ -53,7 +53,7 @@ class Benchmark:
         self._save_result()
 
         # Record process info for specific duration in seconds (e.x. 15 sec). Store recorded data on the file.
-        recording_duration = 15
+        recording_duration = 1
         print(f"Recording running process for {recording_duration} seconds")
         running_process = recording.record_process_info(duration=recording_duration)
         self.result["process"] = running_process
@@ -71,18 +71,56 @@ class Benchmark:
         #     inventory=inventory_path
         # )
 
-        # Run any combination of testing
-        for idx, params in enumerate(self.scenario.combination):
-            # Get or create scenario directory
-            scen_dir = os.path.join(base_dir, f"set_{idx + 1}")
-            self._makedirs_if_not_exists(scen_dir)
-            
-            for i in range(1, self.scenario.repeat + 1):
-                # Get or create test run directory
-                repeat_dir = os.path.join(scen_dir, f"run_{i}")
-                self._makedirs_if_not_exists(repeat_dir)
-                # Print for debugging
-                print(f"Running scenario with params {params} for repetition {i}. Output saved on {repeat_dir}")
+        # Decode user defined command string in yaml scenario file
+        decoded_command = command.decode_qgis_command(self.scenario.command)
+
+        # Store results
+        result_list = []
+
+        # Run for any input combination
+        for idx_input, input in enumerate(self.scenario.inputs):
+            decoded_command["INPUT"] = os.path.abspath(input)
+            # Run any combination of testing
+            for idx, params in enumerate(self.scenario.combination):
+                # Get or create scenario directory
+                scen_dir = os.path.join(base_dir, f"set_{idx + 1}")
+                self._makedirs_if_not_exists(scen_dir)
+
+                # Update the command parameter
+                for key_param, value_param in params.items():
+                    decoded_command[key_param] = value_param
+
+                for i in range(1, self.scenario.repeat + 1):
+                    # Get or create test run directory
+                    repeat_dir = os.path.join(scen_dir, f"run_{i}")
+                    self._makedirs_if_not_exists(repeat_dir)
+                    # Define the path of the execution output
+                    output_file_path = os.path.abspath(os.path.join(repeat_dir, f"{idx_input}_{self.scenario.outputs['OUTPUT']}"))
+                    decoded_command["OUTPUT"] = output_file_path
+                    # Encode the command to string
+                    command_string = command.encode_qgis_command(decoded_command)
+                    # Execute the command
+                    exec_result = command.execute_command(command_string)
+                    # Individual result
+                    result = {
+                        "command": decoded_command,
+                        "repeat": i,
+                        "start_time": exec_result["start_time"],
+                        "end_time": exec_result["end_time"],
+                        "exec_time": exec_result["end_time"] - exec_result["start_time"],
+                        "avg_cpu": exec_result["avg_cpu"],
+                        "avg_mem": exec_result["avg_mem"]
+                    }
+                    # Append result to the list
+                    result_list.append(result)
+                    # Store the temporary result to json output file
+                    self.result["results"] = result_list
+                    self._save_result()
+                    
+                    # Print for debugging
+                    print(f"Running scenario with params {params} for repetition {i}. Output saved on {repeat_dir}")
+                    print(command_string)
+                    print()
 
         # Measure end time
         end_time = time.time()
