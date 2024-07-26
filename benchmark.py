@@ -52,11 +52,23 @@ class Benchmark:
         self.result["system"] = system_info
         self._save_result()
 
-        # Record process info for specific duration in seconds (e.x. 15 sec). Store recorded data on the file.
+        # Record process info for specific duration in seconds (e.x. 15 sec).
         recording_duration = 1
-        print(f"Recording running process for {recording_duration} seconds")
+        print(f"Check running process for {recording_duration} seconds")
         running_process = recording.record_process_info(duration=recording_duration)
-        self.result["process"] = running_process
+        # self.result["process"] = running_process
+        # self._save_result()
+
+        # To Do: check if system is suitable for testing
+        # - Check the running process
+        # - Check the availability of the tools and libraries for running benchmark
+        # - Decide if the system is suitable for testing
+
+        # Baseline monitoring for specific duration in seconds (e.x. 15 sec). Store recorded data on the file.
+        recording_duration = 1
+        print(f"Baseline monitoring for {recording_duration} seconds")
+        baseline_results = recording.monitor_baseline(duration=recording_duration)
+        self.result["baseline"] = baseline_results
         self._save_result()
 
         # Record software configuration
@@ -74,6 +86,7 @@ class Benchmark:
         # Store results
         result_list = []
 
+        print("Generating test scenario")
         # Generate test for any input combination
         for idx_input, input in enumerate(self.scenario.inputs):
             decoded_command["INPUT"] = os.path.abspath(input)
@@ -92,34 +105,37 @@ class Benchmark:
                     # Get or create test run directory
                     repeat_dir = os.path.join(scen_dir, f"run_{i}")
                     self._makedirs_if_not_exists(repeat_dir)
+                    # Record the running process before test run
+                    print(f"Recording running process for {recording_duration} seconds")
+                    running_process = recording.record_process_info(duration=1)
                     # Define the path of the execution output
                     output_file_path = os.path.abspath(os.path.join(repeat_dir, f"{idx_input}_{self.scenario.outputs['OUTPUT']}"))
                     decoded_command["OUTPUT"] = output_file_path
                     # Encode the command to string
                     command_string = command.encode_qgis_command(decoded_command)
+                    # Print for debugging
+                    print(f"Running scenario with params {params} for repetition {i}. Output saved on {repeat_dir}")
+                    print(command_string)
+                    print()
                     # Execute the command
                     exec_result = command.execute_command(command_string)
                     # Individual result
                     result = {
-                        "command": decoded_command,
+                        "parameters": decoded_command,
                         "repeat": i,
                         "success": exec_result["success"],
                         "start_time": exec_result["start_time"],
                         "end_time": exec_result["end_time"],
                         "exec_time": exec_result["end_time"] - exec_result["start_time"],
                         "avg_cpu": exec_result["avg_cpu"],
-                        "avg_mem": exec_result["avg_mem"]
+                        "avg_mem": exec_result["avg_mem"],
+                        "process": running_process
                     }
                     # Append result to the list
                     result_list.append(result)
                     # Store the temporary result to json output file
                     self.result["results"] = result_list
                     self._save_result()
-                    
-                    # Print for debugging
-                    print(f"Running scenario with params {params} for repetition {i}. Output saved on {repeat_dir}")
-                    print(command_string)
-                    print()
 
         # Measure end time of a whole tests
         end_time = time.time()
@@ -148,7 +164,7 @@ class Benchmark:
             pass  # If file doesn't exist, we will create a new one
         
         df.to_csv(CSV_FILE, index=False)
-        print(f'Test result for "{self.scenario.name}" saved.')
+        print(f'Test finished. Result for "{self.scenario.name}" saved.')
 
 class Results:
     @classmethod

@@ -171,16 +171,39 @@ def _calculate_average_usage(process_info):
     average_info.sort(key=lambda x: x['avg_memory_usage'], reverse=True)
     return average_info
 
-# Record process for specific duration, then calculate the average
+# Record running process for specific duration, then calculate the average CPU and memory usage
 def record_process_info(duration=30):
     process_info = _record_process_info(duration=duration, interval=1)
     average_info = _calculate_average_usage(process_info)
 
     return average_info
 
+# Perform baseline monitoring for a specific duration. The function return the average CPU and memory usage.
+def monitor_baseline(duration=15):
+    results = {}
+    cpu_usage = []
+    mem_usage = []
+
+    # Define the start time
+    start_time = time.time()
+
+    # Define the duration for which the code should run (in seconds)
+    duration = 15
+
+    # Loop until the specified duration has passed
+    while time.time() - start_time < duration:
+        cpu_usage.append(psutil.cpu_percent(interval=1))
+        mem_usage.append(psutil.virtual_memory().percent)
+        time.sleep(0.1)
+    results["avg_cpu"] = sum(cpu_usage) / len(cpu_usage) if cpu_usage else 0
+    results["avg_mem"] = sum(mem_usage) / len(mem_usage) if mem_usage else 0
+    return results
+
+# Perform monitoring during benchmark. The function return the average CPU and memory usage.
 def monitor_usage(results):
     cpu_usage = []
     mem_usage = []
+    # Loop until execution is finished
     while not results.get("finished"):
         cpu_usage.append(psutil.cpu_percent(interval=1))
         mem_usage.append(psutil.virtual_memory().percent)
