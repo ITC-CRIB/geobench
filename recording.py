@@ -187,9 +187,6 @@ def monitor_baseline(duration=15):
     # Define the start time
     start_time = time.time()
 
-    # Define the duration for which the code should run (in seconds)
-    duration = 15
-
     # Loop until the specified duration has passed
     while time.time() - start_time < duration:
         cpu_usage.append(psutil.cpu_percent(interval=1))
