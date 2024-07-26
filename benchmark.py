@@ -114,6 +114,7 @@ class Benchmark:
                     # Encode the command to string
                     command_string = command.encode_qgis_command(decoded_command)
                     # Print for debugging
+                    print()
                     print(f"Running scenario with params {params} for repetition {i}. Output saved on {repeat_dir}")
                     print(command_string)
                     print()
