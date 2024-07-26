@@ -59,10 +59,11 @@ class Benchmark:
         # self.result["process"] = running_process
         # self._save_result()
 
-        # To Do: check if system is suitable for testing
-        # - Check the running process
-        # - Check the availability of the tools and libraries for running benchmark
-        # - Decide if the system is suitable for testing
+        # Check the availability of the tools and libraries for running benchmark
+        print(f"Check requirement for {self.scenario.type} type")
+        command.check_requirement(command_type=self.scenario.type)
+        
+        # To do: Decide if the system is suitable for testing
 
         # Baseline monitoring for specific duration in seconds (e.x. 15 sec). Store recorded data on the file.
         recording_duration = 1

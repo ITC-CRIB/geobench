@@ -1,3 +1,4 @@
+import sys
 import error
 import subprocess
 import threading
@@ -32,6 +33,19 @@ def encode_qgis_command(command_dict):
     # Join the command and parameters into a single string
     command_str = command + ' ' + ' '.join(params)
     return command_str
+
+def check_requirement(command_type="qgis-command"):
+    if command_type == "qgis-command":
+        try:
+            # Try to run 'qgis_process' with the '--help' flag
+            result = subprocess.run(['qgis_process', '--help'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if result.returncode == 0:
+                print("qgis_process command exists.")
+        except FileNotFoundError:
+            print("qgis_process command not found. Please ensure QGIS is installed and the command is available in the system PATH.")
+            sys.exit(1)
+        except subprocess.CalledProcessError:
+            raise Exception("qgis_process command exists but returned an error.")
 
 def execute_command(command):
     results = {"finished": False}
