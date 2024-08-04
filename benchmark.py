@@ -74,15 +74,21 @@ class Benchmark:
 
         # Record software configuration
         print("Recording software configuration")
-        software_config = recording.record_software_config()
+        software_config = command.get_software_config()
         self.result["software"] = software_config
+        exec_path = software_config["exec_path"]
 
         # Measure start time of the whole tests
         start_time = time.time()
         start_time_hr = datetime.fromtimestamp(start_time).strftime('%Y-%m-%d %H:%M:%S')
 
-        # Decode user defined command string in yaml scenario file
-        decoded_command = command.decode_qgis_command(self.scenario.command)
+        decoded_params = {}
+        if(self.scenario.type == "qgis-command"):
+            # Decode user defined command string in yaml scenario file
+            decoded_params = command.decode_qgis_command(self.scenario.command)
+        elif(self.scenario.type == "qgis-python"):
+            # Decode user defined command string in yaml scenario file
+            decoded_params = command.decode_qgis_python(self.scenario.command_file)
 
         # Store results
         result_list = []
@@ -90,7 +96,7 @@ class Benchmark:
         print("Generating test scenario")
         # Generate test for any input combination
         for idx_input, input in enumerate(self.scenario.inputs):
-            decoded_command["INPUT"] = os.path.abspath(input)
+            decoded_params["INPUT"] = os.path.abspath(input)
             # Generate test for any combination of parameters
             for idx, params in enumerate(self.scenario.combination):
                 # Get or create scenario directory
@@ -99,7 +105,7 @@ class Benchmark:
 
                 # Update the command parameter
                 for key_param, value_param in params.items():
-                    decoded_command[key_param] = value_param
+                    decoded_params[key_param] = value_param
 
                 # Generate for each repeatable test run
                 for i in range(1, self.scenario.repeat + 1):
@@ -111,9 +117,15 @@ class Benchmark:
                     running_process = recording.record_process_info(duration=1)
                     # Define the path of the execution output
                     output_file_path = os.path.abspath(os.path.join(repeat_dir, f"{idx_input}_{self.scenario.outputs['OUTPUT']}"))
-                    decoded_command["OUTPUT"] = output_file_path
-                    # Encode the command to string
-                    command_string = command.encode_qgis_command(decoded_command)
+                    decoded_params["OUTPUT"] = output_file_path
+                    if(self.scenario.type == "qgis-command"):
+                        # Encode the command to string
+                        command_string = command.encode_qgis_command(decoded_params)
+                        command_string = f"{exec_path} {command_string}"
+                    elif(self.scenario.type == "qgis-python"):
+                        program_path = command.generate_qgis_python(self.scenario.command_file, decoded_params, repeat_dir)
+                        command_string = f"{exec_path} {program_path}"
+                    
                     # Print for debugging
                     print()
                     print(f"Running scenario with params {params} for repetition {i}. Output saved on {repeat_dir}")
@@ -123,7 +135,7 @@ class Benchmark:
                     exec_result = command.execute_command(command_string)
                     # Individual result
                     result = {
-                        "parameters": decoded_command,
+                        "parameters": decoded_params,
                         "repeat": i,
                         "success": exec_result["success"],
                         "start_time": exec_result["start_time"],

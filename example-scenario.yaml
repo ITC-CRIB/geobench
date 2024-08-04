@@ -2,7 +2,6 @@ name: ExampleBenchmark
 repeat: 2
 type: qgis-command
 command: "qgis_process run native:buffer --distance_units=meters --area_units=m2 --ellipsoid=EPSG:7030 --INPUT='.../point_data.shp' --DISTANCE=0.001 --SEGMENTS=19 --END_CAP_STYLE=0 --JOIN_STYLE=0 --MITER_LIMIT=2 --DISSOLVE=false --SEPARATE_DISJOINT=false --OUTPUT='.../Result.shp"
-command-file: "path/to/command_file.sh"
 inputs:
   - "./sample-input/enschede/point.shp"
 outputs:

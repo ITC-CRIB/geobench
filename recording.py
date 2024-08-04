@@ -207,9 +207,9 @@ def monitor_usage(results):
     results["avg_cpu"] = sum(cpu_usage) / len(cpu_usage) if cpu_usage else 0
     results["avg_mem"] = sum(mem_usage) / len(mem_usage) if mem_usage else 0
 
-def get_qgis_plugins():
+def get_qgis_plugins(qgis_process_path):
     # Execute the shell command
-    result = subprocess.run(['qgis_process', 'plugins'], capture_output=True, text=True)
+    result = subprocess.run([qgis_process_path, 'plugins'], capture_output=True, text=True)
 
     # Capture the output
     output = result.stdout
@@ -225,32 +225,6 @@ def get_qgis_plugins():
             plugin_names.append(plugin_name)
 
     return plugin_names
-
-def get_qgis_config():
-    # Execute the shell command
-    result = subprocess.run(['qgis_process', '--version'], capture_output=True, text=True)
-
-    # Capture the output
-    version = result.stdout
-
-    # Split the output text into lines
-    lines = version.splitlines()
-    
-    # Initialize an empty list to store the relevant lines
-    parsed_lines = []
-    
-    # Iterate over each line
-    for line in lines:
-        line = line.strip()
-        # Skip lines that contain warnings or errors
-        if "Cannot" not in line:
-            parsed_lines.append(line)
-    
-    return parsed_lines
-
-def record_software_config():
-    software_config = get_qgis_config()
-    return software_config
 
 def main():
     process_list = record_process_info()
