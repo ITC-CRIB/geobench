@@ -1,5 +1,0 @@
-rioxarray
-pystac_client
-shapely
-dask
-distributed

@@ -31,7 +31,7 @@ else:
 for path in qgis_python_plugin_path:
     sys.path.append(path)
 
-from qgis.core import QgsApplication, QgsVectorLayer
+from qgis.core import QgsApplication
 from qgis.analysis import QgsNativeAlgorithms
 QgsApplication.setPrefixPath(qgis_prefix_path, True)
 
@@ -43,7 +43,7 @@ import processing
 from processing.core.Processing import Processing
 
 Processing.initialize()
-QgsApplication.processingRegistry().addProvider(QgsNativeAlgorithms())
+# QgsApplication.processingRegistry().addProvider(QgsNativeAlgorithms())
 
 processing.run("native:buffer", {'INPUT':'/Users/bhawiyuga/project/geobench/sample-input/enschede/polygon.shp','DISTANCE':10,'SEGMENTS':5,'END_CAP_STYLE':0,'JOIN_STYLE':0,'MITER_LIMIT':2,'DISSOLVE':False,'SEPARATE_DISJOINT':False,'OUTPUT':'/Users/bhawiyuga/project/geobench/sample-output/hello.shp'})
 

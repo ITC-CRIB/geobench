@@ -74,9 +74,9 @@ class Benchmark:
 
         # Record software configuration
         print("Recording software configuration")
-        software_config = command.get_software_config()
-        self.result["software"] = software_config
+        software_config = command.get_software_config(self.scenario.type)
         exec_path = software_config["exec_path"]
+        self.result["software"] = software_config
 
         # Measure start time of the whole tests
         start_time = time.time()

@@ -6,3 +6,5 @@ __pycache__
 sample-output/
 sample-input/
 scenario.yaml
+.venv
+venv
