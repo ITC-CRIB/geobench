@@ -96,7 +96,9 @@ class Benchmark:
         print("Generating test scenario")
         # Generate test for any input combination
         for idx_input, input in enumerate(self.scenario.inputs):
-            decoded_params["INPUT"] = os.path.abspath(input)
+            abs_path = os.path.abspath(input)
+            print(f"DEBUG Path: {abs_path}")
+            decoded_params["INPUT"] = abs_path
             # Generate test for any combination of parameters
             for idx, params in enumerate(self.scenario.combination):
                 # Get or create scenario directory
@@ -120,19 +122,19 @@ class Benchmark:
                     decoded_params["OUTPUT"] = output_file_path
                     if(self.scenario.type == "qgis-command"):
                         # Encode the command to string
-                        command_string = command.encode_qgis_command(decoded_params)
-                        command_string = f"{exec_path} {command_string}"
+                        command_params = command.encode_qgis_command(decoded_params)
+                        # command_string = fr"{exec_path} {command_string}"
                     elif(self.scenario.type == "qgis-python"):
-                        program_path = command.generate_qgis_python(self.scenario.command_file, decoded_params, repeat_dir)
-                        command_string = f"{exec_path} {program_path}"
+                        command_params = command.generate_qgis_python(self.scenario.command_file, decoded_params, repeat_dir)
+                        # command_string = fr"{exec_path} {program_path}"
                     
                     # Print for debugging
                     print()
                     print(f"Running scenario with params {params} for repetition {i}. Output saved on {repeat_dir}")
-                    print(command_string)
+                    print(command_params)
                     print()
                     # Execute the command
-                    exec_result = command.execute_command(command_string)
+                    exec_result = command.execute_command(exec_path, [command_params])
                     # Individual result
                     result = {
                         "parameters": decoded_params,

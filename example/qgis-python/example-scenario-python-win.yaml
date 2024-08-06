@@ -1,0 +1,17 @@
+name: ExampleBenchmark
+repeat: 2
+type: qgis-python
+command-file: 'C:\Users\adhit\project\sample\qgis-python\program.py'
+inputs:
+  - "C:\\Users\\adhit\\project\\sample\\enschede\\point.shp"
+outputs:
+  OUTPUT: output.shp
+  SUMMARY: output.json
+temp-directory: 'C:\Users\adhit\project\sample\sample-output'
+parameters:
+  DISTANCE: 
+    - 0.001
+    - 0.002
+  DISSOLVE:
+    - "false"
+output-structure: nested

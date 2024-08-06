@@ -51,7 +51,8 @@ def _extract_parameters_from_code(code_snippet):
         else:
             return None
     except Exception as e:
-        return str(e)
+        print(f"Error when extracting parameter from Python program: {e}")
+        sys.exit(1)
 
 def _decode_parameters(parameter_str):
     try:
@@ -59,15 +60,18 @@ def _decode_parameters(parameter_str):
         param_dict = ast.literal_eval(parameter_str)
         return param_dict
     except Exception as e:
-        return str(e)
+        print(f"Error when decoding parameter from Python program: {e}")
+        sys.exit(1)
 
 def _encode_parameters(param_dict):
     try:
         # Encode the dictionary back into a string
         param_str = str(param_dict)
+        param_str = param_str.replace("\\", "\\\\")
         return param_str
     except Exception as e:
-        return str(e)
+        print(f"Error when encoding dictionary to Python program: {e}")
+        sys.exit(1)
 
 def _replace_parameters_in_code(code_snippet, new_param_str):
     try:
@@ -76,7 +80,8 @@ def _replace_parameters_in_code(code_snippet, new_param_str):
         new_code = pattern.sub(rf"\1{new_param_str}\2", code_snippet)
         return new_code
     except Exception as e:
-        return str(e)
+        print(f"Error when replacing generated code to Python program: {e}")
+        sys.exit(1)
 
 def decode_qgis_python(program_path):
     decoded_params = {}
@@ -120,6 +125,7 @@ def get_software_config(command_type="qgis-command"):
                 try:
                     # Get executable path of qgis_process
                     qgis_python_path = get_qgis_python_path(qgis_basedir_path)
+                    print(f"- Found qgis python path in {qgis_python_path}")
                     # Try to run 'qgis_process' with the '--help' flag
                     result = subprocess.run([qgis_python_path, '--version'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                     if result.returncode == 0:
@@ -162,13 +168,14 @@ def _parse_qgis_plugins(version):
     
     return parsed_lines
 
-def execute_command(command):
+def execute_command(command, params=[]):
     results = {"finished": False}
     monitor_thread = threading.Thread(target=monitor_usage, args=(results,))
     monitor_thread.start()
     
     exec_start_time = time.time()
     try:
+        command = [command] + params
         subprocess.run(command, shell=True, check=True)
         results["success"] = True
     except subprocess.CalledProcessError as e:
@@ -195,7 +202,11 @@ def get_qgis_process_path(qgis_basedir_path):
         qgis_bin_dir = os.path.join(qgis_basedir_path, "bin")
     else:
         raise OSError('Unsupported operating system')
-    return find_file_prefix(qgis_bin_dir, "qgis_process")
+    path_result = find_file_prefix(qgis_bin_dir, "qgis_process")
+    if path_result is None:
+        print("QGIS process path not found")
+        sys.exit(1)
+    return path_result
 
 def get_qgis_python_path(qgis_basedir_path):
     # QGIS binary directory
@@ -204,19 +215,41 @@ def get_qgis_python_path(qgis_basedir_path):
     os_type = platform.system()
     if os_type == 'Windows':
         qgis_apps_dir = os.path.join(qgis_basedir_path, "apps")
-        qgis_python_dir = find_file_prefix(qgis_apps_dir, "Python")
+        qgis_python_dir = find_dir_prefix(qgis_apps_dir, "Python")
         if qgis_python_dir is None:
             return None
-        qgis_bin_dir =  os.path.join(qgis_python_dir, "bin")
+        qgis_bin_dir =  os.path.join(qgis_python_dir)
     elif os_type == 'Linux':
         qgis_bin_dir = f'{qgis_basedir_path}'
     elif os_type == 'Darwin':  # macOS
         qgis_bin_dir = os.path.join(qgis_basedir_path, "bin")
     else:
         raise OSError('Unsupported operating system')
-    return find_file_prefix(qgis_bin_dir, "python3")
+    path_result = find_file_prefix(qgis_bin_dir, "python3")
+    if path_result is None:
+        print("QGIS Python path not found")
+        sys.exit(1)
+    return path_result
 
 def find_file_prefix(directory, prefix):
+    executable_extensions = ['.exe', '.bat', '.cmd', '.com', '.ps1']
+    # Check if the directory exists
+    if not os.path.isdir(directory):
+        print(f"The directory {directory} does not exist.")
+        return None
+    # List all files in the directory
+    for file_name in os.listdir(directory):
+        # Check if the file name starts with the given prefix and is an executable
+        if file_name.startswith(prefix):
+            if platform.system() == 'Windows':
+                if file_name.lower().endswith(tuple(executable_extensions)):
+                    return os.path.join(directory, file_name)
+            else:
+                return os.path.join(directory, file_name)
+    return None
+
+def find_dir_prefix(directory, prefix):
+    executable_extensions = ['.exe', '.bat', '.cmd', '.com', '.ps1']
     # Check if the directory exists
     if not os.path.isdir(directory):
         print(f"The directory {directory} does not exist.")
