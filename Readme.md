@@ -47,6 +47,11 @@ Follow these steps to set up GeoBench:
 	pipx install . --force
 	```
 
+- Update program path to be recognized in system
+	```
+	pipx ensurepath
+	```
+
 - Note: to update the tool, you need to pull from github and do the installation again.
 
 ## Development
