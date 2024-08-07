@@ -8,3 +8,6 @@ sample-input/
 scenario.yaml
 .venv
 venv
+geobench.egg-info/
+__pycache__/
+build/

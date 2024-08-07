@@ -1,5 +1,5 @@
 import sys
-import error
+
 import subprocess
 import threading
 import time
@@ -8,7 +8,8 @@ import ast
 import re
 import platform
 
-from recording import monitor_usage
+from . import error
+from .recording import monitor_usage
 
 def decode_qgis_command(command_str):
     parts = command_str.split()
@@ -112,7 +113,7 @@ def get_software_config(command_type="qgis-command"):
             qgis_basedir_path = get_qgis_directory()
             # Get executable path of qgis_process
             qgis_process_path = get_qgis_process_path(qgis_basedir_path)
-            # Try to run 'qgis_process' with the '--help' flag
+            # Try to run 'qgis_process' with the '--version' flag
             qgis_version = subprocess.run([qgis_process_path, '--version'], capture_output=True, text=True)
             if qgis_version.returncode == 0:
                 print(f"- Found qgis_process path in {qgis_process_path}")
@@ -126,7 +127,7 @@ def get_software_config(command_type="qgis-command"):
                     # Get executable path of qgis_process
                     qgis_python_path = get_qgis_python_path(qgis_basedir_path)
                     print(f"- Found qgis python path in {qgis_python_path}")
-                    # Try to run 'qgis_process' with the '--help' flag
+                    # Try to run 'python' qgis with the '--version' flag
                     result = subprocess.run([qgis_python_path, '--version'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                     if result.returncode == 0:
                         print("The QGIS python command exists.")
@@ -143,10 +144,12 @@ def get_software_config(command_type="qgis-command"):
             else:
                 print("Invalid process type. The program only support following type [qgis-command, qgis-python]")
                 sys.exit(1)
-        except FileNotFoundError:
-            print("qgis_process command not found. Please ensure QGIS is installed.n \
-                   - For Windows: setx QGIS_PATH=path_to_your_QGIS_installation\n \
+        except FileNotFoundError as e:
+            print("qgis_process command not found. Please ensure QGIS is installed.\n \
+                   - For Windows (using Command Line): set QGIS_PATH=path_to_your_QGIS_installation\n \
+                   - For Windows (using PowerShell): $env:QGIS_PATH=path_to_your_QGIS_installation\n \
                    - For Linux/MacOS: export QGIS_PATH=path_to_your_QGIS_installation")
+            print(f"Specific error message: {e}")
             sys.exit(1)
         except subprocess.CalledProcessError:
             print("qgis_process command exists but returned an error.")
@@ -204,8 +207,7 @@ def get_qgis_process_path(qgis_basedir_path):
         raise OSError('Unsupported operating system')
     path_result = find_file_prefix(qgis_bin_dir, "qgis_process")
     if path_result is None:
-        print("QGIS process path not found")
-        sys.exit(1)
+        raise FileNotFoundError("QGIS process path not found")
     return path_result
 
 def get_qgis_python_path(qgis_basedir_path):
@@ -227,8 +229,7 @@ def get_qgis_python_path(qgis_basedir_path):
         raise OSError('Unsupported operating system')
     path_result = find_file_prefix(qgis_bin_dir, "python3")
     if path_result is None:
-        print("QGIS Python path not found")
-        sys.exit(1)
+        raise FileNotFoundError("QGIS Python path not found")
     return path_result
 
 def find_file_prefix(directory, prefix):

@@ -2,7 +2,7 @@ import yaml
 import itertools
 import re
 
-from error import MissingParameterError
+from .error import MissingParameterError
 
 # Define the scenario structure
 class Scenario:

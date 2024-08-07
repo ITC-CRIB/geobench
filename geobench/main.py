@@ -5,11 +5,11 @@ import datetime
 import sys
 import os
 
-from benchmark import Benchmark
-from error import MissingParameterError
-from report import PrometheusMetricsReporter
+from .benchmark import Benchmark
+from .error import MissingParameterError
+from .report import PrometheusMetricsReporter
 
-import scenario
+from . import scenario
 
 class CommandLineTool:
     def __init__(self):
@@ -118,8 +118,9 @@ class CommandLineTool:
     #             inventory=inventory_path
     #         )
 
-
-
-if __name__ == "__main__":
+def main():
     tool = CommandLineTool()
     tool.run()
+
+if __name__ == "__main__":
+    main()

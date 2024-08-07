@@ -5,9 +5,9 @@ import pandas as pd
 from datetime import datetime
 # import ansible_runner
 
-from scenario import Scenario
-import recording
-import command
+from .scenario import Scenario
+from . import recording
+from . import command
 
 CSV_FILE = 'benchmark_results.csv'
 
@@ -53,7 +53,7 @@ class Benchmark:
         self._save_result()
 
         # Record process info for specific duration in seconds (e.x. 15 sec).
-        recording_duration = 1
+        recording_duration = 10
         print(f"Check running process for {recording_duration} seconds")
         running_process = recording.record_process_info(duration=recording_duration)
         # self.result["process"] = running_process
@@ -66,7 +66,6 @@ class Benchmark:
         # To do: Decide if the system is suitable for testing
 
         # Baseline monitoring for specific duration in seconds (e.x. 15 sec). Store recorded data on the file.
-        recording_duration = 1
         print(f"Baseline monitoring for {recording_duration} seconds")
         baseline_results = recording.monitor_baseline(duration=recording_duration)
         self.result["baseline"] = baseline_results
@@ -97,7 +96,6 @@ class Benchmark:
         # Generate test for any input combination
         for idx_input, input in enumerate(self.scenario.inputs):
             abs_path = os.path.abspath(input)
-            print(f"DEBUG Path: {abs_path}")
             decoded_params["INPUT"] = abs_path
             # Generate test for any combination of parameters
             for idx, params in enumerate(self.scenario.combination):
@@ -116,7 +114,7 @@ class Benchmark:
                     self._makedirs_if_not_exists(repeat_dir)
                     # Record the running process before test run
                     print(f"Recording running process for {recording_duration} seconds")
-                    running_process = recording.record_process_info(duration=1)
+                    running_process = recording.record_process_info(duration=recording_duration)
                     # Define the path of the execution output
                     output_file_path = os.path.abspath(os.path.join(repeat_dir, f"{idx_input}_{self.scenario.outputs['OUTPUT']}"))
                     decoded_params["OUTPUT"] = output_file_path
