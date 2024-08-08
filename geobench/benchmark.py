@@ -131,9 +131,11 @@ class Benchmark:
                     if(self.scenario.type == "qgis-command"):
                         # Encode the command to string
                         command_params = command.encode_qgis_command(decoded_params)
+                        command_params = command_params.split()
                         # command_string = fr"{exec_path} {command_string}"
                     elif(self.scenario.type == "qgis-python"):
                         command_params = command.generate_qgis_python(self.scenario.command_file, decoded_params, repeat_dir)
+                        command_params = [command_params]
                         # command_string = fr"{exec_path} {program_path}"
                     
                     # Print for debugging
@@ -142,7 +144,7 @@ class Benchmark:
                     print(f"{exec_path} {command_params}")
                     print()
                     # Execute the command
-                    exec_result = command.execute_command(exec_path, [command_params])
+                    exec_result = command.execute_command(exec_path, command_params)
                     # Individual result
                     result = {
                         "parameters": decoded_params,
