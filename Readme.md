@@ -122,6 +122,9 @@ In this scenario type, the QGIS benchmarking is performed by running QGIS python
 	```bash
 	geobench run -f sample-input/example-scenario-python.yaml
 	```
+## Environment Variables
+- `QGIS_PATH`: defining the installation path of QGIS
+- `GB_RECORD_DURATION`: defining the system recording duration (in seconds)
 ---
 
 Feel free to contribute to the development of GeoBench by submitting issues or pull requests on the repository. For more details on contributing, please refer to the CONTRIBUTING.md file in the repository.

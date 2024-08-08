@@ -52,8 +52,17 @@ class Benchmark:
         self.result["system"] = system_info
         self._save_result()
 
-        # Record process info for specific duration in seconds (e.x. 15 sec).
-        recording_duration = 0.5
+        # Record process info for specific duration in seconds (e.x. 15s). Default value is 10s.
+        recording_duration = 10
+        # Read recording duration value from environment
+        recording_duration_env = os.getenv('GB_RECORD_DURATION')
+        if recording_duration_env:
+            # Try to convert to integer
+            try :
+                recording_duration = float(recording_duration_env)
+            except (ValueError, TypeError):
+                # Use default value
+                pass
         print(f"Check running process for {recording_duration} seconds\n")
         running_process = recording.record_process_info(duration=recording_duration)
         # self.result["process"] = running_process
