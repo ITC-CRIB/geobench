@@ -129,8 +129,8 @@ def get_software_config(command_type="qgis-command"):
                     print(f"- Found qgis python path in {qgis_python_path}")
                     # Try to run 'python' qgis with the '--version' flag
                     result = subprocess.run([qgis_python_path, '--version'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    if result.returncode == 0:
-                        print("The QGIS python command exists.")
+                    # if result.returncode == 0:
+                    #     print("- The qgis python command works.\n")
                     software_config["exec_path"] = qgis_python_path
                     return software_config
                 except FileNotFoundError:
@@ -179,7 +179,7 @@ def execute_command(command, params=[]):
     exec_start_time = time.time()
     try:
         command = [command] + params
-        subprocess.run(command, shell=True, check=True)
+        subprocess.run(command, shell=False, check=True)
         results["success"] = True
     except subprocess.CalledProcessError as e:
         results["success"] = False
@@ -271,7 +271,7 @@ def get_qgis_directory():
     # Provide default directory based on the operating system
     os_type = platform.system()
     if os_type == 'Windows':
-        return r'C:\Program Files\QGIS'
+        return r'C:\\Program Files\\QGIS'
     elif os_type == 'Linux':
         return '/usr/bin'
     elif os_type == 'Darwin':  # macOS

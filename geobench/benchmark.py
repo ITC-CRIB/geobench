@@ -47,26 +47,26 @@ class Benchmark:
         self._makedirs_if_not_exists(base_dir)
 
         # Record system configuration. Store recorded data on the file.
-        print("Recording system configuration")
+        print("Recording system configuration\n")
         system_info = recording.get_system_info()
         self.result["system"] = system_info
         self._save_result()
 
         # Record process info for specific duration in seconds (e.x. 15 sec).
-        recording_duration = 10
-        print(f"Check running process for {recording_duration} seconds")
+        recording_duration = 0.5
+        print(f"Check running process for {recording_duration} seconds\n")
         running_process = recording.record_process_info(duration=recording_duration)
         # self.result["process"] = running_process
         # self._save_result()
 
         # Check the availability of the tools and libraries for running benchmark
-        print(f"Check requirement for {self.scenario.type} type")
+        print(f"Check system requirement\n")
         command.check_requirement(command_type=self.scenario.type)
         
         # To do: Decide if the system is suitable for testing
 
         # Baseline monitoring for specific duration in seconds (e.x. 15 sec). Store recorded data on the file.
-        print(f"Baseline monitoring for {recording_duration} seconds")
+        print(f"Baseline monitoring for {recording_duration} seconds\n")
         baseline_results = recording.monitor_baseline(duration=recording_duration)
         self.result["baseline"] = baseline_results
         self._save_result()
@@ -76,6 +76,7 @@ class Benchmark:
         software_config = command.get_software_config(self.scenario.type)
         exec_path = software_config["exec_path"]
         self.result["software"] = software_config
+        print()
 
         # Measure start time of the whole tests
         start_time = time.time()
@@ -92,7 +93,7 @@ class Benchmark:
         # Store results
         result_list = []
 
-        print("Generating test scenario")
+        print("Generating test scenario\n")
         # Generate test for any input combination
         for idx_input, input in enumerate(self.scenario.inputs):
             abs_path = os.path.abspath(input)
@@ -113,7 +114,7 @@ class Benchmark:
                     repeat_dir = os.path.join(scen_dir, f"run_{i}")
                     self._makedirs_if_not_exists(repeat_dir)
                     # Record the running process before test run
-                    print(f"Recording running process for {recording_duration} seconds")
+                    print(f"Recording running process for {recording_duration} seconds\n")
                     running_process = recording.record_process_info(duration=recording_duration)
                     # Define the path of the execution output
                     output_file_path = os.path.abspath(os.path.join(repeat_dir, f"{idx_input}_{self.scenario.outputs['OUTPUT']}"))
@@ -129,7 +130,7 @@ class Benchmark:
                     # Print for debugging
                     print()
                     print(f"Running scenario with params {params} for repetition {i}. Output saved on {repeat_dir}")
-                    print(command_params)
+                    print(f"{exec_path} {command_params}")
                     print()
                     # Execute the command
                     exec_result = command.execute_command(exec_path, [command_params])
