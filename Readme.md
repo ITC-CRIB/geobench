@@ -125,6 +125,20 @@ In this scenario type, the QGIS benchmarking is performed by running QGIS python
 ## Environment Variables
 - `QGIS_PATH`: defining the installation path of QGIS
 - `GB_RECORD_DURATION`: defining the system recording duration (in seconds)
+
+## Development Roadmap
+- [x] Recording the system configuration including the OS, computer name, CPU, memory, disk. This feature has been tested in MacOS and Windows. The output is written to file in JSON structure.
+- [x] Recording the running process of a computer for a specific duration. The program tracks and calculates the average CPU and memory usage of each running process.
+- [x] The program checks the availability of the GIS command/libraries on the computer. For the time being the program supports `qgis_process` and QGIS `python` command checking.
+- [x] Perform baseline monitoring to record the average CPU and memory usage for a specific duration. The output is written to file in JSON structure.
+- [x] Generate any possible test combination from the parameters and input defined on the YAML scenario file. For the time being, the program supports `qgis-command` and `qgis-python` type of execution.
+- [x] Record running process for a specific duration before execution is performed. The output is stored to file in JSON strcuture.
+- [x] Execute the generated command and store the command output to a specific folder. For the time being, our program supports nested directory structure for the output.
+- [x] During the execution, our program records parameters as well as following metrics: average CPU and memory usage, start time, end time, and execution time.
+- [] Support `arcgis` and `qgis-json` type of execution
+- [] Support flat output directory structure
+- [] Suitability criteria to decide whether the execution should be continued
+- [] System cleaning and preparation
 ---
 
 Feel free to contribute to the development of GeoBench by submitting issues or pull requests on the repository. For more details on contributing, please refer to the CONTRIBUTING.md file in the repository.
