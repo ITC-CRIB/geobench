@@ -135,10 +135,10 @@ In this scenario type, the QGIS benchmarking is performed by running QGIS python
 - [x] Record running process for a specific duration before execution is performed. The output is stored to file in JSON strcuture.
 - [x] Execute the generated command and store the command output to a specific folder. For the time being, our program supports nested directory structure for the output.
 - [x] During the execution, our program records parameters as well as following metrics: average CPU and memory usage, start time, end time, and execution time.
-- [] Support `arcgis` and `qgis-json` type of execution
-- [] Support flat output directory structure
-- [] Suitability criteria to decide whether the execution should be continued
-- [] System cleaning and preparation
+- [ ] Support `arcgis` and `qgis-json` type of execution
+- [ ] Support flat output directory structure
+- [ ] Suitability criteria to decide whether the execution should be continued
+- [ ] System cleaning and preparation
 ---
 
 Feel free to contribute to the development of GeoBench by submitting issues or pull requests on the repository. For more details on contributing, please refer to the CONTRIBUTING.md file in the repository.
