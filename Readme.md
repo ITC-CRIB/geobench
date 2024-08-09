@@ -135,6 +135,7 @@ In this scenario type, the QGIS benchmarking is performed by running QGIS python
 - [x] Record running process for a specific duration before execution is performed. The output is stored to file in JSON strcuture.
 - [x] Execute the generated command and store the command output to a specific folder. For the time being, our program supports nested directory structure for the output.
 - [x] During the execution, our program records parameters as well as following metrics: average CPU and memory usage, start time, end time, and execution time.
+- [x] Accommodate new YAML scenario template
 - [ ] Support `arcgis` and `qgis-json` type of execution
 - [ ] Support flat output directory structure
 - [ ] Suitability criteria to decide whether the execution should be continued
