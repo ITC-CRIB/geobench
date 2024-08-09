@@ -107,10 +107,10 @@ def generate_qgis_python(command, decoded_params, output_dir_path):
         
     return program_path
 
-def check_requirement(command_type="qgis-command"):
+def check_requirement(command_type="qgis-process"):
     pass
 
-def get_software_config(command_type="qgis-command"):
+def get_software_config(command_type="qgis-process"):
     software_config = {}
     if command_type.startswith("qgis"):
         try:
@@ -124,7 +124,7 @@ def get_software_config(command_type="qgis-command"):
                 print(f"- Found qgis_process path in {qgis_process_path}")
                 qgis_plugins = _parse_qgis_plugins(qgis_version.stdout)
                 software_config["plugins"] = qgis_plugins
-            if command_type == "qgis-command":
+            if command_type == "qgis-process":
                 software_config["exec_path"] = qgis_process_path
                 return software_config
             elif command_type == "qgis-python":
@@ -147,7 +147,7 @@ def get_software_config(command_type="qgis-command"):
                     print("The QGIS python command exists but returned an error.")
                     sys.exit(1)
             else:
-                print("Invalid process type. The program only support following type [qgis-command, qgis-python]")
+                print("Invalid process type. The program only support following type [qgis-process, qgis-python]")
                 sys.exit(1)
         except FileNotFoundError as e:
             print("qgis_process command not found. Please ensure QGIS is installed.\n \

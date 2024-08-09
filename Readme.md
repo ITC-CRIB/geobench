@@ -87,14 +87,14 @@ Follow these steps to set up GeoBench:
 	```
 
 ## Running Benchmarking Scenario
-A benchmarking scenario is represented in a YAML file. For the time being, there are two scenario types supported in this tool: `qgis-command` and `qgis-python`. The `qgis-json` and `arcgis-command` will be supported later.
+A benchmarking scenario is represented in a YAML file. For the time being, there are two scenario types supported in this tool: `qgis-process` and `qgis-python`. The `qgis-json` and `arcgis-command` will be supported later.
 
-### Running qgis-command scenario type
-In this scenario type, the QGIS benchmarking is performed by running `qgis_process` command in terminal. The sample scenario file can be accessed in `example/qgis-command/example-scenario.yaml`.
+### Running qgis-process scenario type
+In this scenario type, the QGIS benchmarking is performed by running `qgis_process` command in terminal. The sample scenario file can be accessed in `example/qgis-process/example-scenario.yaml`.
 
 - Copy the sample scenario to directory `sample-input`
 	```
-	cp example/qgis-command/example-scenario.yaml sample-input/example-scenario.yaml
+	cp example/qgis-process/example-scenario.yaml sample-input/example-scenario.yaml
 	```
 - Modify the parameter in the YAML file. Make sure the `INPUT` and `OUTPUT` paths are exist and accessible.
 - To run the benchmark, use the following command:
@@ -104,7 +104,7 @@ In this scenario type, the QGIS benchmarking is performed by running `qgis_proce
 	```
 
 ### Running qgis-python scenario type
-In this scenario type, the QGIS benchmarking is performed by running QGIS python code specified by user. The sample code and scenario files can be accessed in `example/qgis-command/example-scenario.yaml`.
+In this scenario type, the QGIS benchmarking is performed by running QGIS python code specified by user. The sample code and scenario files can be accessed in `example/qgis-process/example-scenario.yaml`.
 
 - Copy the sample scenario to directory `sample-input`
    ```
@@ -131,7 +131,7 @@ In this scenario type, the QGIS benchmarking is performed by running QGIS python
 - [x] Recording the running process of a computer for a specific duration. The program tracks and calculates the average CPU and memory usage of each running process.
 - [x] The program checks the availability of the GIS command/libraries on the computer. For the time being the program supports `qgis_process` and QGIS `python` command checking.
 - [x] Perform baseline monitoring to record the average CPU and memory usage for a specific duration. The output is written to file in JSON structure.
-- [x] Generate any possible test combination from the parameters and input defined on the YAML scenario file. For the time being, the program supports `qgis-command` and `qgis-python` type of execution.
+- [x] Generate any possible test combination from the parameters and input defined on the YAML scenario file. For the time being, the program supports `qgis-process` and `qgis-python` type of execution.
 - [x] Record running process for a specific duration before execution is performed. The output is stored to file in JSON strcuture.
 - [x] Execute the generated command and store the command output to a specific folder. For the time being, our program supports nested directory structure for the output.
 - [x] During the execution, our program records parameters as well as following metrics: average CPU and memory usage, start time, end time, and execution time.

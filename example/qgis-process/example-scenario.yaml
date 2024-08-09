@@ -1,6 +1,6 @@
 name: ExampleBenchmark
 repeat: 2
-type: qgis-command
+type: qgis-process
 command: native:buffer
 inputs:
   INPUT: "./sample-input/enschede/point.shp"

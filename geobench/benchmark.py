@@ -92,7 +92,7 @@ class Benchmark:
         start_time_hr = datetime.fromtimestamp(start_time).strftime('%Y-%m-%d %H:%M:%S')
 
         # decoded_params = {}
-        # if(self.scenario.type == "qgis-command"):
+        # if(self.scenario.type == "qgis-process"):
         #     # Decode user defined command string in yaml scenario file
         #     # decoded_params = command.decode_qgis_command(self.scenario.command)
         #     pass
@@ -121,7 +121,7 @@ class Benchmark:
                 # Define the path of the execution output
                 output_file_path = os.path.abspath(os.path.join(repeat_dir, f"{self.scenario.outputs['OUTPUT']}"))
                 decoded_params["OUTPUT"] = output_file_path
-                if(self.scenario.type == "qgis-command"):
+                if(self.scenario.type == "qgis-process"):
                     # Encode the command to string
                     command_params = command.encode_qgis_command(self.scenario.command, decoded_params)
                 elif(self.scenario.type == "qgis-python"):

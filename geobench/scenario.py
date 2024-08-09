@@ -97,8 +97,8 @@ def load_scenario(yaml_file, cmd_args):
     if name is None:
         raise MissingParameterError("Error: 'name' is a mandatory parameter and must be specified either as a command line argument or in the YAML scenario file.")
     
-    if type not in ["qgis-command", "qgis-python", "qgis-json", "arcgis-python"]:
-        raise MissingParameterError(f"Error: '{type}' is not a valid type. Use qgis-command, qgis-python, qgis-json, arcgis-python.")
+    if type not in ["qgis-process", "qgis-python", "qgis-json", "arcgis-python"]:
+        raise MissingParameterError(f"Error: '{type}' is not a valid type. Use qgis-process, qgis-python, qgis-json, arcgis-python.")
     
     return Scenario(name, repeat, type, command, command_file, checked_inputs, checked_outputs, temp_directory, parameters, output_structure, scenarios)
 
