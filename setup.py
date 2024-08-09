@@ -14,5 +14,8 @@ setup(
             'geobench=geobench.main:main',
         ],
     },
+    package_data={
+        'geobench': ['templates/*.j2'],  # Include template files
+    },
     install_requires=read_requirements(),
 )
