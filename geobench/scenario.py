@@ -1,6 +1,7 @@
 import yaml
 import itertools
 import re
+import os
 
 from .error import MissingParameterError
 
@@ -52,7 +53,10 @@ def expand_parameters(parameters):
     return expanded_params
 
 def generate_scenarios(parameters):
-    keys, values = zip(*parameters.items())
+     # Ensure all values are lists
+    normalized_parameters = {k: v if isinstance(v, list) else [v] for k, v in parameters.items()}
+    
+    keys, values = zip(*normalized_parameters.items())
     scenarios = [dict(zip(keys, combination)) for combination in itertools.product(*values)]
     return scenarios
 
@@ -76,8 +80,19 @@ def load_scenario(yaml_file, cmd_args):
     parameters = scenario_data.get('parameters', {})
     output_structure = scenario_data.get('output-structure')
 
-    expanded_parameters = expand_parameters(parameters)
-    scenarios = generate_scenarios(expanded_parameters)
+    checked_inputs = {}
+    # Update inputs parameters to absolute path
+    for key_param, value_param in inputs.items():
+        checked_inputs[key_param] = os.path.abspath(value_param)
+    
+    checked_outputs = {}
+    # Update outputs parameters to absolute path
+    for key_param, value_param in outputs.items():
+        checked_outputs[key_param] = os.path.abspath(value_param)
+
+    # expanded_parameters = expand_parameters(parameters)
+    all_parameters = parameters | checked_inputs | checked_outputs
+    scenarios = generate_scenarios(all_parameters)
 
     if name is None:
         raise MissingParameterError("Error: 'name' is a mandatory parameter and must be specified either as a command line argument or in the YAML scenario file.")
@@ -85,7 +100,7 @@ def load_scenario(yaml_file, cmd_args):
     if type not in ["qgis-command", "qgis-python", "qgis-json", "arcgis-python"]:
         raise MissingParameterError(f"Error: '{type}' is not a valid type. Use qgis-command, qgis-python, qgis-json, arcgis-python.")
     
-    return Scenario(name, repeat, type, command, command_file, inputs, outputs, temp_directory, parameters, output_structure, scenarios)
+    return Scenario(name, repeat, type, command, command_file, checked_inputs, checked_outputs, temp_directory, parameters, output_structure, scenarios)
 
 # Example usage
 if __name__ == "__main__":

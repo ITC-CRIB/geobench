@@ -91,77 +91,68 @@ class Benchmark:
         start_time = time.time()
         start_time_hr = datetime.fromtimestamp(start_time).strftime('%Y-%m-%d %H:%M:%S')
 
-        decoded_params = {}
-        if(self.scenario.type == "qgis-command"):
-            # Decode user defined command string in yaml scenario file
-            decoded_params = command.decode_qgis_command(self.scenario.command)
-        elif(self.scenario.type == "qgis-python"):
-            # Decode user defined command string in yaml scenario file
-            decoded_params = command.decode_qgis_python(self.scenario.command_file)
+        # decoded_params = {}
+        # if(self.scenario.type == "qgis-command"):
+        #     # Decode user defined command string in yaml scenario file
+        #     # decoded_params = command.decode_qgis_command(self.scenario.command)
+        #     pass
+        # elif(self.scenario.type == "qgis-python"):
+        #     # Decode user defined command string in yaml scenario file
+        #     decoded_params = command.decode_qgis_python(self.scenario.command_file)
 
         # Store results
         result_list = []
 
         print("Generating test scenario\n")
-        # Generate test for any input combination
-        for idx_input, input in enumerate(self.scenario.inputs):
-            abs_path = os.path.abspath(input)
-            decoded_params["INPUT"] = abs_path
-            # Generate test for any combination of parameters
-            for idx, params in enumerate(self.scenario.combination):
-                # Get or create scenario directory
-                scen_dir = os.path.join(base_dir, f"set_{idx + 1}")
-                self._makedirs_if_not_exists(scen_dir)
+        # Generate test for any combination of parameters
+        for idx, decoded_params in enumerate(self.scenario.combination):
+            # Get or create scenario directory
+            scen_dir = os.path.join(base_dir, f"set_{idx + 1}")
+            self._makedirs_if_not_exists(scen_dir)
 
-                # Update the command parameter
-                for key_param, value_param in params.items():
-                    decoded_params[key_param] = value_param
-
-                # Generate for each repeatable test run
-                for i in range(1, self.scenario.repeat + 1):
-                    # Get or create test run directory
-                    repeat_dir = os.path.join(scen_dir, f"run_{i}")
-                    self._makedirs_if_not_exists(repeat_dir)
-                    # Record the running process before test run
-                    print(f"Recording running process for {recording_duration} seconds\n")
-                    running_process = recording.record_process_info(duration=recording_duration)
-                    # Define the path of the execution output
-                    output_file_path = os.path.abspath(os.path.join(repeat_dir, f"{idx_input}_{self.scenario.outputs['OUTPUT']}"))
-                    decoded_params["OUTPUT"] = output_file_path
-                    if(self.scenario.type == "qgis-command"):
-                        # Encode the command to string
-                        command_params = command.encode_qgis_command(decoded_params)
-                        command_params = command_params.split()
-                        # command_string = fr"{exec_path} {command_string}"
-                    elif(self.scenario.type == "qgis-python"):
-                        command_params = command.generate_qgis_python(self.scenario.command_file, decoded_params, repeat_dir)
-                        command_params = [command_params]
-                        # command_string = fr"{exec_path} {program_path}"
-                    
-                    # Print for debugging
-                    print()
-                    print(f"Running scenario with params {params} for repetition {i}. Output saved on {repeat_dir}")
-                    print(f"{exec_path} {command_params}")
-                    print()
-                    # Execute the command
-                    exec_result = command.execute_command(exec_path, command_params)
-                    # Individual result
-                    result = {
-                        "parameters": decoded_params,
-                        "repeat": i,
-                        "success": exec_result["success"],
-                        "start_time": exec_result["start_time"],
-                        "end_time": exec_result["end_time"],
-                        "exec_time": exec_result["end_time"] - exec_result["start_time"],
-                        "avg_cpu": exec_result["avg_cpu"],
-                        "avg_mem": exec_result["avg_mem"],
-                        "process": running_process
-                    }
-                    # Append result to the list
-                    result_list.append(result)
-                    # Store the temporary result to json output file
-                    self.result["results"] = result_list
-                    self._save_result()
+            # Generate for each repeatable test run
+            for i in range(1, self.scenario.repeat + 1):
+                # Get or create test run directory
+                repeat_dir = os.path.join(scen_dir, f"run_{i}")
+                self._makedirs_if_not_exists(repeat_dir)
+                # Record the running process before test run
+                print(f"Recording running process for {recording_duration} seconds\n")
+                running_process = recording.record_process_info(duration=recording_duration)
+                # Define the path of the execution output
+                output_file_path = os.path.abspath(os.path.join(repeat_dir, f"{self.scenario.outputs['OUTPUT']}"))
+                decoded_params["OUTPUT"] = output_file_path
+                if(self.scenario.type == "qgis-command"):
+                    # Encode the command to string
+                    command_params = command.encode_qgis_command(self.scenario.command, decoded_params)
+                elif(self.scenario.type == "qgis-python"):
+                    # Generate python code
+                    generated_python_path = command.generate_qgis_python(self.scenario.command, decoded_params, repeat_dir)
+                    command_params = [generated_python_path]
+                
+                # Print for debugging
+                print()
+                print(f"Running scenario with params {command_params} for repetition {i}. Output saved on {repeat_dir}")
+                print(f"{exec_path} {command_params}")
+                print()
+                # Execute the command
+                exec_result = command.execute_command(exec_path, command_params)
+                # Individual result
+                result = {
+                    "parameters": decoded_params,
+                    "repeat": i,
+                    "success": exec_result["success"],
+                    "start_time": exec_result["start_time"],
+                    "end_time": exec_result["end_time"],
+                    "exec_time": exec_result["end_time"] - exec_result["start_time"],
+                    "avg_cpu": exec_result["avg_cpu"],
+                    "avg_mem": exec_result["avg_mem"],
+                    "process": running_process
+                }
+                # Append result to the list
+                result_list.append(result)
+                # Store the temporary result to json output file
+                self.result["results"] = result_list
+                self._save_result()
 
         # Measure end time of a whole tests
         end_time = time.time()

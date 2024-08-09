@@ -7,6 +7,8 @@ import os
 import ast
 import re
 import platform
+import importlib.resources as pkg_resources
+from jinja2 import Environment, FileSystemLoader
 
 from . import error
 from .recording import monitor_usage
@@ -27,19 +29,14 @@ def decode_qgis_command(command_str):
     else:
         raise error.WrongQGISCommandError
 
-def encode_qgis_command(command_dict):
-    # Extract the base command
-    command = command_dict['command']
+def encode_qgis_command(command, params_dict):
     
     # Extract and format the parameters
-    params = []
-    for key, value in command_dict.items():
-        if key != 'command':
-            params.append(f"--{key}={value}")
+    params = ["run", command]
+    for key, value in params_dict.items():
+        params.append(f"--{key}={value}")
     
-    # Join the command and parameters into a single string
-    command_str = command + ' ' + ' '.join(params)
-    return command_str
+    return params
 
 def _extract_parameters_from_code(code_snippet):
     try:
@@ -92,14 +89,22 @@ def decode_qgis_python(program_path):
         decoded_params = _decode_parameters(param_str)
     return decoded_params
 
-def generate_qgis_python(program_path, decoded_params, output_dir_path):
-    new_command_string = _encode_parameters(decoded_params)
-    with open(program_path, "r") as f:
-        original_code_snippet = f.read()
-        replaced_snippet = _replace_parameters_in_code(original_code_snippet, new_command_string)
-        program_path = os.path.join(output_dir_path, "program.py")
-        with open(program_path, "w") as f:
-            f.write(replaced_snippet)
+def render_template(template_name, **kwargs):
+    with pkg_resources.path(__package__, 'templates') as template_dir:
+        env = Environment(loader=FileSystemLoader(template_dir))
+        template = env.get_template(template_name)
+        return template.render(**kwargs)
+
+def generate_qgis_python(command, decoded_params, output_dir_path):
+    params_str = _encode_parameters(decoded_params)
+    script_line_str = f'processing.run("{command}", {params_str})'
+    # Render from template
+    rendered_code = render_template('program.j2', script_line=script_line_str)
+
+    program_path = os.path.join(output_dir_path, "program.py")
+    with open(program_path, "w") as f:
+        f.write(rendered_code)
+        
     return program_path
 
 def check_requirement(command_type="qgis-command"):
