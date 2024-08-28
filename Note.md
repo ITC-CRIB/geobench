@@ -33,9 +33,9 @@
 
 Meeting 22 Aug 2024:
 - [x] Bug: the output location is wrong
-- Record CPU (per CPU core), memory, disk utilization, existing process for each second 
+- [x] Record CPU (per CPU core), memory, existing process for each second 
 - Also record how many time take for recording these informations
-- Output for each run -> also include input parameters (with the input information)
-
+- [x] Output for each run -> also include input parameters (with the input information)
+- Output disk I/O statistics
 - Include query from prometheus 
 - Configuration file for the tool itself (we can define it later). For example: number of replication, prometheus port and url, 
