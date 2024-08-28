@@ -118,8 +118,10 @@ class Benchmark:
                 # Record the running process before test run
                 print(f"Recording running process for {recording_duration} seconds\n")
                 running_process = recording.record_process_info(duration=recording_duration)
-                # Define the path of the execution output
-                output_file_path = os.path.abspath(os.path.join(repeat_dir, f"{self.scenario.outputs['OUTPUT']}"))
+                # Define the absolute path of the execution output directory
+                output_abs_path = os.path.abspath(repeat_dir)
+                # Join the absolute path of the execution output directory with the output file name
+                output_file_path = os.path.join(output_abs_path, f"{self.scenario.outputs['OUTPUT']}")
                 decoded_params["OUTPUT"] = output_file_path
                 if(self.scenario.type == "qgis-process"):
                     # Encode the command to string
@@ -136,8 +138,17 @@ class Benchmark:
                 print()
                 # Execute the command
                 exec_result = command.execute_command(exec_path, command_params)
-                # Individual result
-                result = {
+                # Save the individual execution result to each test run directory as json file
+                result_path = os.path.join(output_abs_path, "result.json")
+                with open(result_path, "w") as f:
+                    # Dump the execution result to json file
+                    json.dump(exec_result, f, indent=4)
+                # Save running process information as json file
+                process_path = os.path.join(output_abs_path, "process.json")
+                with open(process_path, "w") as f:
+                    json.dump(running_process, f, indent=4)
+                # Summary result
+                summarized_result = {
                     "parameters": decoded_params,
                     "repeat": i,
                     "success": exec_result["success"],
@@ -146,12 +157,13 @@ class Benchmark:
                     "exec_time": exec_result["end_time"] - exec_result["start_time"],
                     "avg_cpu": exec_result["avg_cpu"],
                     "avg_mem": exec_result["avg_mem"],
-                    "process": running_process
+                    "running_process": process_path,
+                    "detailed_result": result_path,
                 }
                 # Append result to the list
-                result_list.append(result)
+                result_list.append(summarized_result)
                 # Store the temporary result to json output file
-                self.result["results"] = result_list
+                self.result["summarized_results"] = result_list
                 self._save_result()
 
         # Measure end time of a whole tests

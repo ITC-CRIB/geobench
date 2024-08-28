@@ -30,3 +30,12 @@
 - Try to find the way to execute program with different version
 - Support query (collec data) from the (multiple) prometheus/server -> selected
 - Discuss: parameters to be collected from tools 
+
+Meeting 22 Aug 2024:
+- [x] Bug: the output location is wrong
+- Record CPU (per CPU core), memory, disk utilization, existing process for each second 
+- Also record how many time take for recording these informations
+- Output for each run -> also include input parameters (with the input information)
+
+- Include query from prometheus 
+- Configuration file for the tool itself (we can define it later). For example: number of replication, prometheus port and url, 

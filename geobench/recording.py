@@ -200,12 +200,30 @@ def monitor_baseline(duration=15):
 def monitor_usage(results):
     cpu_usage = []
     mem_usage = []
+    log_data = []
     # Loop until execution is finished
     while not results.get("finished"):
-        cpu_usage.append(psutil.cpu_percent(interval=1))
-        mem_usage.append(psutil.virtual_memory().percent)
+        # Get the current CPU and memory usage
+        cpu_percent = psutil.cpu_percent(interval=1)
+        # Get the current memory usage as a percentage
+        mem_percent = psutil.virtual_memory().percent
+        # Append the usage data to the lists
+        cpu_usage.append(cpu_percent)
+        mem_usage.append(mem_percent)
+        # Create a dictionary to store the log data
+        log = {
+            "cpu" : cpu_percent,
+            "mem" : mem_percent,
+            "time" : time.time()
+        }
+        # Append the log data to the list
+        log_data.append(log)
+    # Calculate the average CPU and memory usage
     results["avg_cpu"] = sum(cpu_usage) / len(cpu_usage) if cpu_usage else 0
+    # Calculate the average memory usage
     results["avg_mem"] = sum(mem_usage) / len(mem_usage) if mem_usage else 0
+    # Store the log data in the results dictionary
+    results["log_data"] = log_data
 
 def get_qgis_plugins(qgis_process_path):
     # Execute the shell command

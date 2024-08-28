@@ -85,13 +85,13 @@ def load_scenario(yaml_file, cmd_args):
     for key_param, value_param in inputs.items():
         checked_inputs[key_param] = os.path.abspath(value_param)
     
-    checked_outputs = {}
-    # Update outputs parameters to absolute path
-    for key_param, value_param in outputs.items():
-        checked_outputs[key_param] = os.path.abspath(value_param)
+    # checked_outputs = {}
+    # # Update outputs parameters to absolute path
+    # for key_param, value_param in outputs.items():
+    #     checked_outputs[key_param] = os.path.abspath(value_param)
 
     # expanded_parameters = expand_parameters(parameters)
-    all_parameters = parameters | checked_inputs | checked_outputs
+    all_parameters = parameters | checked_inputs | outputs
     scenarios = generate_scenarios(all_parameters)
 
     if name is None:
@@ -100,7 +100,7 @@ def load_scenario(yaml_file, cmd_args):
     if type not in ["qgis-process", "qgis-python", "qgis-json", "arcgis-python"]:
         raise MissingParameterError(f"Error: '{type}' is not a valid type. Use qgis-process, qgis-python, qgis-json, arcgis-python.")
     
-    return Scenario(name, repeat, type, command, command_file, checked_inputs, checked_outputs, temp_directory, parameters, output_structure, scenarios)
+    return Scenario(name, repeat, type, command, command_file, checked_inputs, outputs, temp_directory, parameters, output_structure, scenarios)
 
 # Example usage
 if __name__ == "__main__":
