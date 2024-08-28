@@ -204,15 +204,17 @@ def monitor_usage(results):
     # Loop until execution is finished
     while not results.get("finished"):
         # Get the current CPU and memory usage
-        cpu_percent = psutil.cpu_percent(interval=1)
+        per_cpu_percent = psutil.cpu_percent(interval=1, percpu=True)
+        avg_cpu_percent = sum(per_cpu_percent) / len(per_cpu_percent)
         # Get the current memory usage as a percentage
         mem_percent = psutil.virtual_memory().percent
         # Append the usage data to the lists
-        cpu_usage.append(cpu_percent)
+        cpu_usage.append(avg_cpu_percent)
         mem_usage.append(mem_percent)
         # Create a dictionary to store the log data
         log = {
-            "cpu" : cpu_percent,
+            "avg_cpu" : avg_cpu_percent,
+            "per_cpu": per_cpu_percent,
             "mem" : mem_percent,
             "time" : time.time()
         }
