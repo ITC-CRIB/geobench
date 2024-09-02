@@ -11,3 +11,4 @@ venv
 geobench.egg-info/
 __pycache__/
 build/
+.DS_Store
