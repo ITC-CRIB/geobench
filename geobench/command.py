@@ -178,9 +178,11 @@ def _parse_qgis_plugins(version):
 
 def execute_command(command, params=[]):
     results = {"finished": False}
+    # Start monitoring thread
     monitor_thread = threading.Thread(target=monitor_usage, args=(results,))
     monitor_thread.start()
     
+    # Start execution
     exec_start_time = time.time()
     try:
         command = [command] + params

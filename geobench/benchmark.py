@@ -140,11 +140,13 @@ class Benchmark:
                 exec_result = command.execute_command(exec_path, command_params)
                 # Save the individual execution result to each test run directory as json file
                 result_path = os.path.join(output_abs_path, "result.json")
+                result_path_relative = os.path.join(f"set_{idx + 1}", f"run_{i}", "result.json")
                 with open(result_path, "w") as f:
                     # Dump the execution result to json file
                     json.dump(exec_result, f, indent=4)
                 # Save running process information as json file
                 process_path = os.path.join(output_abs_path, "process.json")
+                process_path_relative = os.path.join(f"set_{idx + 1}", f"run_{i}", "process.json")
                 with open(process_path, "w") as f:
                     json.dump(running_process, f, indent=4)
                 # Summary result
@@ -157,8 +159,8 @@ class Benchmark:
                     "exec_time": exec_result["end_time"] - exec_result["start_time"],
                     "avg_cpu": exec_result["avg_cpu"],
                     "avg_mem": exec_result["avg_mem"],
-                    "running_process": process_path,
-                    "detailed_result": result_path,
+                    "running_process": process_path_relative,
+                    "detailed_result": result_path_relative,
                 }
                 # Append result to the list
                 result_list.append(summarized_result)
