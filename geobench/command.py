@@ -178,21 +178,18 @@ def _parse_qgis_plugins(version):
 
 def execute_command(command, params=[]):
     results = {"finished": False}
-    # Start monitoring thread
-    monitor_thread = threading.Thread(target=monitor_usage, args=(results,))
-    monitor_thread.start()
     
     # Start execution
     exec_start_time = time.time()
     try:
         command = [command] + params
-        subprocess.run(command, shell=False, check=True)
+        process = subprocess.Popen(command, shell=False)
+        monitor_usage(results, process)
         results["success"] = True
     except subprocess.CalledProcessError as e:
         results["success"] = False
         print(f"Command failed with {e.returncode}")
     results["finished"] = True
-    monitor_thread.join()
     exec_end_time = time.time()
     results["start_time"] = exec_start_time
     results["end_time"] =  exec_end_time

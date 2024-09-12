@@ -157,8 +157,10 @@ class Benchmark:
                     "start_time": exec_result["start_time"],
                     "end_time": exec_result["end_time"],
                     "exec_time": exec_result["end_time"] - exec_result["start_time"],
-                    "avg_cpu": exec_result["avg_cpu"],
-                    "avg_mem": exec_result["avg_mem"],
+                    "system_avg_cpu": exec_result["system_avg_cpu"],
+                    "system_avg_mem": exec_result["system_avg_mem"],
+                    "process_avg_cpu": exec_result["process_avg_cpu"],
+                    "process_avg_mem": exec_result["process_avg_mem"],
                     "running_process": process_path_relative,
                     "detailed_result": result_path_relative,
                 }

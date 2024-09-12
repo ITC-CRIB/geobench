@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import platform
 import psutil
@@ -196,36 +197,91 @@ def monitor_baseline(duration=15):
     results["avg_mem"] = sum(mem_usage) / len(mem_usage) if mem_usage else 0
     return results
 
+# Get CPU usage per cpu
+def get_cpu_usage_per_cpu(interval=1):
+    return psutil.cpu_percent(interval=interval, percpu=True)
+
+# Get CPU and memory usage for a process
+def get_cpu_mem_usage_for_process(pid, interval=1):
+    try:
+        process = psutil.Process(pid)
+        # Get CPU usage for the process
+        cpu_usage = process.cpu_percent(interval=interval)
+        # Get memory usage for the process
+        mem_usage = process.memory_percent()
+        return {
+            "proc_cpu": cpu_usage,
+            "proc_mem": mem_usage
+        }
+    except psutil.NoSuchProcess:
+        return None
+
 # Perform monitoring during benchmark. The function return the average CPU and memory usage.
-def monitor_usage(results):
-    cpu_usage = []
-    mem_usage = []
+def monitor_usage(results: dict, process: psutil.Process):
+    sys_cpu_usage = []
+    sys_mem_usage = []
+    proc_cpu_usage = []
+    proc_mem_usage = []
     log_data = []
+    # Threading executor pool
+    executor = ThreadPoolExecutor(max_workers=2)
+    
     # Loop until execution is finished
-    while not results.get("finished"):
-        # Get the current CPU and memory usage
-        per_cpu_percent = psutil.cpu_percent(interval=1, percpu=True)
+    while process.poll() is None:
+        # Define tasks to get CPU usage of system-wide and per process
+        per_cpu_percent_task = executor.submit(get_cpu_usage_per_cpu)
+        process_cpu_mem_percent_task = executor.submit(get_cpu_mem_usage_for_process, process.pid)
+        # Wait all tasks to complete
+        as_completed([per_cpu_percent_task, process_cpu_mem_percent_task])
+        # Get tasks result
+        per_cpu_percent = per_cpu_percent_task.result()
+        process_usage = process_cpu_mem_percent_task.result()
+        # Calculate average system-wide CPU usage
         avg_cpu_percent = sum(per_cpu_percent) / len(per_cpu_percent)
-        # Get the current memory usage as a percentage
+        # Get the current system-wide memory usage as a percentage
         mem_percent = psutil.virtual_memory().percent
-        # Append the usage data to the lists
-        cpu_usage.append(avg_cpu_percent)
-        mem_usage.append(mem_percent)
         # Create a dictionary to store the log data
         log = {
-            "avg_cpu" : avg_cpu_percent,
-            "per_cpu": per_cpu_percent,
-            "mem" : mem_percent,
+            "sys_cpu" : avg_cpu_percent,
+            "sys_per_cpu": per_cpu_percent,
+            "sys_mem" : mem_percent,
             "time" : time.time()
         }
+        # Append the usage data to the lists for average calculation of per-process metric
+        if process_usage is not None:
+            proc_cpu_usage.append(process_usage["proc_cpu"])
+            proc_mem_usage.append(process_usage["proc_mem"])
+            # Update the log data with the per-process usage data
+            log.update(process_usage)
         # Append the log data to the list
         log_data.append(log)
+        # Append the usage data to the lists for average calculation of system-wide metric
+        sys_cpu_usage.append(avg_cpu_percent)
+        sys_mem_usage.append(mem_percent)
+        
+
     # Calculate the average CPU and memory usage
-    results["avg_cpu"] = sum(cpu_usage) / len(cpu_usage) if cpu_usage else 0
+    results["system_avg_cpu"] = sum(sys_cpu_usage) / len(sys_cpu_usage) if sys_cpu_usage else 0
     # Calculate the average memory usage
-    results["avg_mem"] = sum(mem_usage) / len(mem_usage) if mem_usage else 0
+    results["system_avg_mem"] = sum(sys_mem_usage) / len(sys_mem_usage) if sys_mem_usage else 0
+    # Calculate per-process averae CPU usage
+    results["process_avg_cpu"] = sum(proc_cpu_usage) / len(proc_cpu_usage) if proc_cpu_usage else 0
+    # Calculate per-process averae memory usage
+    results["process_avg_mem"] = sum(proc_mem_usage) / len(proc_mem_usage) if proc_mem_usage else 0
     # Store the log data in the results dictionary
     results["log_data"] = log_data
+
+# Monitor the process during the execution of a benchmark.
+def monitor_process(process, results):
+    try:
+        p = psutil.Process(process.pid)
+        while process.poll() is None:
+            cpu = p.cpu_percent(interval=1)
+            memory = p.memory_percent()
+            
+            
+    except psutil.NoSuchProcess:
+        print("Process has terminated.")
 
 def get_qgis_plugins(qgis_process_path):
     # Execute the shell command
