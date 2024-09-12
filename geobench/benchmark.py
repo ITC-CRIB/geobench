@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import time
 import pandas as pd
 from datetime import datetime
@@ -122,6 +123,7 @@ class Benchmark:
                 output_abs_path = os.path.abspath(repeat_dir)
                 # Join the absolute path of the execution output directory with the output file name
                 output_file_path = os.path.join(output_abs_path, f"{self.scenario.outputs['OUTPUT']}")
+                output_file_path_relative = os.path.join(f"set_{idx + 1}", f"run_{i}", f"{self.scenario.outputs['OUTPUT']}")
                 decoded_params["OUTPUT"] = output_file_path
                 if(self.scenario.type == "qgis-process"):
                     # Encode the command to string
@@ -147,11 +149,21 @@ class Benchmark:
                 # Save running process information as json file
                 process_path = os.path.join(output_abs_path, "process.json")
                 process_path_relative = os.path.join(f"set_{idx + 1}", f"run_{i}", "process.json")
+                # Copy input file to output directory
+                input_base_name = os.path.basename(self.scenario.inputs["INPUT"])
+                input_copy_destination = os.path.join(output_abs_path, input_base_name)
+                copied_input_file_path_relative = os.path.join(f"set_{idx + 1}", f"run_{i}", input_base_name)
+                shutil.copy(self.scenario.inputs["INPUT"], input_copy_destination)
+                # Save running process information as json file
                 with open(process_path, "w") as f:
                     json.dump(running_process, f, indent=4)
+                # Change decoded params path to relative for recording purpose
+                recorded_params = decoded_params.copy()
+                recorded_params["OUTPUT"] = output_file_path_relative
+                recorded_params["INPUT"] = copied_input_file_path_relative
                 # Summary result
                 summarized_result = {
-                    "parameters": decoded_params,
+                    "parameters": recorded_params,
                     "repeat": i,
                     "success": exec_result["success"],
                     "start_time": exec_result["start_time"],
