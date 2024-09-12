@@ -202,16 +202,18 @@ def get_cpu_usage_per_cpu(interval=1):
     return psutil.cpu_percent(interval=interval, percpu=True)
 
 # Get CPU and memory usage for a process
-def get_cpu_mem_usage_for_process(pid, interval=1):
+def get_cpu_mem_usage_for_process(process:psutil.Process, interval=1):
     try:
-        process = psutil.Process(pid)
         # Get CPU usage for the process
         cpu_usage = process.cpu_percent(interval=interval)
         # Get memory usage for the process
         mem_usage = process.memory_percent()
+        # Get memory infomation for the process
+        # mem_info = process.memory_info()
         return {
             "proc_cpu": cpu_usage,
-            "proc_mem": mem_usage
+            "proc_mem": mem_usage,
+            # "proc_mem_info": mem_info
         }
     except psutil.NoSuchProcess:
         return None
@@ -228,9 +230,11 @@ def monitor_usage(results: dict, process: psutil.Process):
     
     # Loop until execution is finished
     while process.poll() is None:
+        # Get start time of metric collection
+        collection_start_time = time.time()
         # Define tasks to get CPU usage of system-wide and per process
         per_cpu_percent_task = executor.submit(get_cpu_usage_per_cpu)
-        process_cpu_mem_percent_task = executor.submit(get_cpu_mem_usage_for_process, process.pid)
+        process_cpu_mem_percent_task = executor.submit(get_cpu_mem_usage_for_process, process)
         # Wait all tasks to complete
         as_completed([per_cpu_percent_task, process_cpu_mem_percent_task])
         # Get tasks result
@@ -240,12 +244,15 @@ def monitor_usage(results: dict, process: psutil.Process):
         avg_cpu_percent = sum(per_cpu_percent) / len(per_cpu_percent)
         # Get the current system-wide memory usage as a percentage
         mem_percent = psutil.virtual_memory().percent
+        # Calculate time needed to collec metrics
+        collection_time = time.time() - collection_start_time
         # Create a dictionary to store the log data
         log = {
             "sys_cpu" : avg_cpu_percent,
             "sys_per_cpu": per_cpu_percent,
             "sys_mem" : mem_percent,
-            "time" : time.time()
+            "time" : time.time(),
+            "overhead_sec": collection_time
         }
         # Append the usage data to the lists for average calculation of per-process metric
         if process_usage is not None:

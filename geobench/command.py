@@ -9,6 +9,7 @@ import re
 import platform
 import importlib.resources as pkg_resources
 from jinja2 import Environment, FileSystemLoader
+import psutil
 
 from . import error
 from .recording import monitor_usage
@@ -183,12 +184,17 @@ def execute_command(command, params=[]):
     exec_start_time = time.time()
     try:
         command = [command] + params
-        process = subprocess.Popen(command, shell=False)
+        # Start process immeaditely (NON-BLOCKING)
+        process = psutil.Popen(command, shell=False)
+        # Run monitoring function
         monitor_usage(results, process)
+        # Set success flag to True if the process completed without raising an exception
         results["success"] = True
     except subprocess.CalledProcessError as e:
         results["success"] = False
         print(f"Command failed with {e.returncode}")
+    # Store process id
+    results["pid"] = process.pid
     results["finished"] = True
     exec_end_time = time.time()
     results["start_time"] = exec_start_time
