@@ -209,11 +209,14 @@ def get_cpu_mem_usage_for_process(process:psutil.Process, interval=1):
         cpu_usage = process.cpu_percent(interval=interval)
         # Get memory usage for the process
         mem_usage = process.memory_percent()
+        # Get child processes
+        child_processes = process.children(recursive=True)
         # Get memory infomation for the process
         # mem_info = process.memory_info()
         return {
+            "pid": process.pid,
             "proc_cpu": cpu_usage,
-            "proc_mem": mem_usage,
+            "proc_mem": mem_usage
             # "proc_mem_info": mem_info
         }
     except psutil.NoSuchProcess:
@@ -251,6 +254,8 @@ def monitor_usage(results: dict, process: psutil.Process):
     sys_mem_info = []
     proc_cpu_usage = []
     proc_mem_usage = []
+    child_proc_cpu_usage = {} 
+    child_proc_mem_usage = {}
     log_data = []
     # Threading executor pool
     executor = ThreadPoolExecutor(max_workers=2)
@@ -259,16 +264,25 @@ def monitor_usage(results: dict, process: psutil.Process):
     while process.poll() is None:
         # Get start time of metric collection
         collection_start_time = time.time()
-        # Define tasks to get CPU usage of system-wide and per process
+        # Get child process as list
+        child_process_list = process.children(recursive=True)
+        # Define tasks to get CPU usage of system-wide, main process, and child processes
         per_cpu_percent_task = executor.submit(get_cpu_usage_per_cpu)
         process_cpu_mem_percent_task = executor.submit(get_cpu_mem_usage_for_process, process)
+        # Check if child process exists
+        child_process_task_list = []
+        if len(child_process_list) > 0:
+            for child in child_process_list:
+                child_process_task = executor.submit(get_cpu_mem_usage_for_process, child)
+                child_process_task_list.append(child_process_task)
         # Wait all tasks to complete
-        as_completed([per_cpu_percent_task, process_cpu_mem_percent_task])
+        as_completed([per_cpu_percent_task, process_cpu_mem_percent_task, *child_process_task_list])
         # Get tasks result
         per_cpu_percent = per_cpu_percent_task.result()
         process_usage = process_cpu_mem_percent_task.result()
-        # Calculate average system-wide CPU usage
-        avg_cpu_percent = sum(per_cpu_percent) / len(per_cpu_percent)
+        child_process_usage_list = [task.result() for task in child_process_task_list]
+        # Calculate average system-wide CPU usage given CPU usages for all core
+        all_cores_avg_cpu_percent = sum(per_cpu_percent) / len(per_cpu_percent)
         # Get the current system-wide memory information
         memory_snapshot = psutil.virtual_memory()
         memory_info = convert_named_tuple_to_dict(memory_snapshot)
@@ -276,7 +290,7 @@ def monitor_usage(results: dict, process: psutil.Process):
         collection_time = time.time() - collection_start_time
         # Create a dictionary to store the log data
         log = {
-            "sys_cpu" : avg_cpu_percent,
+            "sys_cpu" : all_cores_avg_cpu_percent,
             "sys_per_cpu": per_cpu_percent,
             "sys_mem" : memory_info,
             "time" : time.time(),
@@ -284,14 +298,27 @@ def monitor_usage(results: dict, process: psutil.Process):
         }
         # Append the usage data to the lists for average calculation of per-process metric
         if process_usage is not None:
-            proc_cpu_usage.append(process_usage["proc_cpu"])
-            proc_mem_usage.append(process_usage["proc_mem"])
+            pid_list = [process_usage["pid"]]
+            related_process_cpu_usage = process_usage["proc_cpu"]
+            related_process_mem_usage = process_usage["proc_mem"]
+            for child_usage in child_process_usage_list:
+                if child_usage is not None:
+                    related_process_cpu_usage += child_usage["proc_cpu"]
+                    related_process_mem_usage += child_usage["proc_mem"]
+                    pid_list.append(child_usage["pid"])
+            proc_cpu_usage.append(related_process_cpu_usage)
+            proc_mem_usage.append(related_process_mem_usage)
+            related_process_usage = {
+                "proc_cpu": related_process_cpu_usage,
+                "proc_mem": related_process_mem_usage,
+                "pid_list": pid_list
+            }
             # Update the log data with the per-process usage data
-            log.update(process_usage)
+            log.update(related_process_usage)
         # Append the log data to the list
         log_data.append(log)
         # Append the usage data to the lists for average calculation of system-wide metric
-        sys_cpu_usage.append(avg_cpu_percent)
+        sys_cpu_usage.append(all_cores_avg_cpu_percent)
         sys_mem_info.append(memory_snapshot)
         
 
