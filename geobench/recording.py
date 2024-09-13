@@ -1,3 +1,4 @@
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import platform
@@ -218,10 +219,36 @@ def get_cpu_mem_usage_for_process(process:psutil.Process, interval=1):
     except psutil.NoSuchProcess:
         return None
 
+# Convert named tuples to dictionaries
+def convert_named_tuple_to_dict(named_tuple):
+    return {field: getattr(named_tuple, field) for field in named_tuple._fields}
+
+# Calculate average available memory information metrics
+def calculate_average_memory_info(memory_data):
+    # Initialize a defaultdict to hold sums for each field.
+    sum_data = defaultdict(float)
+    field_counts = defaultdict(int)
+
+    # Go through each memory snapshot
+    for snapshot in memory_data:
+        # For each attribute in the snapshot, accumulate sums if it exists
+        for field in snapshot._fields:
+            value = getattr(snapshot, field, None)
+            if value is not None:  # Make sure the attribute exists and is not None
+                sum_data[field] += value
+                field_counts[field] += 1
+
+    # Create an average dictionary
+    avg_data = {}
+    for field, total in sum_data.items():
+        avg_data[field] = total / field_counts[field]  # Average it out
+
+    return avg_data
+
 # Perform monitoring during benchmark. The function return the average CPU and memory usage.
 def monitor_usage(results: dict, process: psutil.Process):
     sys_cpu_usage = []
-    sys_mem_usage = []
+    sys_mem_info = []
     proc_cpu_usage = []
     proc_mem_usage = []
     log_data = []
@@ -242,15 +269,16 @@ def monitor_usage(results: dict, process: psutil.Process):
         process_usage = process_cpu_mem_percent_task.result()
         # Calculate average system-wide CPU usage
         avg_cpu_percent = sum(per_cpu_percent) / len(per_cpu_percent)
-        # Get the current system-wide memory usage as a percentage
-        mem_percent = psutil.virtual_memory().percent
+        # Get the current system-wide memory information
+        memory_snapshot = psutil.virtual_memory()
+        memory_info = convert_named_tuple_to_dict(memory_snapshot)
         # Calculate time needed to collec metrics
         collection_time = time.time() - collection_start_time
         # Create a dictionary to store the log data
         log = {
             "sys_cpu" : avg_cpu_percent,
             "sys_per_cpu": per_cpu_percent,
-            "sys_mem" : mem_percent,
+            "sys_mem" : memory_info,
             "time" : time.time(),
             "overhead_sec": collection_time
         }
@@ -264,13 +292,13 @@ def monitor_usage(results: dict, process: psutil.Process):
         log_data.append(log)
         # Append the usage data to the lists for average calculation of system-wide metric
         sys_cpu_usage.append(avg_cpu_percent)
-        sys_mem_usage.append(mem_percent)
+        sys_mem_info.append(memory_snapshot)
         
 
     # Calculate the average CPU and memory usage
     results["system_avg_cpu"] = sum(sys_cpu_usage) / len(sys_cpu_usage) if sys_cpu_usage else 0
-    # Calculate the average memory usage
-    results["system_avg_mem"] = sum(sys_mem_usage) / len(sys_mem_usage) if sys_mem_usage else 0
+    # Calculate the average system-wide memory info
+    results["system_avg_mem"] = calculate_average_memory_info(sys_mem_info) if sys_mem_info else {}
     # Calculate per-process averae CPU usage
     results["process_avg_cpu"] = sum(proc_cpu_usage) / len(proc_cpu_usage) if proc_cpu_usage else 0
     # Calculate per-process averae memory usage
