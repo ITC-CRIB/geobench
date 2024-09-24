@@ -4,6 +4,8 @@ import shutil
 import time
 import pandas as pd
 from datetime import datetime
+
+import importlib.resources as pkg_resources
 # import ansible_runner
 
 from .scenario import Scenario
@@ -46,6 +48,11 @@ class Benchmark:
         # Get or create base directory based on the temporary directory and testing scenario name
         base_dir  =  os.path.join(self.scenario.temp_directory, self.scenario.name)
         self._makedirs_if_not_exists(base_dir)
+        # Copy dashboard viewer
+        with pkg_resources.path(__package__, 'templates') as template_dir:
+            # Copy index.html to base directory force overwrite
+            shutil.copy(os.path.join(template_dir, 'index.html'), base_dir)
+            shutil.copy(os.path.join(template_dir, 'result.html'), base_dir)
 
         # Record system configuration. Store recorded data on the file.
         print("Recording system configuration\n")
@@ -83,7 +90,7 @@ class Benchmark:
 
         # Record software configuration
         print("Recording software configuration")
-        software_config = command.get_software_config(self.scenario.type)
+        software_config = command.get_software_config(self.scenario)
         exec_path = software_config["exec_path"]
         self.result["software"] = software_config
         print()
@@ -91,15 +98,6 @@ class Benchmark:
         # Measure start time of the whole tests
         start_time = time.time()
         start_time_hr = datetime.fromtimestamp(start_time).strftime('%Y-%m-%d %H:%M:%S')
-
-        # decoded_params = {}
-        # if(self.scenario.type == "qgis-process"):
-        #     # Decode user defined command string in yaml scenario file
-        #     # decoded_params = command.decode_qgis_command(self.scenario.command)
-        #     pass
-        # elif(self.scenario.type == "qgis-python"):
-        #     # Decode user defined command string in yaml scenario file
-        #     decoded_params = command.decode_qgis_python(self.scenario.command_file)
 
         # Store results
         result_list = []
@@ -113,6 +111,8 @@ class Benchmark:
 
             # Generate for each repeatable test run
             for i in range(1, self.scenario.repeat + 1):
+                # Copy the decoded parameters to the recorded parameters
+                recorded_params = decoded_params.copy()
                 # Get or create test run directory
                 repeat_dir = os.path.join(scen_dir, f"run_{i}")
                 self._makedirs_if_not_exists(repeat_dir)
@@ -122,16 +122,23 @@ class Benchmark:
                 # Define the absolute path of the execution output directory
                 output_abs_path = os.path.abspath(repeat_dir)
                 # Join the absolute path of the execution output directory with the output file name
-                output_file_path = os.path.join(output_abs_path, f"{self.scenario.outputs['OUTPUT']}")
-                output_file_path_relative = os.path.join(f"set_{idx + 1}", f"run_{i}", f"{self.scenario.outputs['OUTPUT']}")
-                decoded_params["OUTPUT"] = output_file_path
+                output_file_path = ""
+                if "OUTPUT" in self.scenario.outputs:
+                    output_file_path = os.path.join(output_abs_path, f"{self.scenario.outputs['OUTPUT']}")
+                    output_file_path_relative = os.path.join(f"set_{idx + 1}", f"run_{i}", f"{self.scenario.outputs['OUTPUT']}")
+                    decoded_params["OUTPUT"] = output_file_path
+                    recorded_params["OUTPUT"] = output_file_path_relative
+                # Generate command parameters
                 if(self.scenario.type == "qgis-process"):
                     # Encode the command to string
                     command_params = command.encode_qgis_command(self.scenario.command, decoded_params)
                 elif(self.scenario.type == "qgis-python"):
                     # Generate python code
-                    generated_python_path = command.generate_qgis_python(self.scenario.command, decoded_params, repeat_dir)
-                    command_params = [generated_python_path]
+                    command_params = command.generate_qgis_python(self.scenario.command, decoded_params, repeat_dir)
+                elif(self.scenario.type == "python"):
+                    command_params = command.generate_python(self.scenario.command, decoded_params, repeat_dir)
+                elif(self.scenario.type == "script"):
+                    pass
                 
                 # Print for debugging
                 print()
@@ -150,17 +157,16 @@ class Benchmark:
                 process_path = os.path.join(output_abs_path, "process.json")
                 process_path_relative = os.path.join(f"set_{idx + 1}", f"run_{i}", "process.json")
                 # Copy input file to output directory
-                input_base_name = os.path.basename(self.scenario.inputs["INPUT"])
-                input_copy_destination = os.path.join(output_abs_path, input_base_name)
-                copied_input_file_path_relative = os.path.join(f"set_{idx + 1}", f"run_{i}", input_base_name)
-                shutil.copy(self.scenario.inputs["INPUT"], input_copy_destination)
+                if "INPUT" in self.scenario.inputs:
+                    input_base_name = os.path.basename(self.scenario.inputs["INPUT"])
+                    input_copy_destination = os.path.join(output_abs_path, input_base_name)
+                    copied_input_file_path_relative = os.path.join(f"set_{idx + 1}", f"run_{i}", input_base_name)
+                    shutil.copy(self.scenario.inputs["INPUT"], input_copy_destination)
+                    recorded_params["INPUT"] = copied_input_file_path_relative
                 # Save running process information as json file
                 with open(process_path, "w") as f:
                     json.dump(running_process, f, indent=4)
-                # Change decoded params path to relative for recording purpose
-                recorded_params = decoded_params.copy()
-                recorded_params["OUTPUT"] = output_file_path_relative
-                recorded_params["INPUT"] = copied_input_file_path_relative
+                
                 # Summary result
                 summarized_result = {
                     "parameters": recorded_params,

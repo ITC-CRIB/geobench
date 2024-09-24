@@ -1,3 +1,4 @@
+import shutil
 import sys
 
 import subprocess
@@ -31,7 +32,6 @@ def decode_qgis_command(command_str):
         raise error.WrongQGISCommandError
 
 def encode_qgis_command(command, params_dict):
-    
     # Extract and format the parameters
     params = ["run", command]
     for key, value in params_dict.items():
@@ -64,6 +64,8 @@ def _decode_parameters(parameter_str):
 
 def _encode_parameters(param_dict):
     try:
+        if param_dict == {}:
+            return ""
         # Encode the dictionary back into a string
         param_str = str(param_dict)
         param_str = param_str.replace("\\", "\\\\")
@@ -106,13 +108,33 @@ def generate_qgis_python(command, decoded_params, output_dir_path):
     with open(program_path, "w") as f:
         f.write(rendered_code)
         
-    return program_path
+    return [program_path]
+
+def generate_python(script_path, decoded_params, output_dir_path):
+    
+    
+    # Check if the Python executable exists
+    if not os.path.isfile(script_path):
+        raise FileNotFoundError(f"Python script not found at: {script_path}")
+    
+    # Copy Python script to output directory
+    output_file_path = os.path.join(output_dir_path, os.path.basename(script_path))
+    shutil.copyfile(script_path, output_file_path)
+    
+    # Construct the command to activate the virtual environment and run the script
+    command = f"{script_path}"
+    if decoded_params != {}:
+        params_str = _encode_parameters(decoded_params)
+        command = f"{script_path} {params_str}"
+    
+    return [command]
 
 def check_requirement(command_type="qgis-process"):
     pass
 
-def get_software_config(command_type="qgis-process"):
+def get_software_config(scenario):
     software_config = {}
+    command_type = scenario.type
     if command_type.startswith("qgis"):
         try:
             # Get QGIS installed directory
@@ -126,7 +148,7 @@ def get_software_config(command_type="qgis-process"):
                 qgis_plugins = _parse_qgis_plugins(qgis_version.stdout)
                 software_config["plugins"] = qgis_plugins
             if command_type == "qgis-process":
-                software_config["exec_path"] = qgis_process_path
+                software_config["exec_path"] = [qgis_process_path]
                 return software_config
             elif command_type == "qgis-python":
                 try:
@@ -137,7 +159,7 @@ def get_software_config(command_type="qgis-process"):
                     result = subprocess.run([qgis_python_path, '--version'], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                     # if result.returncode == 0:
                     #     print("- The qgis python command works.\n")
-                    software_config["exec_path"] = qgis_python_path
+                    software_config["exec_path"] = [qgis_python_path]
                     return software_config
                 except FileNotFoundError:
                     print("The QGIS python command not found. Please ensure QGIS is installed.n \
@@ -160,6 +182,30 @@ def get_software_config(command_type="qgis-process"):
         except subprocess.CalledProcessError:
             print("qgis_process command exists but returned an error.")
             sys.exit(1)
+    elif command_type.startswith("python"):
+        os_type = platform.system()
+        venv_path = scenario.venv
+
+        python_executable = "python3"
+        # Check if a virtual environment path is provided
+        if venv_path is not None:
+            # Check if the virtual environment path exists
+            if os.path.isdir(venv_path):
+                if os_type == "Windows":
+                    # Set the Python executable path for Windows
+                    python_executable = os.path.join(venv_path, "Scripts", "python3.exe")
+                else:
+                    # Set the Python executable path for Linux/MacOS
+                    python_executable = os.path.join(venv_path, "bin", "python3")
+                
+                # Check if the Python executable exists
+                if not os.path.isfile(python_executable):
+                    raise FileNotFoundError(f"Python executable not found at: {python_executable}")
+            else:
+                raise FileNotFoundError(f"Virtual environment not found at: {venv_path}")
+
+        software_config["exec_path"] = [python_executable]
+    return software_config
 
 def _parse_qgis_plugins(version):
     # Split the output text into lines
@@ -177,13 +223,13 @@ def _parse_qgis_plugins(version):
     
     return parsed_lines
 
-def execute_command(command, params=[]):
+def execute_command(command_list, params=[]):
     results = {"finished": False}
     
     # Start execution
     exec_start_time = time.time()
     try:
-        command = [command] + params
+        command = command_list + params
         # Start process immeaditely (NON-BLOCKING)
         process = psutil.Popen(command, shell=False)
         # Run monitoring function

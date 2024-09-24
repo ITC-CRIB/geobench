@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benchmark Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        #app {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .charts {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+        .chart-container {
+            width: 300px;
+            height: 300px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>{{ data.name }} Dashboard</h1>
+        
+        <h2>System Information</h2>
+        <div v-if="data.system">
+            <p><strong>OS:</strong> {{ data.system.os.system }} {{ data.system.os.release }}</p>
+            <p><strong>CPU Cores:</strong> {{ data.system.cpu.physical_cores }}</p>
+            <p><strong>CPU Usage:</strong> {{ data.system.cpu.usage }}%</p>
+        </div>
+        
+        <div class="charts">
+            <div class="chart-container">
+                <canvas id="memoryChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="diskChart"></canvas>
+            </div>
+        </div>
+        
+        <h2>Summarized Results</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Run</th>
+                    <th>Exec Time</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="(result, index) in data.summarized_results" :key="index">
+                    <td><a href="#" @click.prevent="showModal(index)">Set {{ Math.floor(index / 2) + 1 }}, Run {{ (index % 2) + 1 }}</a></td>
+                    <td>{{ result.exec_time.toFixed(2) }}s</td>
+                    <td><a :href="'result.html?path=' + encodeURIComponent(result.detailed_result)" target="_blank">View Details</a></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div id="parameterModal" class="modal">
+            <div class="modal-content">
+                <span class="close" @click="closeModal">&times;</span>
+                <h2>Run Parameters</h2>
+                <pre>{{ selectedParameters }}</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    new Vue({
+        el: '#app',
+        data: {
+            data: {},
+            selectedParameters: null
+        },
+        mounted() {
+            this.loadData();
+        },
+        methods: {
+            loadData() {
+                fetch('output.json')
+                    .then(response => response.json())
+                    .then(data => {
+                        this.data = data;
+                        this.$nextTick(() => {
+                            this.createPieChart('memoryChart', this.data.system.memory, 'Memory Usage');
+                            this.createPieChart('diskChart', this.data.system.disk[0], 'Disk Usage');
+                        });
+                    })
+                    .catch(error => console.error('Error loading data:', error));
+            },
+            createPieChart(elementId, data, title) {
+                const ctx = document.getElementById(elementId).getContext('2d');
+                new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Used', 'Free'],
+                        datasets: [{
+                            data: [data.used, data.free || data.available],
+                            backgroundColor: ['#4e79a7', '#e15759']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: title
+                            }
+                        }
+                    }
+                });
+            },
+            showModal(index) {
+                this.selectedParameters = JSON.stringify(this.data.summarized_results[index].parameters, null, 2);
+                document.getElementById('parameterModal').style.display = 'block';
+            },
+            closeModal() {
+                document.getElementById('parameterModal').style.display = 'none';
+            }
+        }
+    });
+    </script>
+</body>
+</html>

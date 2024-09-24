@@ -7,7 +7,7 @@ from .error import MissingParameterError
 
 # Define the scenario structure
 class Scenario:
-    def __init__(self, name, repeat, type, command, command_file, inputs, outputs, temp_directory, parameters, output_structure, scenario_combination):
+    def __init__(self, name, repeat, type, command, command_file, inputs, outputs, temp_directory, parameters, output_structure, scenario_combination, venv):
         self.name = name
         self.repeat = repeat
         self.type = type
@@ -19,6 +19,7 @@ class Scenario:
         self.parameters = parameters
         self.output_structure = output_structure
         self.combination = scenario_combination
+        self.venv = venv
 
     def __repr__(self):
         return (f"Scenario(name={self.name}, repeat={self.repeat}, type={self.type}, "
@@ -53,6 +54,8 @@ def expand_parameters(parameters):
     return expanded_params
 
 def generate_scenarios(parameters):
+    if parameters == {}:
+        return [{}]
      # Ensure all values are lists
     normalized_parameters = {k: v if isinstance(v, list) else [v] for k, v in parameters.items()}
     
@@ -73,6 +76,7 @@ def load_scenario(yaml_file, cmd_args):
     repeat = scenario_data.get('repeat')
     type = scenario_data.get('type')
     command = scenario_data.get('command')
+    venv = scenario_data.get('venv')
     command_file = scenario_data.get('command-file')
     inputs = scenario_data.get('inputs', {})
     outputs = scenario_data.get('outputs', {})
@@ -97,10 +101,10 @@ def load_scenario(yaml_file, cmd_args):
     if name is None:
         raise MissingParameterError("Error: 'name' is a mandatory parameter and must be specified either as a command line argument or in the YAML scenario file.")
     
-    if type not in ["qgis-process", "qgis-python", "qgis-json", "arcgis-python"]:
-        raise MissingParameterError(f"Error: '{type}' is not a valid type. Use qgis-process, qgis-python, qgis-json, arcgis-python.")
+    if type not in ["qgis-process", "qgis-python", "qgis-json", "arcgis-python", "python", "script"]:
+        raise MissingParameterError(f"Error: '{type}' is not a valid type. Use qgis-process, qgis-python, qgis-json, arcgis-python, python, script.")
     
-    return Scenario(name, repeat, type, command, command_file, checked_inputs, outputs, temp_directory, parameters, output_structure, scenarios)
+    return Scenario(name, repeat, type, command, command_file, checked_inputs, outputs, temp_directory, parameters, output_structure, scenarios, venv)
 
 # Example usage
 if __name__ == "__main__":

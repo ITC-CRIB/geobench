@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Monitor Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .metrics {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .metric {
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .metric-label {
+            font-size: 14px;
+            color: #666;
+        }
+        .chart-container {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .chart {
+            background-color: #f8f8f8;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="dashboard">
+        <h1>System Monitor Dashboard</h1>
+        <div class="metrics">
+            <div class="metric">
+                <div class="metric-value">{{ systemAvgCpu.toFixed(2) }}%</div>
+                <div class="metric-label">System Avg CPU</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">{{ systemAvgMem.percent }}%</div>
+                <div class="metric-label">System Avg Memory</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">{{ processAvgCpu.toFixed(2) }}%</div>
+                <div class="metric-label">Process Avg CPU</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">{{ processAvgMem.toFixed(2) }}%</div>
+                <div class="metric-label">Process Avg Memory</div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <div class="chart">
+                <canvas id="sysCpuChart"></canvas>
+            </div>
+            <div class="chart">
+                <canvas id="sysPerCpuChart"></canvas>
+            </div>
+            <div class="chart">
+                <canvas id="procCpuChart"></canvas>
+            </div>
+            <div class="chart">
+                <canvas id="procMemChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                systemAvgCpu: 0,
+                systemAvgMem: 0,
+                processAvgCpu: 0,
+                processAvgMem: 0,
+                logData: []
+            },
+            mounted() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const path = urlParams.get('path');
+                if (path) {
+                    this.fetchData(path);
+                }
+            },
+            methods: {
+                fetchData(path) {
+                    fetch(path)
+                        .then(response => response.json())
+                        .then(jsonData => {
+                            this.systemAvgCpu = jsonData.system_avg_cpu;
+                            this.systemAvgMem = jsonData.system_avg_mem;
+                            this.processAvgCpu = jsonData.process_avg_cpu;
+                            this.processAvgMem = jsonData.process_avg_mem;
+                            this.logData = jsonData.log_data;
+
+                            this.createCharts();
+                        })
+                        .catch(error => {
+                            console.error('Error loading JSON data:', error);
+                        });
+                },
+                createCharts() {
+                    this.createSysCpuChart();
+                    this.createSysPerCpuChart();
+                    this.createProcCpuChart();
+                    this.createProcMemChart();
+                },
+                createSysCpuChart() {
+                    this.createChart('sysCpuChart', 'System CPU', 'rgb(75, 192, 192)', 
+                        this.logData.map(entry => entry.sys_cpu));
+                },
+                createSysPerCpuChart() {
+                    const ctx = document.getElementById('sysPerCpuChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: this.logData.map(entry => entry.time),
+                            datasets: this.logData[0].sys_per_cpu.map((_, index) => ({
+                                label: `CPU Core ${index + 1}`,
+                                data: this.logData.map(entry => entry.sys_per_cpu[index]),
+                                borderColor: `hsl(${index * 30}, 70%, 50%)`,
+                                tension: 0.1
+                            }))
+                        },
+                        options: this.getChartOptions('System Per-CPU Usage')
+                    });
+                },
+                createProcCpuChart() {
+                    this.createChart('procCpuChart', 'Process CPU', 'rgb(255, 99, 132)', 
+                        this.logData.map(entry => entry.proc_cpu));
+                },
+                createProcMemChart() {
+                    this.createChart('procMemChart', 'Process Memory', 'rgb(54, 162, 235)', 
+                        this.logData.map(entry => entry.proc_mem));
+                },
+                createChart(canvasId, label, color, data) {
+                    const ctx = document.getElementById(canvasId).getContext('2d');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: this.logData.map(entry => entry.time),
+                            datasets: [{
+                                label: label,
+                                data: data,
+                                borderColor: color,
+                                tension: 0.1
+                            }]
+                        },
+                        options: this.getChartOptions(label)
+                    });
+                },
+                getChartOptions(title) {
+                    return {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: title
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Timestamp'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Value (%)'
+                                },
+                                beginAtZero: true
+                            }
+                        }
+                    };
+                }
+            }
+        });
+    </script>
+</body>
+</html>
