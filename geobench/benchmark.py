@@ -133,9 +133,10 @@ class Benchmark:
                     # Encode the command to string
                     command_params = command.encode_qgis_command(self.scenario.command, decoded_params)
                 elif(self.scenario.type == "qgis-python"):
-                    # Generate python code
+                    # Generate QGIS Python code
                     command_params = command.generate_qgis_python(self.scenario.command, decoded_params, repeat_dir)
                 elif(self.scenario.type == "python"):
+                    # Generate parameter for executing Python code
                     command_params = command.generate_python(self.scenario.command, decoded_params, repeat_dir)
                 elif(self.scenario.type == "script"):
                     pass

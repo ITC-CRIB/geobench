@@ -248,6 +248,37 @@ def calculate_average_memory_info(memory_data):
 
     return avg_data
 
+def get_powermetrics_data(duration=1000):
+    
+    try:
+        # Run powermetrics command and capture output
+        powermetrics_cmd = f"sudo powermetrics -s cpu_power,gpu_power -i {duration} -n 1"
+        powermetrics_output = subprocess.check_output(powermetrics_cmd, shell=True, text=True, stderr=subprocess.STDOUT)
+
+        cpu_power=0
+        gpu_power=0
+        # Parse output to extract CPU and GPU power consumption
+        output_lines = powermetrics_output.splitlines()
+        for line in output_lines:
+            if "CPU Power:" in line:
+                cpu_power = float(line.split(":")[1].strip().split()[0])
+            elif "GPU Power:" in line:
+                gpu_power = float(line.split(":")[1].strip().split()[0])
+        return {
+            "cpu_power": cpu_power,
+            "gpu_power": gpu_power
+        }
+    except subprocess.CalledProcessError as e:
+        print(f"Error running powermetrics: {e.output}")
+        return None
+
+def get_power_function():
+    os_type = platform.system()
+    if os_type == "Darwin":
+        return get_powermetrics_data
+    else:
+        return None
+
 # Perform monitoring during benchmark. The function return the average CPU and memory usage.
 def monitor_usage(results: dict, process: psutil.Process):
     sys_cpu_usage = []
@@ -258,7 +289,9 @@ def monitor_usage(results: dict, process: psutil.Process):
     child_proc_mem_usage = {}
     log_data = []
     # Threading executor pool
-    executor = ThreadPoolExecutor(max_workers=2)
+    executor = ThreadPoolExecutor(max_workers=5)
+
+    power_function = get_power_function()
     
     # Loop until execution is finished
     while process.poll() is None:
@@ -269,18 +302,29 @@ def monitor_usage(results: dict, process: psutil.Process):
         # Define tasks to get CPU usage of system-wide, main process, and child processes
         per_cpu_percent_task = executor.submit(get_cpu_usage_per_cpu)
         process_cpu_mem_percent_task = executor.submit(get_cpu_mem_usage_for_process, process)
+        # power_task = executor.submit(get_powermetrics_data)
         # Check if child process exists
         child_process_task_list = []
         if len(child_process_list) > 0:
             for child in child_process_list:
                 child_process_task = executor.submit(get_cpu_mem_usage_for_process, child)
                 child_process_task_list.append(child_process_task)
+        # All monitoring tasks
+        all_tasks = [per_cpu_percent_task, process_cpu_mem_percent_task, *child_process_task_list]
+        # Check if power function exists for specific OS
+        if power_function is not None:
+            power_task = executor.submit(power_function)
+            all_tasks.append(power_task)
         # Wait all tasks to complete
-        as_completed([per_cpu_percent_task, process_cpu_mem_percent_task, *child_process_task_list])
+        as_completed(all_tasks)
         # Get tasks result
         per_cpu_percent = per_cpu_percent_task.result()
         process_usage = process_cpu_mem_percent_task.result()
         child_process_usage_list = [task.result() for task in child_process_task_list]
+        # Check if power function exists
+        power_usage = None
+        if power_function is not None:
+            power_usage = power_task.result()
         # Calculate average system-wide CPU usage given CPU usages for all core
         all_cores_avg_cpu_percent = sum(per_cpu_percent) / len(per_cpu_percent)
         # Get the current system-wide memory information
@@ -315,6 +359,8 @@ def monitor_usage(results: dict, process: psutil.Process):
             }
             # Update the log data with the per-process usage data
             log.update(related_process_usage)
+        if power_usage is not None:
+            log.update(power_usage)
         # Append the log data to the list
         log_data.append(log)
         # Append the usage data to the lists for average calculation of system-wide metric

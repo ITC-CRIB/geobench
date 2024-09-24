@@ -62,7 +62,7 @@
                 <div class="metric-label">System Avg CPU</div>
             </div>
             <div class="metric">
-                <div class="metric-value">{{ systemAvgMem.percent }}%</div>
+                <div class="metric-value">{{ systemAvgMemPercent }}%</div>
                 <div class="metric-label">System Avg Memory</div>
             </div>
             <div class="metric">
@@ -87,6 +87,9 @@
             <div class="chart">
                 <canvas id="procMemChart"></canvas>
             </div>
+            <div class="chart">
+                <canvas id="powerChart"></canvas>
+            </div>
         </div>
     </div>
 
@@ -95,7 +98,7 @@
             el: '#app',
             data: {
                 systemAvgCpu: 0,
-                systemAvgMem: 0,
+                systemAvgMemPercent: 0,
                 processAvgCpu: 0,
                 processAvgMem: 0,
                 logData: []
@@ -113,7 +116,9 @@
                         .then(response => response.json())
                         .then(jsonData => {
                             this.systemAvgCpu = jsonData.system_avg_cpu;
-                            this.systemAvgMem = jsonData.system_avg_mem;
+                            if (jsonData.system_avg_mem.percent) {
+                                this.systemAvgMemPercent = jsonData.system_avg_mem.percent.toFixed(2);
+                            }
                             this.processAvgCpu = jsonData.process_avg_cpu;
                             this.processAvgMem = jsonData.process_avg_mem;
                             this.logData = jsonData.log_data;
@@ -129,6 +134,7 @@
                     this.createSysPerCpuChart();
                     this.createProcCpuChart();
                     this.createProcMemChart();
+                    this.createPowerChart();
                 },
                 createSysCpuChart() {
                     this.createChart('sysCpuChart', 'System CPU', 'rgb(75, 192, 192)', 
@@ -148,6 +154,50 @@
                             }))
                         },
                         options: this.getChartOptions('System Per-CPU Usage')
+                    });
+                },
+                createPowerChart() {
+                    const ctx = document.getElementById('powerChart').getContext('2d');
+                    const labels = this.logData.map(entry => entry.time);
+                    const cpuData = this.logData.map(entry => entry.cpu_power);
+                    const gpuData = this.logData.map(entry => entry.gpu_power);
+
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                {
+                                    label: 'CPU Power',
+                                    data: cpuData,
+                                    borderColor: 'rgb(75, 192, 192)',
+                                    tension: 0.1
+                                },
+                                {
+                                    label: 'GPU Power',
+                                    data: gpuData,
+                                    borderColor: 'rgb(255, 99, 132)',
+                                    tension: 0.1
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Time (seconds)'
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Power (mW)'
+                                    }
+                                }
+                            }
+                        }
                     });
                 },
                 createProcCpuChart() {
