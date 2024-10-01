@@ -76,9 +76,12 @@ class Benchmark:
         # self.result["process"] = running_process
         # self._save_result()
 
+        # Get instance of the command for the testing scenario
+        instance = command.get_instance(self.scenario)
+
         # Check the availability of the tools and libraries for running benchmark
         print(f"Check system requirement\n")
-        command.check_requirement(command_type=self.scenario.type)
+        instance.check_requirement()
         
         # To do: Decide if the system is suitable for testing
 
@@ -90,7 +93,7 @@ class Benchmark:
 
         # Record software configuration
         print("Recording software configuration")
-        software_config = command.get_software_config(self.scenario)
+        software_config = instance.get_software_config()
         exec_path = software_config["exec_path"]
         self.result["software"] = software_config
         print()
@@ -129,17 +132,18 @@ class Benchmark:
                     decoded_params["OUTPUT"] = output_file_path
                     recorded_params["OUTPUT"] = output_file_path_relative
                 # Generate command parameters
-                if(self.scenario.type == "qgis-process"):
-                    # Encode the command to string
-                    command_params = command.encode_qgis_command(self.scenario.command, decoded_params)
-                elif(self.scenario.type == "qgis-python"):
-                    # Generate QGIS Python code
-                    command_params = command.generate_qgis_python(self.scenario.command, decoded_params, repeat_dir)
-                elif(self.scenario.type == "python"):
-                    # Generate parameter for executing Python code
-                    command_params = command.generate_python(self.scenario.command, decoded_params, repeat_dir)
-                elif(self.scenario.type == "script"):
-                    pass
+                command_params = instance.get_exec_params(self.scenario.command, decoded_params, repeat_dir)
+                # if(self.scenario.type == "qgis-process"):
+                #     # Encode the command to string
+                #     command_params = command.encode_qgis_command(self.scenario.command, decoded_params)
+                # elif(self.scenario.type == "qgis-python"):
+                #     # Generate QGIS Python code
+                #     command_params = command.generate_qgis_python(self.scenario.command, decoded_params, repeat_dir)
+                # elif(self.scenario.type == "python"):
+                #     # Generate parameter for executing Python code
+                #     command_params = command.generate_python(self.scenario.command, decoded_params, repeat_dir)
+                # elif(self.scenario.type == "script"):
+                #     pass
                 
                 # Print for debugging
                 print()
