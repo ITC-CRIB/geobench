@@ -292,6 +292,10 @@ def monitor_usage(results: dict, process: psutil.Process):
     executor = ThreadPoolExecutor(max_workers=5)
 
     power_function = get_power_function()
+
+    # Initialize child process start times dictionary outside the loop
+    child_process_start_times = {}
+    child_process_running_times = {}
     
     # Loop until execution is finished
     while process.poll() is None:
@@ -302,13 +306,24 @@ def monitor_usage(results: dict, process: psutil.Process):
         # Define tasks to get CPU usage of system-wide, main process, and child processes
         per_cpu_percent_task = executor.submit(get_cpu_usage_per_cpu)
         process_cpu_mem_percent_task = executor.submit(get_cpu_mem_usage_for_process, process)
-        # power_task = executor.submit(get_powermetrics_data)
+
         # Check if child process exists
         child_process_task_list = []
+        child_pid_list = []
         if len(child_process_list) > 0:
             for child in child_process_list:
+                if child.pid not in child_process_start_times:
+                    child_process_start_times[child.pid] = time.time()
                 child_process_task = executor.submit(get_cpu_mem_usage_for_process, child)
                 child_process_task_list.append(child_process_task)
+                child_pid_list.append(child.pid)
+        
+        # Clean up finished child processes
+        for pid in list(child_process_start_times.keys()):
+            if pid not in child_pid_list:
+                child_process_running_times[child.pid] = time.time() - child_process_start_times[pid]
+                del child_process_start_times[pid]
+
         # All monitoring tasks
         all_tasks = [per_cpu_percent_task, process_cpu_mem_percent_task, *child_process_task_list]
         # Check if power function exists for specific OS

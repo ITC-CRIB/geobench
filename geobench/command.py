@@ -11,6 +11,7 @@ import psutil
 
 from . import error
 from .recording import monitor_usage
+from .process_monitor import ProcessMonitor
 
 def execute_command(command_list, params=[]):
     results = {"finished": False}
@@ -22,7 +23,13 @@ def execute_command(command_list, params=[]):
         # Start process immeaditely (NON-BLOCKING)
         process = psutil.Popen(command, shell=False)
         # Run monitoring function
-        monitor_usage(results, process)
+        # monitor_usage(results, process)
+        pm = ProcessMonitor()
+        pm.start_monitoring(process)
+        # Get collected metrics
+        collected_metrics = pm.get_metrics()
+        # Update results with collected metrics
+        results.update(collected_metrics)
         # Set success flag to True if the process completed without raising an exception
         results["success"] = True
     except subprocess.CalledProcessError as e:
