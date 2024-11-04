@@ -7,7 +7,7 @@ from .error import MissingParameterError
 
 # Define the scenario structure
 class Scenario:
-    def __init__(self, name, repeat, type, command, command_file, inputs, outputs, temp_directory, parameters, output_structure, scenario_combination, venv):
+    def __init__(self, name, repeat, type, command, command_file, inputs, outputs, temp_directory, parameters, output_structure, scenario_combination, venv, working_dir):
         self.name = name
         self.repeat = repeat
         self.type = type
@@ -20,6 +20,7 @@ class Scenario:
         self.output_structure = output_structure
         self.combination = scenario_combination
         self.venv = venv
+        self.working_dir = working_dir
 
     def __repr__(self):
         return (f"Scenario(name={self.name}, repeat={self.repeat}, type={self.type}, "
@@ -83,6 +84,7 @@ def load_scenario(yaml_file, cmd_args):
     temp_directory = scenario_data.get('temp-directory')
     parameters = scenario_data.get('parameters', {})
     output_structure = scenario_data.get('output-structure')
+    working_dir = scenario_data.get('workdir', os.getcwd())
 
     checked_inputs = {}
     # Update inputs parameters to absolute path
@@ -101,10 +103,10 @@ def load_scenario(yaml_file, cmd_args):
     if name is None:
         raise MissingParameterError("Error: 'name' is a mandatory parameter and must be specified either as a command line argument or in the YAML scenario file.")
     
-    if type not in ["qgis-process", "qgis-python", "qgis-json", "arcgis-python", "python", "script"]:
-        raise MissingParameterError(f"Error: '{type}' is not a valid type. Use qgis-process, qgis-python, qgis-json, arcgis-python, python, script.")
+    if type not in ["qgis-process", "qgis-python", "qgis-json", "python", "shell"]:
+        raise MissingParameterError(f"Error: '{type}' is not a valid type. Use qgis-process, qgis-python, qgis-json, python, shell script.")
     
-    return Scenario(name, repeat, type, command, command_file, checked_inputs, outputs, temp_directory, parameters, output_structure, scenarios, venv)
+    return Scenario(name, repeat, type, command, command_file, checked_inputs, outputs, temp_directory, parameters, output_structure, scenarios, venv, working_dir)
 
 # Example usage
 if __name__ == "__main__":

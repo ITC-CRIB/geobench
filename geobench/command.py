@@ -13,38 +13,43 @@ from . import error
 from .recording import monitor_usage
 from .process_monitor import ProcessMonitor
 
-def execute_command(command_list, params=[]):
-    results = {"finished": False}
-    
-    # Start execution
-    exec_start_time = time.time()
-    try:
-        command = command_list + params
-        # Start process immeaditely (NON-BLOCKING)
-        process = psutil.Popen(command, shell=False)
-        # Run monitoring function
-        # monitor_usage(results, process)
-        pm = ProcessMonitor()
-        pm.start_monitoring(process)
-        # Get collected metrics
-        collected_metrics = pm.get_metrics()
-        # Update results with collected metrics
-        results.update(collected_metrics)
-        # Set success flag to True if the process completed without raising an exception
-        results["success"] = True
-    except subprocess.CalledProcessError as e:
-        results["success"] = False
-        print(f"Command failed with {e.returncode}")
-    # Store process id
-    results["pid"] = process.pid
-    results["finished"] = True
-    exec_end_time = time.time()
-    results["start_time"] = exec_start_time
-    results["end_time"] =  exec_end_time
-
-    return results
-
 class CommandType:
+    def __init__(self, scenario):
+        self.scenario = scenario
+    
+    def execute_command(self, command_list, params=[]):
+        results = {"finished": False}
+        
+        working_dir = self.scenario.working_dir
+
+        # Start execution
+        exec_start_time = time.time()
+        try:
+            command = command_list + params
+            # Start process immeaditely (NON-BLOCKING)
+            process = psutil.Popen(command, shell=False, cwd=working_dir)
+            # Run monitoring function
+            # monitor_usage(results, process)
+            pm = ProcessMonitor()
+            pm.start_monitoring(process)
+            # Get collected metrics
+            collected_metrics = pm.get_metrics()
+            # Update results with collected metrics
+            results.update(collected_metrics)
+            # Set success flag to True if the process completed without raising an exception
+            results["success"] = True
+        except subprocess.CalledProcessError as e:
+            results["success"] = False
+            print(f"Command failed with {e.returncode}")
+        # Store process id
+        results["pid"] = process.pid
+        results["finished"] = True
+        exec_end_time = time.time()
+        results["start_time"] = exec_start_time
+        results["end_time"] =  exec_end_time
+
+        return results
+        
     def get_software_config(self):
         raise NotImplementedError("Subclasses must implement get_software_config method")
     def get_exec_params(self, command, params_dict, output_dir_path):
@@ -228,25 +233,27 @@ class QGISPython(QGISProcess):
         return [program_path]
 
 class Python(CommandType):
-    def __init__(self, venv=None):
-        self.venv = venv
 
     def get_software_config(self):
         software_config = {}
         os_type = platform.system()
         python_executable = "python3"
 
-        if self.venv is not None:
-            if os.path.isdir(self.venv):
+        venv = self.scenario.venv
+
+        if venv is not None:
+            if os.path.isdir(venv):
                 if os_type == "Windows":
-                    python_executable = os.path.join(self.venv, "Scripts", "python3.exe")
+                    python_executable = os.path.join(venv, "Scripts", "python3.exe")
                 else:
-                    python_executable = os.path.join(self.venv, "bin", "python3")
+                    python_executable = os.path.join(venv, "bin", "python3")
                 
-                if not os.path.isfile(python_executable):
+                if os.path.isfile(python_executable) or os.path.islink(python_executable):
+                    pass
+                else:
                     raise FileNotFoundError(f"Python executable not found at: {python_executable}")
             else:
-                raise FileNotFoundError(f"Virtual environment not found at: {self.venv}")
+                raise FileNotFoundError(f"Virtual environment not found at: {venv}")
 
         software_config["exec_path"] = [python_executable]
         return software_config
@@ -280,6 +287,11 @@ class Python(CommandType):
             raise Exception(f"Error when encoding input parameters: {e}")
 
 class Shell(CommandType):
+    def get_software_config(self):
+        software_config = {
+            "exec_path": [self.scenario.command]
+        }
+        return software_config
 
     def get_exec_params(self, script_path, decoded_params, output_dir_path):
         if not os.path.isfile(script_path):
@@ -313,13 +325,13 @@ class CommandFactory:
     @staticmethod
     def create_command(scenario):
         if scenario.type == "qgis-process":
-            return QGISProcess()
+            return QGISProcess(scenario)
         elif scenario.type == "qgis-python":
-            return QGISPython()
+            return QGISPython(scenario)
         elif scenario.type.startswith("python"):
-            return Python(scenario.venv)
+            return Python(scenario)
         elif scenario.type.startswith("shell"):
-            return Shell()
+            return Shell(scenario)
         else:
             raise ValueError("Invalid process type. The program only supports [qgis-process, qgis-python, python, shell]")
 

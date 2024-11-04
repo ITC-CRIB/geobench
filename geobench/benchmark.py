@@ -151,7 +151,7 @@ class Benchmark:
                 print(f"{exec_path} {command_params}")
                 print()
                 # Execute the command
-                exec_result = command.execute_command(exec_path, command_params)
+                exec_result = instance.execute_command(exec_path, command_params)
                 # Save the individual execution result to each test run directory as json file
                 result_path = os.path.join(output_abs_path, "result.json")
                 result_path_relative = os.path.join(f"set_{idx + 1}", f"run_{i}", "result.json")
