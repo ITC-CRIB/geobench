@@ -277,7 +277,37 @@ class Python(CommandType):
             # Return script path and parameters as a list
             return param_list
         except Exception as e:
-            raise Exception(f"Error when encoding dictionary to Python program: {e}")
+            raise Exception(f"Error when encoding input parameters: {e}")
+
+class Shell(CommandType):
+
+    def get_exec_params(self, script_path, decoded_params, output_dir_path):
+        if not os.path.isfile(script_path):
+            raise FileNotFoundError(f"Shell script not found at: {script_path}")
+        
+        output_file_path = os.path.join(output_dir_path, os.path.basename(script_path))
+        shutil.copyfile(script_path, output_file_path)
+        
+        command_with_params = self._encode_parameters(script_path, decoded_params)
+        return command_with_params
+
+    def _encode_parameters(self, script_path, params):
+        try:
+            # Initialize the param_list with the script path
+            param_list = [script_path]
+            
+            # Check if the params are a dictionary
+            if isinstance(params, dict):
+                for key, value in params.items():
+                    # Append string values with quotes to a list
+                    param_list.append(f"--{key}={value}")
+            elif isinstance(params, list):
+                # If params is a list, extend the param_list with the list
+                param_list.extend(params)
+            # Return script path and parameters as a list
+            return param_list
+        except Exception as e:
+            raise Exception(f"Error when encoding input parameters: {e}")
 
 class CommandFactory:
     @staticmethod
@@ -288,8 +318,10 @@ class CommandFactory:
             return QGISPython()
         elif scenario.type.startswith("python"):
             return Python(scenario.venv)
+        elif scenario.type.startswith("shell"):
+            return Shell()
         else:
-            raise ValueError("Invalid process type. The program only supports [qgis-process, qgis-python, python]")
+            raise ValueError("Invalid process type. The program only supports [qgis-process, qgis-python, python, shell]")
 
 def get_instance(scenario):
     instance = CommandFactory.create_command(scenario)

@@ -37,25 +37,34 @@ Follow these steps to set up GeoBench:
 
 ## Installation as Tool
 
-- Install `pipx`
+- Install `uv`
+	- macOS and Linux
 	```
-	pip install pipx
+	curl -LsSf https://astral.sh/uv/install.sh | sh
+	```
+	- Windows (from Powershell/Terminal)
+	```
+	powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+	```
+	- Using `pip`
+	```
+	pip install uv
 	```
 
 - Run the installation process
 	```
-	pipx install . --force
-	```
-
-- Update program path to be recognized in system
-	```
-	pipx ensurepath
+	uv tool install . --upgrade
 	```
 
 - Note: to update the tool, you need to pull from github and do the installation again.
 
 ## Development
 - **Set up and activate the Python environment**:
+   - **Using `uv` (recommended) **:
+	```
+	uv sync
+	```
+   
    - **Using `venv`**:
      ```bash
      python3 -m venv .venv
@@ -70,6 +79,12 @@ Follow these steps to set up GeoBench:
      ```
 
 - **Install required packages**:
+   - **Using `uv` (recommended)**:
+   ```
+   uv sync
+   ```
+
+   - **Using `pip`**:
    ```bash
    pip install -r requirements.txt
    ```

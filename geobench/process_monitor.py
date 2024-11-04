@@ -290,18 +290,6 @@ class ProcessMonitor:
     def get_metrics(self):
         return self.metrics
 
-    def print_metrics(self):
-        for pid, metrics in self.process_metrics.items():
-            print(f"Process {pid} metrics:")
-            print(f"     {metrics}")
-            # print(f"  Running Time: {metrics['running_time']:.2f}s")
-            # print(f"  Average CPU: {metrics['avg_cpu_percent']:.2f}%")
-            # print(f"  Average Memory: {metrics['avg_memory_percent']:.2f}%")
-            # print("  Samples:")
-            # for sample in metrics['samples']:
-            #     print(f"    Timestamp: {sample['timestamp']}, CPU: {sample['cpu_percent']:.2f}%, "
-            #           f"Memory: {sample['memory_percent']:.2f}%")
-
 def main():
     if len(sys.argv) != 2:
         print("Usage: python process_tracker.py <path_to_heavy_processes.py>")
