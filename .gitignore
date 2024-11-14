@@ -12,3 +12,4 @@ geobench.egg-info/
 __pycache__/
 build/
 .DS_Store
+.ipynb_checkpoints/
