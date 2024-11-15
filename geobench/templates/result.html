@@ -88,6 +88,9 @@
                 <canvas id="procMemChart"></canvas>
             </div>
             <div class="chart">
+                <canvas id="procRuntimeChart"></canvas>
+            </div>
+            <div class="chart">
                 <canvas id="powerChart"></canvas>
             </div>
         </div>
@@ -101,7 +104,8 @@
                 systemAvgMemPercent: 0,
                 processAvgCpu: 0,
                 processAvgMem: 0,
-                logData: []
+                logData: [],
+                processMetrics:{},
             },
             mounted() {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -122,6 +126,7 @@
                             this.processAvgCpu = jsonData.process_avg_cpu;
                             this.processAvgMem = jsonData.process_avg_mem;
                             this.logData = jsonData.log_data;
+                            this.processMetrics = jsonData.process_metrics;
 
                             this.createCharts();
                         })
@@ -134,6 +139,7 @@
                     this.createSysPerCpuChart();
                     this.createProcCpuChart();
                     this.createProcMemChart();
+                    this.createProcRuntimeChart();
                     this.createPowerChart();
                 },
                 createSysCpuChart() {
@@ -201,12 +207,106 @@
                     });
                 },
                 createProcCpuChart() {
-                    this.createChart('procCpuChart', 'Process CPU', 'rgb(255, 99, 132)', 
-                        this.logData.map(entry => entry.proc_cpu));
+                    const ctx = document.getElementById('procCpuChart').getContext('2d');
+                    const datasets = Object.entries(this.processMetrics).map(([pid, data]) => ({
+                        label: `${data.name} (${pid})`,
+                        data: [data.avg_cpu_percent],
+                        backgroundColor: `hsl(${Math.random() * 360}, 70%, 50%)`
+                    }));
+
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Process CPU Usage'],
+                            datasets: datasets
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'Process CPU Usage'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    title: {
+                                        display: true,
+                                        text: 'CPU Usage (%)'
+                                    }
+                                }
+                            }
+                        }
+                    });
                 },
                 createProcMemChart() {
-                    this.createChart('procMemChart', 'Process Memory', 'rgb(54, 162, 235)', 
-                        this.logData.map(entry => entry.proc_mem));
+                    const ctx = document.getElementById('procMemChart').getContext('2d');
+                    const datasets = Object.entries(this.processMetrics).map(([pid, data]) => ({
+                        label: `${data.name} (${pid})`,
+                        data: [data.avg_memory_percent],
+                        backgroundColor: `hsl(${Math.random() * 360}, 70%, 50%)`
+                    }));
+
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Process Memory Usage'],
+                            datasets: datasets
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'Process Memory Usage'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Memory Usage (%)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                },
+                createProcRuntimeChart() {
+                    const ctx = document.getElementById('procRuntimeChart').getContext('2d');
+                    const datasets = Object.entries(this.processMetrics).map(([pid, data]) => ({
+                        label: `${data.name} (${pid})`,
+                        data: [data.running_time],
+                        backgroundColor: `hsl(${Math.random() * 360}, 70%, 50%)`
+                    }));
+
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Process Running Time'],
+                            datasets: datasets
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'Process Running Time'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Running Time (ms)'
+                                    }
+                                }
+                            }
+                        }
+                    });
                 },
                 createChart(canvasId, label, color, data) {
                     const ctx = document.getElementById(canvasId).getContext('2d');
