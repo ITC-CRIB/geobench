@@ -9,7 +9,7 @@ import importlib.resources as pkg_resources
 # import ansible_runner
 
 from .scenario import Scenario
-from . import recording
+from . import system_recording as recording
 from . import command
 
 CSV_FILE = 'benchmark_results.csv'
@@ -112,7 +112,7 @@ class Benchmark:
         self._makedirs_if_not_exists(run_specific_dir)
 
         print(f"Recording running process for {recording_duration} seconds before run {run_idx} in set {scenario_set_idx +1}\n")
-        pre_run_processes = recording.record_process_info(duration=recording_duration)
+        pre_run_processes = recording.record_all_process_info(duration=recording_duration)
 
         output_abs_path = os.path.abspath(run_specific_dir)
         

@@ -9,7 +9,6 @@ import importlib.resources as pkg_resources
 from jinja2 import Environment, FileSystemLoader
 import psutil
 
-from . import error
 from .error import (
     ExecutableNotFoundError,
     SoftwareConfigurationError,

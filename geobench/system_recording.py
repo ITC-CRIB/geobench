@@ -141,8 +141,8 @@ def _calculate_average_usage(process_info):
     average_info.sort(key=lambda x: x['avg_memory_usage'], reverse=True)
     return average_info
 
-# Record running process for specific duration, then calculate the average CPU and memory usage
-def record_process_info(duration=30):
+# Record all running processes for specific duration, then calculate the average CPU and memory usage
+def record_all_process_info(duration=30):
     process_info = _record_process_info(duration=duration, interval=1)
     average_info = _calculate_average_usage(process_info)
 
