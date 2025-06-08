@@ -6,7 +6,6 @@ import pandas as pd
 from datetime import datetime
 
 import importlib.resources as pkg_resources
-# import ansible_runner
 
 from .scenario import Scenario
 from . import system_recording as recording

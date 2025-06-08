@@ -65,10 +65,6 @@ class CommandLineTool:
             self.handle_run(args)
         elif args.command == 'result':
             self.handle_result(args)
-        elif args.command == 'install':
-            self.handle_install(args)
-        elif args.command == 'monitor':
-            self.handle_monitor(args)
         else:
             self.parser.print_help()
 
@@ -172,57 +168,6 @@ class CommandLineTool:
                 print(f"No test instance found for ID: {scenario_id}. Cannot display.")
         else:
             self.result_parser.print_help()
-    
-    def handle_install(self, args):
-        print(f"Attempting to run installation process...")
-        try:
-            import ansible_runner # Make sure ansible_runner is installed
-            
-            # Define paths relative to the geobench package directory
-            base_dir = os.path.dirname(__file__) # geobench directory
-            ansible_dir = os.path.join(base_dir, 'ansible')
-            inventory_file = os.path.join(ansible_dir, 'inventory.yml')
-            playbook_file = os.path.join(ansible_dir, 'install.yml')
-
-            if not os.path.isdir(ansible_dir):
-                print(f"Ansible directory not found: {ansible_dir}")
-                print("Please ensure an 'ansible' directory with 'inventory.yml' and 'install.yml' exists within the geobench package.")
-                return
-            if not os.path.exists(inventory_file):
-                print(f"Inventory file not found: {inventory_file}")
-                return
-            if not os.path.exists(playbook_file):
-                print(f"Playbook file not found: {playbook_file}")
-                return
-
-            print(f"Running Ansible playbook: {playbook_file} with inventory: {inventory_file}")
-            r = ansible_runner.interface.run(
-                    private_data_dir=ansible_dir, # Directory for ansible artifacts
-                    playbook=playbook_file,
-                    inventory=inventory_file
-                )
-            
-            print(f"Ansible run completed. Status: {r.status}, RC: {r.rc}")
-            if r.rc != 0:
-                print(f"Ansible playbook execution failed. See logs in {os.path.join(ansible_dir, 'artifacts')}")
-            else:
-                print("Installation playbook executed successfully.")
-
-        except ImportError:
-            print("ansible_runner package is not installed. Please install it to use this feature (e.g., 'pip install ansible-runner').")
-        except Exception as e:
-            print(f"An error occurred during the install process: {e}")
-
-    def handle_monitor(self, args):
-        # This is a placeholder. Actual monitoring depends on the deployed infrastructure.
-        # It typically involves checking a dashboarding tool like Grafana.
-        default_grafana_url = 'http://18.197.58.197:9090' # Consistent with other defaults
-        print(f"Handling monitor command...")
-        print(f"Geobench monitoring typically involves observing system and application metrics.")
-        print(f"If you have a Grafana instance set up for monitoring, you might find dashboards at an address like: {default_grafana_url}")
-        print(f"You may need to navigate to specific dashboards relevant to your benchmarks.")
-        print("For real-time process monitoring during a 'run' command, Geobench collects metrics directly.")
-        print("This 'monitor' command is a hint for post-run or general system observation.")
 
 def main():
     tool = CommandLineTool()
