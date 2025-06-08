@@ -51,12 +51,6 @@ class CommandLineTool:
         self.result_display_parser.add_argument('id', type=str, help='The scenario id')
         self.result_display_parser.add_argument('--grafana-url', type=str, default='http://18.197.58.197:9090', help='Base URL of the Grafana instance.')
 
-        # Create subparsers for "install" command
-        self.snapshot_parser = self.subparsers.add_parser("install", help='Install required packages')
-        
-        # Create subparsers for "monitor" command
-        self.monitor_parser = self.subparsers.add_parser("monitor", help='Monitor the benchmarking')
-
     def run(self):
         args = self.parser.parse_args()
         # inventory_path = os.path.abspath(args.inventory)

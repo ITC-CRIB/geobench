@@ -1,21 +1,6 @@
 version = 1
+revision = 1
 requires-python = ">=3.13"
-
-[[package]]
-name = "ansible-runner"
-version = "2.3.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "packaging" },
-    { name = "pexpect" },
-    { name = "python-daemon" },
-    { name = "pyyaml" },
-    { name = "six" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/78/db/7c615d2be8a98e08d31e90c6b89555919b3b7882885407b885c211ad8b93/ansible-runner-2.3.6.tar.gz", hash = "sha256:b2174a12dcad2dc2f342ea82876898f568a0b66c53568600bf80577158fcba1c", size = 179068 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/84/048138070cd0dea115b4004569e95fc4d69ff20fae33ce0cd4547e49b1e9/ansible_runner-2.3.6-py3-none-any.whl", hash = "sha256:4f153d9c3000a61b82d7253ca292849e3ad2c5d68dfff4377a6b98c4e6ff6c3e", size = 81559 },
-]
 
 [[package]]
 name = "certifi"
@@ -91,7 +76,6 @@ name = "geobench"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "ansible-runner" },
     { name = "certifi" },
     { name = "charset-normalizer" },
     { name = "contourpy" },
@@ -132,7 +116,6 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ansible-runner", specifier = "==2.3.6" },
     { name = "certifi", specifier = "==2024.2.2" },
     { name = "charset-normalizer", specifier = "==3.3.2" },
     { name = "contourpy", specifier = "==1.2.1" },
@@ -473,7 +456,7 @@ name = "tzlocal"
 version = "5.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "tzdata", marker = "platform_system == 'Windows'" },
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/04/d3/c19d65ae67636fe63953b20c2e4a8ced4497ea232c43ff8d01db16de8dc0/tzlocal-5.2.tar.gz", hash = "sha256:8d399205578f1a9342816409cc1e46a93ebd5755e39ea2d85334bea911bf0e6e", size = 30201 }
 wheels = [
