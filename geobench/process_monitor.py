@@ -1,5 +1,4 @@
 from collections import defaultdict
-from multiprocessing.dummy import Process
 from pathlib import Path
 import platform
 import sys
@@ -7,9 +6,9 @@ import time
 import psutil
 import subprocess
 from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import statistics
-import threading
+import asyncio
+from typing import Dict, List, Any, Optional, Union, Tuple
 
 class ProcessMonitor:
     # Initialize the ProcessMonitor class
@@ -20,6 +19,8 @@ class ProcessMonitor:
         self.interval = interval
         # Dictionary to store metrics for each monitored process
         self.process_metrics = {}
+        # Dictionary to store logs for each monitored process
+        self.process_metrics_logs = {}
         # List to store the PIDs of monitored processes
         self.monitored_pids = []
         # List to store system-wide logs metrics
@@ -27,9 +28,12 @@ class ProcessMonitor:
         # Dictionary to store overall metrics
         self.metrics = {}
         # Lock to ensure thread-safe operations
-        self.lock = threading.Lock()
-        # Thread pool executor to manage concurrent monitoring tasks
-        self.executor = ThreadPoolExecutor(max_workers=10)  # Adjust max_workers as needed
+        self.lock = asyncio.Lock()
+        # Event loop for asyncio
+        self.loop = None
+
+        self.sys_cpu_usage = []
+        self.sys_mem_info = []
 
     # Get CPU usage per cpu
     def get_cpu_usage_per_cpu(self):
@@ -97,190 +101,209 @@ class ProcessMonitor:
 
         return avg_data
 
-    # Monitor the process with the given PID
-    def monitor_process(self, pid):
-        # Flag to check if the process is found
-        is_process_found = False
+    async def monitor_process(self, pid):
+        """
+        Monitor a single process continuously while it's running.
+        Returns False if the process no longer exists, True otherwise.
+        """
         try:
             # Get the process using the pid
             process = psutil.Process(pid)
-            # Get process name
-            process_name = process.name()
-            is_process_found = True
-            start_time = datetime.now()
-            cpu_percents = []
-            memory_percents = []
             
-            # Initialize the process metrics if recording logs
-            if self.record_logs:
-                with self.lock:
-                    self.process_metrics[pid] = {'samples': []}
-            else:
-                with self.lock:
-                    self.process_metrics[pid] = {}
-
-            # Monitor the process while it is running
+            # Check if this is the first time monitoring this process
+            if pid not in self.process_metrics:
+                # Get process name
+                process_name = process.name()
+                
+                # Initialize the process metrics
+                async with self.lock:
+                    self.process_metrics_logs[pid] = {
+                        'start_time': datetime.now(),
+                        'cpu_percents': [],
+                        'memory_percents': [],
+                    }
+                    if self.record_logs:
+                        self.process_metrics[pid] = {
+                            'name': process_name,
+                            'samples': [],
+                            'running_time': 0,
+                            'avg_cpu_percent': 0,
+                            'avg_memory_percent': 0
+                        }
+                    else:
+                        self.process_metrics[pid] = {
+                            'name': process_name,
+                            'running_time': 0,
+                            'avg_cpu_percent': 0,
+                            'avg_memory_percent': 0
+                        }
+            
+            # Monitor the process while it's still running
             while process.is_running():
-                recording_time = datetime.now()
                 # Get the CPU and memory usage of the process
-                cpu_percent = process.cpu_percent(interval=self.interval)
+                cpu_percent = process.cpu_percent(interval=self.interval)  # Non-blocking
                 memory_percent = process.memory_percent()
-
-                # Append the usage data to the lists
-                cpu_percents.append(cpu_percent)
-                memory_percents.append(memory_percent)
-
-                # Record the logs if required
-                if self.record_logs:
-                    with self.lock:
+                
+                # Update metrics
+                async with self.lock:
+                    # Append the usage data to the lists
+                    self.process_metrics_logs[pid]['cpu_percents'].append(cpu_percent)
+                    self.process_metrics_logs[pid]['memory_percents'].append(memory_percent)
+                    
+                    # Record the logs if required
+                    if self.record_logs:
+                        # Record current time
+                        recording_time = datetime.now()
                         self.process_metrics[pid]['samples'].append({
                             'timestamp': recording_time,
                             'cpu_percent': cpu_percent,
                             'memory_percent': memory_percent,
                         })
-
+            with self.lock:
+                self._finalize_process_metrics(pid)
+                self.monitored_pids.remove(pid)
+                print(f"Process {pid} finalized")
+            return True
         except psutil.NoSuchProcess:
-            # Handle the case where the process has terminated
-            print(f"Process {pid} has terminated.")
-        finally:
-            if is_process_found:
-                # Calculate the running time and average CPU and memory usage
-                running_time = datetime.now() - start_time
-                avg_cpu_percent = statistics.mean(cpu_percents) if cpu_percents else 0
-                avg_memory_percent = statistics.mean(memory_percents) if memory_percents else 0
+            print(f"Process {pid} not exists")
+            return False
+            
 
-                with self.lock:
-                    # Update the process metrics with the calculated values
-                    self.process_metrics[pid].update({
-                        'name': process_name,
-                        'running_time': running_time.total_seconds(),
-                        'avg_cpu_percent': avg_cpu_percent,
-                        'avg_memory_percent': avg_memory_percent
-                    })
+    def _finalize_process_metrics(self, pid):
+        """Finalize metrics for a process that has terminated."""
+        # async with self.lock:
+        if pid in self.process_metrics_logs:
+            metrics_logs = self.process_metrics_logs[pid]
+            # Calculate the running time and average CPU and memory usage
+            running_time = datetime.now() - metrics_logs['start_time']
+            avg_cpu_percent = statistics.mean(metrics_logs['cpu_percents'])
+            avg_memory_percent = statistics.mean(metrics_logs['memory_percents'])
+            
+            # Update the process metrics with the calculated values
+            self.process_metrics[pid].update({
+                'running_time': running_time.total_seconds(),
+                'avg_cpu_percent': avg_cpu_percent,
+                'avg_memory_percent': avg_memory_percent
+            })
+
+    async def monitor_system(self, parent_process):
+        """
+        Monitor system metrics for one cycle.
+        """
+        while parent_process.is_running():
+            # Get per-CPU usage directly
+            per_cpu_percent = self.get_cpu_usage_per_cpu()
+            
+            # Get power usage if power function exists
+            power_function = self.get_power_function()
+            power_usage = None
+            if power_function is not None:
+                power_usage = power_function()
+            
+            # Calculate average system-wide CPU usage
+            all_cores_avg_cpu_percent = sum(per_cpu_percent) / len(per_cpu_percent)
+            
+            # Get the current system-wide memory information
+            memory_snapshot = psutil.virtual_memory()
+            memory_info = self._convert_named_tuple_to_dict(memory_snapshot)
+            
+            # Create a dictionary to store the log data
+            log = {
+                "sys_cpu": all_cores_avg_cpu_percent,
+                "sys_per_cpu": per_cpu_percent,
+                "sys_mem": memory_info,
+                "time": time.time(),
+            }
+            if power_usage is not None:
+                log.update(power_usage)
                 
+            # Append the log data to the list
+            self.system_logs_metrics.append(log)
+            self.sys_cpu_usage.append(all_cores_avg_cpu_percent)
+            self.sys_mem_info.append(memory_info)
+        
+        return True
 
-    # Monitor the system-wide CPU and memory usage
-    def monitor_system(self, parent_pid):
-        # Lists to store the system-wide CPU and memory usage data
-        sys_cpu_usage = []
-        sys_mem_info = []
-        # Get the power function for the specific OS
-        power_function = self.get_power_function()
-
-        try:
-            # Get the main process
-            main_process = psutil.Process(parent_pid)
-
-            while main_process.is_running():
-                # Define tasks to get per-CPU usage of system-wide 
-                per_cpu_percent_task = self.executor.submit(self.get_cpu_usage_per_cpu)
-
-                # All monitoring tasks
-                all_tasks = [per_cpu_percent_task]
-
-                # Check if power function exists for specific OS
-                if power_function is not None:
-                    power_task = self.executor.submit(power_function)
-                    all_tasks.append(power_task)
-                
-                # Wait all tasks to complete
-                as_completed(all_tasks)
-                # Get tasks result
-                per_cpu_percent = per_cpu_percent_task.result()
-                # Get power usage if power function exists
-                power_usage = None
-                if power_function is not None:
-                    power_usage = power_task.result()
-                
-                # Calculate average system-wide CPU usage given CPU usages for all core
-                all_cores_avg_cpu_percent = sum(per_cpu_percent) / len(per_cpu_percent)
-                # Get the current system-wide memory information
-                memory_snapshot = psutil.virtual_memory()
-                memory_info = self._convert_named_tuple_to_dict(memory_snapshot)
-                # Create a dictionary to store the log data
-                log = {
-                    "sys_cpu" : all_cores_avg_cpu_percent,
-                    "sys_per_cpu": per_cpu_percent,
-                    "sys_mem" : memory_info,
-                    "time" : time.time(),
-                }
-                if power_usage is not None:
-                    log.update(power_usage)
-                # Append the log data to the list
-                self.system_logs_metrics.append(log)
-                # Append the usage data to the lists for average calculation of system-wide metric
-                sys_cpu_usage.append(all_cores_avg_cpu_percent)
-                sys_mem_info.append(memory_info)
-
-        except psutil.NoSuchProcess:
-            print(f"System monitoring stopped.")
-        finally:
-            # Calculate the average CPU and memory usage
-            self.metrics["system_avg_cpu"] = sum(sys_cpu_usage) / len(sys_cpu_usage) if sys_cpu_usage else 0
-            # Calculate the average system-wide memory info
-            self.metrics["system_avg_mem"] = self._calculate_average_memory_info(sys_mem_info) if sys_mem_info else 0
-
-    # Run the command and start monitoring the process and the system
-    def run(self, command):
-        parent_process = subprocess.Popen(command, shell=True)
-        self.start_monitoring(parent_process)
-
-    # Start monitoring the process and the system, and check for new child processes
-    def start_monitoring(self, parent_process: Process):
+    async def start_monitoring(self, parent_process):
+        print("Start monitoring routines")
         parent_pid = parent_process.pid
         
         # Add the parent process PID to the monitored list
-        with self.lock:
+        async with self.lock:
             self.monitored_pids.append(parent_pid)
+            
+        # Initialize system monitoring data
+        self.sys_cpu_usage = []
+        self.sys_mem_info = []
+        tasks = []
         
-        # Start monitoring the parent process and the system
-        self.executor.submit(self.monitor_process, parent_pid)
-        self.executor.submit(self.monitor_system, parent_pid)
+        # Monitor system metrics
+        tasks.append(asyncio.create_task(self.monitor_system(parent_process)))
 
-        # Continuously check for new child processes while the parent process is running
-        while parent_process.poll() is None:
-            try:
-                # Get the parent process and its children
-                parent = psutil.Process(parent_pid)
-                children = parent.children(recursive=True)
-                for child in children:
-                    with self.lock:
-                        # If a new child process is found, start monitoring it
-                        if child.pid not in self.monitored_pids:
-                            self.monitored_pids.append(child.pid)
-                            self.executor.submit(self.monitor_process, child.pid)
-            except psutil.NoSuchProcess:
-                break
+        # Monitor parent process
+        tasks.append(asyncio.create_task(self.monitor_process(parent_pid)))
 
-        # Wait for all monitoring tasks to complete before shutting down the executor
-        self.executor.shutdown(wait=True)
+        # Main monitoring loop
+        while parent_process.is_running():
+            children = parent_process.children(recursive=True)
+            
+            # Check for new child processes to add
+            for child in children:
+                if child.pid not in self.monitored_pids:
+                    tasks.append(asyncio.create_task(self.monitor_process(child.pid)))
+                    self.monitored_pids.append(child.pid)
+                    print(f"Started monitoring new child process: {child.pid}")
+            
+            # # Check for processes that no longer exist to remove
+            # for pid in current_pids:
+            #     try:
+            #         process = psutil.Process(pid)
+            #         if not process.is_running():
+            #             async with self.lock:
+            #                 if pid in self.monitored_pids:
+            #                     self.monitored_pids.remove(pid)
+            #                     print(f"Removed terminated process: {pid} from monitoring")
+            #     except psutil.NoSuchProcess:
+            #         async with self.lock:
+            #             if pid in self.monitored_pids:
+            #                 self.monitored_pids.remove(pid)
+            #                 # Calculate final metrics for the terminated process
+            #                 self._finalize_process_metrics(pid)
+            #                 print(f"Removed non-existent process: {pid} from monitoring")
+        
+        print("Waiting for all processes to finish")
+        await asyncio.gather(*tasks)
+        print("All processes finished")
+        
+        print("Collected metrics")
+        print(self.process_metrics)
+
+        print("Calculate system-wide metrics")
+        # Calculate system-wide metrics
+        self.metrics["system_avg_cpu"] = sum(self.sys_cpu_usage) / len(self.sys_cpu_usage)
+        self.metrics["system_avg_mem"] = self._calculate_average_memory_info(self.sys_mem_info)
+        
+        print("Calculate the final statistics")
         # Calculate the final statistics
         self._calculate_statistics()
 
-    # Calculate statistics for monitored processes
+    def run_monitoring(self, parent_process):
+        """
+        Entry point to start the monitoring process using asyncio.
+        This method creates a new event loop and runs the start_monitoring coroutine.
+        """
+        # Create and set the event loop
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+        
+        try:
+            # Run the start_monitoring coroutine
+            self.loop.run_until_complete(self.start_monitoring(parent_process))
+        finally:
+            # Close the event loop
+            self.loop.close()
+
     def _calculate_statistics(self):
-        # Initialize total CPU and memory usage percentages
-        total_cpu_percent = 0
-        total_memory_percent = 0
-        # Get the number of monitored processes
-        num_processes = len(self.process_metrics)
-
-        # Iterate over the metrics of each monitored process
-        for proc_metrics in self.process_metrics.values():
-            # Accumulate the average CPU usage percentage
-            total_cpu_percent += proc_metrics['avg_cpu_percent']
-            # Accumulate the average memory usage percentage
-            total_memory_percent += proc_metrics['avg_memory_percent']
-
-        # Calculate the average CPU usage percentage across all processes
-        process_related_avg_cpu_percent = total_cpu_percent / num_processes if num_processes > 0 else 0
-        # Calculate the average memory usage percentage across all processes
-        process_related_avg_memory_percent = total_memory_percent / num_processes if num_processes > 0 else 0
-
-        # Store the calculated average CPU usage in the overall metrics
-        self.metrics["process_avg_cpu"] = process_related_avg_cpu_percent
-        # Store the calculated average memory usage in the overall metrics
-        self.metrics["process_avg_mem"] = process_related_avg_memory_percent
 
         # Store system-wide logs in the overall metrics
         self.metrics["log_data"] = self.system_logs_metrics
@@ -307,7 +330,8 @@ def main():
 
     monitor = ProcessMonitor()
     start_time = datetime.now()
-    monitor.run(' '.join(command))
+    parent_process = subprocess.Popen(command, shell=True)
+    monitor.run_monitoring(parent_process)
     running_time = datetime.now() - start_time
     print(f"Total running time: {running_time.total_seconds()}s")
     print("Monitoring complete.")

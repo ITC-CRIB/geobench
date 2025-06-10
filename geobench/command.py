@@ -19,7 +19,8 @@ from .error import (
     GeobenchCommandError
 )
 
-from .process_monitor import ProcessMonitor
+# from .process_monitor_aio import ProcessMonitor
+from .process_monitor_threading import ProcessMonitor
 from jinja2 import Environment, FileSystemLoader, exceptions as jinja_exceptions
 
 class CommandType:
@@ -42,7 +43,7 @@ class CommandType:
 
             # Run monitoring function (this blocks until the process and its children complete)
             pm = ProcessMonitor()
-            pm.start_monitoring(process)
+            pm.run_monitoring(process)
             
             # Get collected metrics from ProcessMonitor
             collected_metrics = pm.get_metrics()

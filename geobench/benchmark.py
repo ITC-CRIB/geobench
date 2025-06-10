@@ -135,6 +135,7 @@ class Benchmark:
         run_result_file_abs_path = os.path.join(output_abs_path, RUN_RESULT_JSON_FILENAME)
         run_result_file_rel_path = os.path.join(scen_set_dir_name, run_dir_name, RUN_RESULT_JSON_FILENAME)
         with open(run_result_file_abs_path, "w") as f:
+            print(exec_result)
             json.dump(exec_result, f, indent=4)
 
         # Save pre-run process information for this run
@@ -159,8 +160,8 @@ class Benchmark:
             "exec_time": exec_result["end_time"] - exec_result["start_time"],
             "system_avg_cpu": exec_result["system_avg_cpu"],
             "system_avg_mem": exec_result["system_avg_mem"],
-            "process_avg_cpu": exec_result["process_avg_cpu"],
-            "process_avg_mem": exec_result["process_avg_mem"],
+            # "process_avg_cpu": exec_result["process_avg_cpu"],
+            # "process_avg_mem": exec_result["process_avg_mem"],
             "running_process": run_process_file_rel_path,
             "detailed_result": run_result_file_rel_path,
         }
