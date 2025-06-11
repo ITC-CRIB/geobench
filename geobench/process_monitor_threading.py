@@ -10,6 +10,7 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import statistics
 import threading
+import asyncio
 
 class ProcessMonitor:
     # Initialize the ProcessMonitor class
@@ -157,7 +158,6 @@ class ProcessMonitor:
                         'avg_cpu_percent': avg_cpu_percent,
                         'avg_memory_percent': avg_memory_percent
                     })
-                
 
     # Monitor the system-wide CPU and memory usage
     def monitor_system(self, parent_pid):
@@ -284,9 +284,8 @@ class ProcessMonitor:
         self.metrics["process_avg_cpu"] = process_related_avg_cpu_percent
         # Store the calculated average memory usage in the overall metrics
         self.metrics["process_avg_mem"] = process_related_avg_memory_percent
-
         # Store system-wide logs in the overall metrics
-        self.metrics["log_data"] = self.system_logs_metrics
+        self.metrics["log_data"] = self.system_logs_metrics        
         # Store process-specific metrics in the overall metrics
         self.metrics["process_metrics"] = self.process_metrics
     

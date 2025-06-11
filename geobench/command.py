@@ -19,8 +19,8 @@ from .error import (
     GeobenchCommandError
 )
 
-# from .process_monitor_aio import ProcessMonitor
-from .process_monitor_threading import ProcessMonitor
+from .process_monitor import ProcessMonitor
+# from .process_monitor_threading import ProcessMonitor
 from jinja2 import Environment, FileSystemLoader, exceptions as jinja_exceptions
 
 class CommandType:

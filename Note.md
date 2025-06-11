@@ -39,3 +39,15 @@ Meeting 22 Aug 2024:
 - Output disk I/O statistics
 - Include query from prometheus 
 - Configuration file for the tool itself (we can define it later). For example: number of replication, prometheus port and url, 
+
+
+
+# Possible improvements
+
+- Record process utilizations as log (not only system-wide)
+- Reduce the load of while loop
+- Record also other processes as log -> with different intensity with the spawned process (record at the end of each step)
+- Keep record on the memory and record at the end of benchmark
+- Handle the writing of output in case of error in both (Make sure the program is fail safe)
+- Check resource utilization of the software itself
+- Make the graph coloring consistent for all graphs
