@@ -38,6 +38,10 @@ class ProcessMonitor:
     def get_cpu_usage_per_cpu(self):
         return psutil.cpu_percent(interval=self.interval, percpu=True)
     
+    # Async version of get_cpu_usage_per_cpu
+    async def get_cpu_usage_per_cpu_async(self):
+        return self.get_cpu_usage_per_cpu()
+    
     def get_powermetrics_data(self, duration=1000):
         try:
             # Run powermetrics command and capture output
@@ -64,6 +68,10 @@ class ProcessMonitor:
             print(f"Error running powermetrics: {e.output}")
             return None
 
+    # Async version of get_powermetrics_data
+    async def get_powermetrics_data_async(self, duration=1000):
+        return self.get_powermetrics_data(duration)
+
     def get_power_function(self):
         """
         Determines the appropriate power metrics function based on the operating system.
@@ -77,6 +85,23 @@ class ProcessMonitor:
         if os_type == "Darwin":
             # Return the powermetrics function for macOS
             return self.get_powermetrics_data
+        else:
+            return None
+    
+    # Get async power function
+    def get_async_power_function(self):
+        """
+        Determines the appropriate async power metrics function based on the operating system.
+
+        Returns:
+            function: A reference to the `get_powermetrics_data_async` method if the operating system is macOS (Darwin).
+                  Returns None for other operating systems.
+        """
+        os_type = platform.system()
+        # Check if the operating system is macOS (Darwin)
+        if os_type == "Darwin":
+            # Return the async powermetrics function for macOS
+            return self.get_powermetrics_data_async
         else:
             return None
     
@@ -114,7 +139,7 @@ class ProcessMonitor:
             })
         except psutil.NoSuchProcess:
             self.terminated_pids.append(process.pid)
-            print(f"DEBUG: Skip monitoring for {process.pid}. Running status: {process.is_running()}")
+            # print(f"DEBUG: Skip monitoring for {process.pid}. Running status: {process.is_running()}")
 
     async def start_monitoring_with_asyncio(self, parent_process):
         parent_pid = parent_process.pid
@@ -123,7 +148,7 @@ class ProcessMonitor:
         self.monitored_pids.append(parent_pid)
         
         # Start monitoring the parent process and the system
-        self.executor.submit(self.monitor_system, parent_pid)
+        self.executor.submit(self.start_system_monitoring, parent_pid)
 
         parent_pid = parent_process.pid
 
@@ -132,8 +157,7 @@ class ProcessMonitor:
             'command': parent_process.cmdline(),
             'samples': []
         }
-
-        print(f"DEBUG: Parent process ID: {parent_pid}")
+        # print(f"DEBUG: Parent process ID: {parent_pid}")
 
         while parent_process.poll() is None:
             # Check if the parent process has terminated. Parent process may have been terminated but still detected as running.
@@ -168,38 +192,45 @@ class ProcessMonitor:
         # Calculate statistics for monitored processes
         self._calculate_statistics()
 
+    # Helper to call async monitor_system function
+    def start_system_monitoring(self, parent_pid):
+        asyncio.run(self.monitor_system(parent_pid))
+
     # Monitor the system-wide CPU and memory usage
-    def monitor_system(self, parent_pid):
+    async def monitor_system(self, parent_pid):
         # Lists to store the system-wide CPU and memory usage data
         sys_cpu_usage = []
         sys_mem_info = []
-        # Get the power function for the specific OS
-        power_function = self.get_power_function()
+        # Get the async power function for the specific OS
+        power_function = self.get_async_power_function()
 
         try:
             # Get the main process
             main_process = psutil.Process(parent_pid)
 
             while main_process.is_running():
-                # Define tasks to get per-CPU usage of system-wide 
-                per_cpu_percent_task = self.executor.submit(self.get_cpu_usage_per_cpu)
-
-                # All monitoring tasks
-                all_tasks = [per_cpu_percent_task]
+                # Create tasks for async execution
+                tasks = []
+                
+                # Task to get per-CPU usage of system-wide
+                cpu_task = self.get_cpu_usage_per_cpu_async()
+                tasks.append(cpu_task)
 
                 # Check if power function exists for specific OS
                 if power_function is not None:
-                    power_task = self.executor.submit(power_function)
-                    all_tasks.append(power_task)
+                    power_task = power_function()
+                    tasks.append(power_task)
                 
-                # Wait all tasks to complete
-                as_completed(all_tasks)
-                # Get tasks result
-                per_cpu_percent = per_cpu_percent_task.result()
+                # Wait for all tasks to complete
+                results = await asyncio.gather(*tasks)
+                
+                # Get tasks results
+                per_cpu_percent = results[0]
+                
                 # Get power usage if power function exists
                 power_usage = None
                 if power_function is not None:
-                    power_usage = power_task.result()
+                    power_usage = results[1]
                 
                 # Calculate average system-wide CPU usage given CPU usages for all core
                 all_cores_avg_cpu_percent = sum(per_cpu_percent) / len(per_cpu_percent)
@@ -208,10 +239,10 @@ class ProcessMonitor:
                 memory_info = self._convert_named_tuple_to_dict(memory_snapshot)
                 # Create a dictionary to store the log data
                 log = {
-                    "sys_cpu" : all_cores_avg_cpu_percent,
+                    "sys_cpu": all_cores_avg_cpu_percent,
                     "sys_per_cpu": per_cpu_percent,
-                    "sys_mem" : memory_info,
-                    "time" : time.time(),
+                    "sys_mem": memory_info,
+                    "time": time.time(),
                 }
                 if power_usage is not None:
                     log.update(power_usage)
