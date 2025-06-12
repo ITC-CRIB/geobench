@@ -115,7 +115,7 @@ class ProcessMonitor:
             # Initialize the process metrics if recording logs
             if self.record_logs:
                 with self.lock:
-                    self.process_metrics[pid] = {'samples': []}
+                    self.process_metrics[pid] = {'logs': []}
             else:
                 with self.lock:
                     self.process_metrics[pid] = {}
@@ -134,7 +134,7 @@ class ProcessMonitor:
                 # Record the logs if required
                 if self.record_logs:
                     with self.lock:
-                        self.process_metrics[pid]['samples'].append({
+                        self.process_metrics[pid]['logs'].append({
                             'timestamp': recording_time,
                             'cpu_percent': cpu_percent,
                             'memory_percent': memory_percent,

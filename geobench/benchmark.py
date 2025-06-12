@@ -20,6 +20,8 @@ RUN_PROCESS_JSON_FILENAME = "process.json"
 
 class Benchmark:
 
+    outputs = {}
+
     def __init__(self, scenario: Scenario) -> None:
         self.scenario = scenario
         self.result = {
@@ -44,8 +46,14 @@ class Benchmark:
 
     def _save_result(self):
         output_file  =  os.path.join(self.scenario.temp_directory, self.scenario.name, OUTPUT_JSON_FILENAME)
-        with open(output_file, 'w') as json_file:
-            json.dump(self.result, json_file, indent=4)
+        # with open(output_file, 'w') as json_file:
+        #     json.dump(self.result, json_file, indent=4)
+        self.outputs[output_file] = self.result
+    
+    def _store_output(self):
+        for output_file, output in self.outputs.items():
+            with open(output_file, 'w') as json_file:
+                json.dump(output, json_file, indent=4)
 
     def _setup_environment(self, base_dir):
         """Creates base directories and copies template files."""
@@ -145,15 +153,17 @@ class Benchmark:
         # Save detailed execution result for this run
         run_result_file_abs_path = os.path.join(output_abs_path, RUN_RESULT_JSON_FILENAME)
         run_result_file_rel_path = os.path.join(scen_set_dir_name, run_dir_name, RUN_RESULT_JSON_FILENAME)
-        with open(run_result_file_abs_path, "w") as f:
-            # print(exec_result)
-            json.dump(exec_result, f, indent=4)
+        # with open(run_result_file_abs_path, "w") as f:
+        #     # print(exec_result)
+        #     json.dump(exec_result, f, indent=4)
+        self.outputs[run_result_file_abs_path] = exec_result
 
         # Save all running process information for this run
         run_process_file_abs_path = os.path.join(output_abs_path, RUN_PROCESS_JSON_FILENAME)
         run_process_file_rel_path = os.path.join(scen_set_dir_name, run_dir_name, RUN_PROCESS_JSON_FILENAME)
-        with open(run_process_file_abs_path, "w") as f:
-            json.dump(all_processes, f, indent=4)
+        # with open(run_process_file_abs_path, "w") as f:
+        #     json.dump(all_processes, f, indent=4)
+        self.outputs[run_process_file_abs_path] = all_processes
 
         if "INPUT" in self.scenario.inputs:
             input_base_name = os.path.basename(self.scenario.inputs["INPUT"])
@@ -225,27 +235,36 @@ class Benchmark:
 
     # Run the benchmark according to methodology
     def run(self):
-        base_dir = os.path.join(self.scenario.temp_directory, self.scenario.name)
-        self._setup_environment(base_dir)
-        self._record_initial_system_info()
-        
-        recording_duration = self._get_recording_duration()
-        instance = command.get_instance(self.scenario)
-        
-        exec_path = self._perform_pre_run_diagnostics(instance, recording_duration)
-        if not exec_path:
-            print("Error: Execution path for the benchmark command not found. Aborting.")
-            return
+        try:
+            base_dir = os.path.join(self.scenario.temp_directory, self.scenario.name)
+            self._setup_environment(base_dir)
+            self._record_initial_system_info()
+            
+            recording_duration = self._get_recording_duration()
+            instance = command.get_instance(self.scenario)
+            
+            exec_path = self._perform_pre_run_diagnostics(instance, recording_duration)
+            if not exec_path:
+                print("Error: Execution path for the benchmark command not found. Aborting.")
+                return
 
-        start_time_total = time.time()
-        
-        # summarized_results_list will be stored in self.result by _execute_all_test_runs
-        self._execute_all_test_runs(base_dir, instance, exec_path, recording_duration)
-        
-        end_time_total = time.time()
-        
-        self._save_benchmark_summary_to_csv(start_time_total, end_time_total)
-        print(f"Benchmark run for '{self.scenario.name}' completed.")
+            start_time_total = time.time()
+            
+            # summarized_results_list will be stored in self.result by _execute_all_test_runs
+            self._execute_all_test_runs(base_dir, instance, exec_path, recording_duration)
+            
+            end_time_total = time.time()
+            
+            self._save_benchmark_summary_to_csv(start_time_total, end_time_total)
+            print(f"Benchmark run for '{self.scenario.name}' completed.")
+        except Exception as e:
+            print(f"Error running benchmark for '{self.scenario.name}': {str(e)}")
+            raise
+        except KeyboardInterrupt:
+            print("Benchmark run interrupted by user. Intermediary results stored.")
+        finally:
+            print("Storing output to files.")
+            self._store_output()
 
     @classmethod
     def delete_test_result(cls, test_name):

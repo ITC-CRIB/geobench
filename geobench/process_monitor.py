@@ -132,7 +132,7 @@ class ProcessMonitor:
 
             recording_time = datetime.now().timestamp()
 
-            self.process_metrics[process.pid]['samples'].append({
+            self.process_metrics[process.pid]['logs'].append({
                 'timestamp': recording_time,
                 'cpu_percent': cpu_percent,
                 'memory_percent': memory_percent,
@@ -155,7 +155,7 @@ class ProcessMonitor:
         self.process_metrics[parent_pid] = {
             'name': parent_process.name(),
             'command': parent_process.cmdline(),
-            'samples': []
+            'logs': []
         }
         # print(f"DEBUG: Parent process ID: {parent_pid}")
 
@@ -175,7 +175,7 @@ class ProcessMonitor:
                         self.process_metrics[child_pid] = {
                             'name': child.name(),
                             'command': child.cmdline(),
-                            'samples': []
+                            'logs': []
                         }
                     # Check if the child process has terminated. A process may have terminated but still detected as part of child processes.
                     if child_pid not in self.terminated_pids:
@@ -273,7 +273,7 @@ class ProcessMonitor:
         # Calculate the average running time for each process
         for pid, process_metric in self.process_metrics.items():
             # Get the metrics samples for the process
-            metrics_samples = process_metric['samples']
+            metrics_samples = process_metric['logs']
             running_time = 0
             
             # Calculate running time given at least 2 samples
