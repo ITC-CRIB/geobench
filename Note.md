@@ -44,10 +44,10 @@ Meeting 22 Aug 2024:
 
 # Possible improvements
 
-- Record process utilizations as log (not only system-wide)
-- Reduce the load of while loop
-- Record also other processes as log -> with different intensity with the spawned process (record at the end of each step)
-- Keep record on the memory and record at the end of benchmark
-- Handle the writing of output in case of error in both (Make sure the program is fail safe)
-- Check resource utilization of the software itself
-- Make the graph coloring consistent for all graphs
+- [x] Record process utilizations as log (not only system-wide) 
+- [x] Reduce the load of while loop -> using asyncio
+- [x] Record also other processes as log (record at the end of each step) -> record befor and after command execution
+- [ ] Keep record on the memory and record at the end of benchmark
+- [ ] Handle the writing of output in case of error in both (Make sure the program is fail safe)
+- [x] Check resource utilization of the software itself (CPU usage and threads are reduced significantly)
+- [ ] Make the graph coloring consistent for all graphs

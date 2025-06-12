@@ -110,6 +110,7 @@ class Benchmark:
         run_specific_dir = os.path.join(base_dir, scen_set_dir_name, run_dir_name)
         self._makedirs_if_not_exists(run_specific_dir)
 
+        # Record all running process before the run
         print(f"Recording running process for {recording_duration} seconds before run {run_idx} in set {scenario_set_idx +1}\n")
         pre_run_processes = recording.record_all_process_info(duration=recording_duration)
 
@@ -129,20 +130,30 @@ class Benchmark:
         print(f"{exec_path} {command_params_for_exec}")
         print()
         
+        # Execute the command
         exec_result = instance.execute_command(exec_path, command_params_for_exec)
+
+        # Record all running process after the run
+        print(f"Recording running process for {recording_duration} seconds after run {run_idx} in set {scenario_set_idx +1}\n")
+        post_run_processes = recording.record_all_process_info(duration=recording_duration)
+
+        all_processes = {
+            "pre_run": pre_run_processes,
+            "post_run": post_run_processes
+        }
 
         # Save detailed execution result for this run
         run_result_file_abs_path = os.path.join(output_abs_path, RUN_RESULT_JSON_FILENAME)
         run_result_file_rel_path = os.path.join(scen_set_dir_name, run_dir_name, RUN_RESULT_JSON_FILENAME)
         with open(run_result_file_abs_path, "w") as f:
-            print(exec_result)
+            # print(exec_result)
             json.dump(exec_result, f, indent=4)
 
-        # Save pre-run process information for this run
+        # Save all running process information for this run
         run_process_file_abs_path = os.path.join(output_abs_path, RUN_PROCESS_JSON_FILENAME)
         run_process_file_rel_path = os.path.join(scen_set_dir_name, run_dir_name, RUN_PROCESS_JSON_FILENAME)
         with open(run_process_file_abs_path, "w") as f:
-            json.dump(pre_run_processes, f, indent=4)
+            json.dump(all_processes, f, indent=4)
 
         if "INPUT" in self.scenario.inputs:
             input_base_name = os.path.basename(self.scenario.inputs["INPUT"])
