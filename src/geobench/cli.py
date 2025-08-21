@@ -31,5 +31,5 @@ class CommandLineTool:
 
 
 def main():
-    tool = CommandLineTool()
-    tool.run()
+    cli = CommandLineTool()
+    cli.run()

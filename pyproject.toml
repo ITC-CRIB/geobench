@@ -47,7 +47,7 @@ Issues = "https://github.com/ITC-CRIB/geobench/issues"
 Changelog = "https://github.com/ITC-CRIB/geobench/commits"
 
 [project.scripts]
-geobench = "geobench.main:main"
+geobench = "geobench.cli:main"
 
 [tool.hatch.build]
 include = ["src/geobench/**/*"]
