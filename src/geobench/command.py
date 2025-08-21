@@ -8,14 +8,6 @@ import time
 
 from jinja2 import Environment, FileSystemLoader, exceptions as jinja_exceptions
 
-from .error import (
-    ExecutableNotFoundError,
-    SoftwareConfigurationError,
-    ScriptNotFoundError,
-    TemplateFileNotFoundError,
-    ParameterEncodingError,
-    GeobenchCommandError
-)
 from .process_monitor import ProcessMonitor
 
 
@@ -23,10 +15,13 @@ class CommandType:
     def __init__(self, scenario):
         self.scenario = scenario
 
-    def execute_command(self, command_list, params=[]):
+    def execute_command(self, command_list, params: list=None):
+        if not params:
+            params = []
+
         results = {"finished": False}
 
-        working_dir = self.scenario.working_dir
+        workdir = self.scenario.workdir
 
         # Start execution
         exec_start_time = time.time()
@@ -34,7 +29,7 @@ class CommandType:
         command_to_execute = command_list + params # Define here for use in except block
         try:
             # Start process
-            process = psutil.Popen(command_to_execute, shell=False, cwd=working_dir)
+            process = psutil.Popen(command_to_execute, shell=False, cwd=workdir)
             results["pid"] = process.pid # Store PID early
 
             # Run monitoring function (this blocks until the process and its children complete)
@@ -53,19 +48,19 @@ class CommandType:
         except FileNotFoundError: # Specific to executable not found
             results["success"] = False
             print(f"Command executable not found for: {' '.join(command_to_execute)}")
-            raise ExecutableNotFoundError(f"Executable not found for command: {' '.join(command_to_execute)}")
+            raise FileNotFoundError(f"Executable not found for command: {' '.join(command_to_execute)}.")
 
         except psutil.Error as e: # Catch other psutil errors during Popen or process interaction
             results["success"] = False
             print(f"psutil error during command execution '{' '.join(command_to_execute)}': {e}")
             pid_info = f" (PID: {process.pid})" if process and hasattr(process, 'pid') else ""
-            raise GeobenchCommandError(f"psutil error executing command '{' '.join(command_to_execute)}'{pid_info}: {e}")
+            raise RuntimeError(f"psutil error executing command '{' '.join(command_to_execute)}'{pid_info}: {e}")
 
         except Exception as e: # Catch any other unexpected errors
             results["success"] = False
             print(f"Unexpected error during command execution '{' '.join(command_to_execute)}': {e}")
             pid_info = f" (PID: {process.pid})" if process and hasattr(process, 'pid') else ""
-            raise GeobenchCommandError(f"Unexpected error executing command '{' '.join(command_to_execute)}'{pid_info}: {e}")
+            raise RuntimeError(f"Unexpected error executing command '{' '.join(command_to_execute)}'{pid_info}: {e}")
 
         results["finished"] = True
         exec_end_time = time.time()
@@ -125,21 +120,27 @@ class QGISProcess(CommandType):
 
 
     def _get_qgis_process_path(self, qgis_basedir_path):
-        # QGIS binary directory
-        qgis_bin_dir = ""
-        # Provide default directory based on the operating system
+        qgis_bin_dir = None
+
         os_type = platform.system()
+
         if os_type == 'Windows':
             qgis_bin_dir =  os.path.join(qgis_basedir_path, "bin")
+
         elif os_type == 'Linux':
             qgis_bin_dir = qgis_basedir_path
-        elif os_type == 'Darwin':  # macOS
+
+        elif os_type == 'Darwin':
             qgis_bin_dir = os.path.join(qgis_basedir_path, "bin")
+
         else:
             raise OSError('Unsupported operating system')
+
         path_result = self._find_file_prefix(qgis_bin_dir, "qgis_process")
+
         if path_result is None:
-            raise ExecutableNotFoundError(f"QGIS 'qgis_process' executable not found in derived path: {qgis_bin_dir}")
+            raise FileNotFoundError(f"QGIS 'qgis_process' executable not found in derived path '{qgis_bin_dir}'.")
+
         return path_result
 
 
@@ -162,10 +163,11 @@ class QGISProcess(CommandType):
 
     def get_software_config(self):
         software_config = {}
-        try:
-            qgis_basedir_path = self._get_qgis_directory()
-            qgis_process_path = self._get_qgis_process_path(qgis_basedir_path) # Can raise ExecutableNotFoundError
 
+        qgis_basedir_path = self._get_qgis_directory()
+        qgis_process_path = self._get_qgis_process_path(qgis_basedir_path)
+
+        try:
             qgis_version_result = subprocess.run([qgis_process_path, '--version'], capture_output=True, text=True, check=False)
 
             if qgis_version_result.returncode != 0:
@@ -173,25 +175,23 @@ class QGISProcess(CommandType):
                 if qgis_version_result.stderr:
                     error_msg += f" Stderr: {qgis_version_result.stderr.strip()}"
                 print(error_msg)
-                raise SoftwareConfigurationError(error_msg)
+                raise RuntimeError(error_msg)
 
             print(f"- Found qgis_process path in {qgis_process_path}")
             qgis_plugins = self._parse_qgis_plugins(qgis_version_result.stdout)
             software_config["plugins"] = qgis_plugins
             software_config["exec_path"] = [qgis_process_path]
-        except ExecutableNotFoundError: # Re-raise if caught from _get_qgis_process_path or _get_qgis_directory
-            raise
-        except FileNotFoundError: # If subprocess.run itself can't find the executable
+
+        except FileNotFoundError as err:
             msg = f"QGIS 'qgis_process' executable found at '{qgis_process_path if 'qgis_process_path' in locals() else 'unknown path'}' but subprocess.run failed to execute it (FileNotFoundError)."
             print(msg)
-            raise ExecutableNotFoundError(msg)
-        except subprocess.SubprocessError as e: # Catch other subprocess errors
+            raise FileNotFoundError(msg) from err
+
+        except subprocess.SubprocessError as err:
             msg = f"Error running 'qgis_process --version': {e}"
             print(msg)
-            raise SoftwareConfigurationError(msg)
-        except OSError as e: # Catch OSError from _get_qgis_directory (e.g. unsupported OS)
-            print(f"OS error during QGIS configuration: {e}")
-            raise SoftwareConfigurationError(f"OS error during QGIS configuration: {e}")
+            raise RuntimeError(msg) from err
+
         return software_config
 
 
@@ -218,33 +218,39 @@ class QGISPython(QGISProcess):
 
 
     def _get_qgis_python_path(self, qgis_basedir_path):
-        # QGIS binary directory
-        qgis_bin_dir = ""
-        # Provide default directory based on the operating system
+        qgis_bin_dir = None
         os_type = platform.system()
+
         if os_type == 'Windows':
             qgis_apps_dir = os.path.join(qgis_basedir_path, "apps")
             qgis_python_dir = self._find_dir_prefix(qgis_apps_dir, "Python")
             if qgis_python_dir is None:
                 return None
             qgis_bin_dir =  os.path.join(qgis_python_dir)
+
         elif os_type == 'Linux':
             qgis_bin_dir = f'{qgis_basedir_path}'
-        elif os_type == 'Darwin':  # macOS
+
+        elif os_type == 'Darwin':
             qgis_bin_dir = os.path.join(qgis_basedir_path, "bin")
+
         else:
-            raise OSError('Unsupported operating system')
+            raise OSError(f"Unsupported operating system '{os_type}'.")
+
         path_result = self._find_file_prefix(qgis_bin_dir, "python3")
-        if path_result is None:
-            raise ExecutableNotFoundError(f"QGIS 'python3' (or similar) executable not found in derived path: {qgis_bin_dir}")
+        if not path_result:
+            raise FileNotFoundError(f"QGIS Python executable not found in derived path '{qgis_bin_dir}'.")
+
         return path_result
 
 
     def get_software_config(self):
         software_config = {}
+
+        qgis_basedir_path = super()._get_qgis_directory()
+        qgis_python_path = self._get_qgis_python_path(qgis_basedir_path)
+
         try:
-            qgis_basedir_path = super()._get_qgis_directory()
-            qgis_python_path = self._get_qgis_python_path(qgis_basedir_path) # Can raise ExecutableNotFoundError
 
             print(f"- Found QGIS python path in {qgis_python_path}")
             result = subprocess.run([qgis_python_path, '--version'], capture_output=True, text=True, check=False)
@@ -254,22 +260,20 @@ class QGISPython(QGISProcess):
                 if result.stderr:
                     error_msg += f" Stderr: {result.stderr.strip()}"
                 print(error_msg)
-                raise SoftwareConfigurationError(error_msg)
+                raise RuntimeError(error_msg)
 
             software_config["exec_path"] = [qgis_python_path]
-        except ExecutableNotFoundError: # Re-raise
-            raise
-        except FileNotFoundError: # If subprocess.run itself can't find the executable
+
+        except FileNotFoundError as err:
             msg = f"QGIS Python executable found at '{qgis_python_path if 'qgis_python_path' in locals() else 'unknown path'}' but subprocess.run failed to execute it (FileNotFoundError)."
             print(msg)
-            raise ExecutableNotFoundError(msg)
-        except subprocess.SubprocessError as e: # Catch other subprocess errors
-            msg = f"Error running QGIS Python '--version': {e}"
+            raise FileNotFoundError(msg) from err
+
+        except subprocess.SubprocessError as err:
+            msg = "Error running QGIS Python '--version'."
             print(msg)
-            raise SoftwareConfigurationError(msg)
-        except OSError as e: # Catch OSError from _get_qgis_directory
-            print(f"OS error during QGIS Python configuration: {e}")
-            raise SoftwareConfigurationError(f"OS error during QGIS Python configuration: {e}")
+            raise RuntimeError(msg) from err
+
         return software_config
 
 
@@ -279,10 +283,12 @@ class QGISPython(QGISProcess):
                 env = Environment(loader=FileSystemLoader(template_dir))
                 template = env.get_template(template_name)
                 return template.render(**kwargs)
+
         except jinja_exceptions.TemplateNotFound:
-            raise TemplateFileNotFoundError(f"Jinja2 template '{template_name}' not found in package templates.")
+            raise FileNotFoundError(f"Jinja2 template '{template_name}' not found in templates.")
+
         except Exception as e: # Catch other potential errors during template rendering
-            raise GeobenchCommandError(f"Error rendering template '{template_name}': {e}")
+            raise RuntimeError(f"Error rendering template '{template_name}': {e}")
 
 
     def _encode_parameters(self, param_dict):
@@ -294,8 +300,9 @@ class QGISPython(QGISProcess):
             # Basic escaping for backslashes, consider more robust serialization if needed
             param_str = param_str.replace("\\", "\\\\")
             return param_str
-        except Exception as e:
-            raise ParameterEncodingError(f"Error encoding parameter dictionary to string for QGISPython: {e}")
+
+        except Exception as err:
+            raise ValueError(f"Cannot encode parameter to string for QGISPython.") from err
 
 
     def get_exec_params(self, command, params_dict, output_dir_path):
@@ -314,13 +321,13 @@ class Python(CommandType):
     def get_software_config(self):
         software_config = {}
         os_type = platform.system()
-        python_executable = "python3"
+        python_executable = None
 
         venv = self.scenario.venv
 
         if venv is not None:
             if not os.path.isdir(venv):
-                raise ExecutableNotFoundError(f"Virtual environment directory not found at: {venv}")
+                raise FileNotFoundError(f"Virtual environment directory not found at '{venv}'.")
 
             # Common Python executable names in venvs
             potential_execs = ["python", "python3"]
@@ -335,14 +342,15 @@ class Python(CommandType):
                     found_in_venv = True
                     break
             if not found_in_venv:
-                raise ExecutableNotFoundError(f"Python executable not found in venv '{venv}' (tried {', '.join(potential_execs)} in Scripts/bin).")
-        else: # No venv, check system python
-            found_path = shutil.which("python3")
+                raise FileNotFoundError(f"Python executable not found in venv '{venv}'.")
+
+        else:
+            found_path = shutil.which("python")
             if found_path is None:
-                found_path = shutil.which("python") # Try 'python' as a fallback
+                found_path = shutil.which("python3")
                 if found_path is None:
-                    raise ExecutableNotFoundError("System Python executable ('python3' or 'python') not found in PATH.")
-            python_executable = found_path # Use the full path found by shutil.which
+                    raise FileNotFoundError("System Python executable not found in PATH.")
+            python_executable = found_path
 
         software_config["exec_path"] = [python_executable]
         return software_config
@@ -350,14 +358,15 @@ class Python(CommandType):
 
     def get_exec_params(self, script_path, decoded_params, output_dir_path):
         if not os.path.isfile(script_path):
-            raise ScriptNotFoundError(f"Python script not found at: {script_path}")
+            raise FileNotFoundError(f"Python script not found at '{script_path}'.")
 
         try:
             output_file_name = os.path.basename(script_path)
             output_file_path = os.path.join(output_dir_path, output_file_name)
             shutil.copyfile(script_path, output_file_path)
-        except IOError as e:
-            raise GeobenchCommandError(f"Failed to copy Python script from '{script_path}' to '{output_dir_path}': {e}")
+
+        except IOError as err:
+            raise IOError(f"Failed to copy Python script from '{script_path}' to '{output_dir_path}'.") from err
 
         # The script path for execution should be the one in output_dir_path
         command_with_params = self._encode_parameters(output_file_path, decoded_params)
@@ -376,8 +385,9 @@ class Python(CommandType):
                 # Ensure all list parameters are converted to strings
                 param_list.extend(str(p) for p in params)
             return param_list
-        except Exception as e:
-            raise ParameterEncodingError(f"Error encoding Python script parameters: {e}")
+
+        except Exception as err:
+            raise ValueError(f"Cannot encode Python script parameters.") from err
 
 
 class Shell(CommandType):
@@ -417,14 +427,17 @@ class Shell(CommandType):
                 output_file_path = os.path.join(output_dir_path, output_file_name)
                 shutil.copyfile(script_path, output_file_path)
                 executable_to_run = output_file_path # Run the copied script
-            except FileNotFoundError: # Should ideally be caught by os.path.isfile if script_path is truly a path
-                raise ScriptNotFoundError(f"Shell script file to copy not found at: {script_path}")
-            except IOError as e:
-                raise GeobenchCommandError(f"Failed to copy shell script from '{script_path}' to '{output_dir_path}': {e}")
+
+            except FileNotFoundError as err:
+                raise FileNotFoundError(f"Shell script not found at '{script_path}'.") from err
+
+            except IOError as err:
+                raise IOError(f"Failed to copy shell script from '{script_path}' to '{output_dir_path}'.") from err
+
         else:
             # If script_path is not a file (e.g. 'bash'), check if it's in PATH
             if shutil.which(script_path) is None:
-                raise ExecutableNotFoundError(f"Shell command '{script_path}' not found in PATH and is not a local file.")
+                raise FileNotFoundError(f"Shell command '{script_path}' not found in PATH and is not a local file.")
 
         # Construct the full command list
         # The first element is the executable (either copied script or command like 'bash')
@@ -452,8 +465,9 @@ class Shell(CommandType):
                 for p in params:
                     param_list.append(str(p))
             return param_list
-        except Exception as e:
-            raise ParameterEncodingError(f"Error encoding shell parameters: {e}")
+
+        except Exception as err:
+            raise ValueError(f"Cannot encode shell parameters.") from err
 
 
 class CommandFactory:
