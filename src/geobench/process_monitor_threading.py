@@ -1,16 +1,17 @@
+import platform
+import psutil
+import statistics
+import subprocess
+import sys
+import threading
+import time
+
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 from multiprocessing.dummy import Process
 from pathlib import Path
-import platform
-import sys
-import time
-import psutil
-import subprocess
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import statistics
-import threading
-import asyncio
+
 
 class ProcessMonitor:
     # Initialize the ProcessMonitor class
@@ -35,7 +36,7 @@ class ProcessMonitor:
     # Get CPU usage per cpu
     def get_cpu_usage_per_cpu(self):
         return psutil.cpu_percent(interval=self.interval, percpu=True)
-    
+
     def get_powermetrics_data(self, duration=1000):
         try:
             # Run powermetrics command and capture output
@@ -77,11 +78,11 @@ class ProcessMonitor:
             return self.get_powermetrics_data
         else:
             return None
-    
+
     # Convert named tuples to dictionaries
     def _convert_named_tuple_to_dict(self, named_tuple):
         return {field: getattr(named_tuple, field) for field in named_tuple._fields}
-    
+
     # Calculate average available memory information metrics
     def _calculate_average_memory_info(self, memory_data):
         # Initialize a defaultdict to hold sums for each field.
@@ -92,7 +93,7 @@ class ProcessMonitor:
         for memory_snapshot in memory_data:
             for field, value in memory_snapshot.items():
                 sum_data[field] += value
-        
+
         # Calculate the average value for each field.
         avg_data = {field: sum_value / field_counts for field, sum_value in sum_data.items()}
 
@@ -111,7 +112,7 @@ class ProcessMonitor:
             start_time = datetime.now()
             cpu_percents = []
             memory_percents = []
-            
+
             # Initialize the process metrics if recording logs
             if self.record_logs:
                 with self.lock:
@@ -172,7 +173,7 @@ class ProcessMonitor:
             main_process = psutil.Process(parent_pid)
 
             while main_process.is_running():
-                # Define tasks to get per-CPU usage of system-wide 
+                # Define tasks to get per-CPU usage of system-wide
                 per_cpu_percent_task = self.executor.submit(self.get_cpu_usage_per_cpu)
 
                 # All monitoring tasks
@@ -182,7 +183,7 @@ class ProcessMonitor:
                 if power_function is not None:
                     power_task = self.executor.submit(power_function)
                     all_tasks.append(power_task)
-                
+
                 # Wait all tasks to complete
                 as_completed(all_tasks)
                 # Get tasks result
@@ -191,7 +192,7 @@ class ProcessMonitor:
                 power_usage = None
                 if power_function is not None:
                     power_usage = power_task.result()
-                
+
                 # Calculate average system-wide CPU usage given CPU usages for all core
                 all_cores_avg_cpu_percent = sum(per_cpu_percent) / len(per_cpu_percent)
                 # Get the current system-wide memory information
@@ -228,11 +229,11 @@ class ProcessMonitor:
     # Start monitoring the process and the system, and check for new child processes
     def start_monitoring(self, parent_process: Process):
         parent_pid = parent_process.pid
-        
+
         # Add the parent process PID to the monitored list
         with self.lock:
             self.monitored_pids.append(parent_pid)
-        
+
         # Start monitoring the parent process and the system
         self.executor.submit(self.monitor_process, parent_pid)
         self.executor.submit(self.monitor_system, parent_pid)
@@ -285,10 +286,10 @@ class ProcessMonitor:
         # Store the calculated average memory usage in the overall metrics
         self.metrics["process_avg_mem"] = process_related_avg_memory_percent
         # Store system-wide logs in the overall metrics
-        self.metrics["log_data"] = self.system_logs_metrics        
+        self.metrics["log_data"] = self.system_logs_metrics
         # Store process-specific metrics in the overall metrics
         self.metrics["process_metrics"] = self.process_metrics
-    
+
     def get_metrics(self):
         return self.metrics
 

@@ -1,9 +1,11 @@
+import ctypes
 import os
 import platform
-import ctypes
 import shutil
-from subprocess import check_call
 import sys
+
+from subprocess import check_call
+
 
 def clear_linux_cache():
     try:
@@ -66,7 +68,7 @@ def clear_windows_disk_cache():
 
 def clear_cache():
     os_type = platform.system()
-    
+
     if os_type == 'Linux':
         clear_linux_cache()
     elif os_type == 'Windows':

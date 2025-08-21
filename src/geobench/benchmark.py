@@ -1,15 +1,16 @@
+import importlib.resources as pkg_resources
 import json
 import os
+import pandas as pd
 import shutil
 import time
-import pandas as pd
+
 from datetime import datetime
 
-import importlib.resources as pkg_resources
-
 from .scenario import Scenario
-from . import system_recording as recording
 from . import command
+from . import system_recording as recording
+
 
 CSV_FILE = 'benchmark_results.csv'
 OUTPUT_JSON_FILENAME = "output.json"
@@ -26,7 +27,7 @@ class Benchmark:
             "name": scenario.name
         }
         self.outputs = {}
-    
+
     def _makedirs_if_not_exists(self, dir_path):
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
@@ -38,7 +39,7 @@ class Benchmark:
         for idx, scenario in enumerate(scenario_combination):
             base_dir = os.path.join(base_dir, f"set_{idx + 1}")
             self._makedirs_if_not_exists(base_dir)
-            
+
             for i in range(1, repeat + 1):
                 repeat_dir = os.path.join(base_dir, f"run_{i}")
                 self._makedirs_if_not_exists(repeat_dir)
@@ -48,7 +49,7 @@ class Benchmark:
         # with open(output_file, 'w') as json_file:
         #     json.dump(self.result, json_file, indent=4)
         self.outputs[output_file] = self.result
-    
+
     def _store_output(self):
         for output_file, output in self.outputs.items():
             with open(output_file, 'w') as json_file:
@@ -103,7 +104,7 @@ class Benchmark:
         print()
         return software_config.get("exec_path")
 
-    def _execute_single_test_run(self, base_dir, scenario_set_idx, run_idx, 
+    def _execute_single_test_run(self, base_dir, scenario_set_idx, run_idx,
                                  decoded_params_template, instance, exec_path, recording_duration):
         """Executes a single test run within a scenario set."""
         # Copy the decoded parameters to the recorded parameters for this run
@@ -113,7 +114,7 @@ class Benchmark:
 
         scen_set_dir_name = f"set_{scenario_set_idx + 1}"
         run_dir_name = f"run_{run_idx}"
-        
+
         run_specific_dir = os.path.join(base_dir, scen_set_dir_name, run_dir_name)
         self._makedirs_if_not_exists(run_specific_dir)
 
@@ -122,7 +123,7 @@ class Benchmark:
         pre_run_processes = recording.record_all_process_info(duration=recording_duration)
 
         output_abs_path = os.path.abspath(run_specific_dir)
-        
+
         if "OUTPUT" in self.scenario.outputs:
             output_filename = self.scenario.outputs['OUTPUT']
             output_file_abs_path = os.path.join(output_abs_path, output_filename)
@@ -136,7 +137,7 @@ class Benchmark:
         print(f"Running scenario set {scenario_set_idx+1}/run {run_idx} with params {command_params_for_exec}. Output saved on {run_specific_dir}")
         print(f"{exec_path} {command_params_for_exec}")
         print()
-        
+
         # Execute the command
         exec_result = instance.execute_command(exec_path, command_params_for_exec)
 
@@ -196,7 +197,7 @@ class Benchmark:
 
             for run_idx_within_set in range(1, self.scenario.repeat + 1):
                 summarized_run_result = self._execute_single_test_run(
-                    base_dir, scenario_set_idx, run_idx_within_set, 
+                    base_dir, scenario_set_idx, run_idx_within_set,
                     decoded_params_template, instance, exec_path, recording_duration
                 )
                 all_runs_results.append(summarized_run_result)
@@ -219,7 +220,7 @@ class Benchmark:
             'end_time_hr': end_time_hr,
             'execution_time': execution_time_total
         }
-        
+
         df = pd.DataFrame([record])
         try:
             existing_df = pd.read_csv(CSV_FILE)
@@ -228,7 +229,7 @@ class Benchmark:
             df = pd.concat([existing_df, df], ignore_index=True)
         except FileNotFoundError:
             pass # If file doesn't exist, the new df will create it
-        
+
         df.to_csv(CSV_FILE, index=False)
         print(f'Test finished. Overall result for "{self.scenario.name}" saved to {CSV_FILE}.')
 
@@ -238,22 +239,22 @@ class Benchmark:
             base_dir = os.path.join(self.scenario.temp_directory, self.scenario.name)
             self._setup_environment(base_dir)
             self._record_initial_system_info()
-            
+
             recording_duration = self._get_recording_duration()
             instance = command.get_instance(self.scenario)
-            
+
             exec_path = self._perform_pre_run_diagnostics(instance, recording_duration)
             if not exec_path:
                 print("Error: Execution path for the benchmark command not found. Aborting.")
                 return
 
             start_time_total = time.time()
-            
+
             # summarized_results_list will be stored in self.result by _execute_all_test_runs
             self._execute_all_test_runs(base_dir, instance, exec_path, recording_duration)
-            
+
             end_time_total = time.time()
-            
+
             self._save_benchmark_summary_to_csv(start_time_total, end_time_total)
             print(f"Benchmark run for '{self.scenario.name}' completed.")
         except Exception as e:
@@ -282,7 +283,7 @@ class Benchmark:
             print(df)
         except FileNotFoundError:
             print('No results found.')
-    
+
     @classmethod
     def get_test_instance(cls, test_name):
         try:
@@ -291,9 +292,9 @@ class Benchmark:
             if record:
                 instance = {}
                 instance["test_name"] = test_name
-                instance["start_time"] = record[0]['start_time'] 
+                instance["start_time"] = record[0]['start_time']
                 instance["end_time"] = record[0]['end_time']
-                instance["start_time_hr"] = record[0]['start_time_hr'] 
+                instance["start_time_hr"] = record[0]['start_time_hr']
                 instance["end_time_hr"] = record[0]['end_time_hr']
                 instance["execution_time"] = record[0]['execution_time']
                 return instance

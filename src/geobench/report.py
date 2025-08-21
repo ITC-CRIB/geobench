@@ -1,9 +1,10 @@
-from prometheus_api_client import PrometheusConnect
+import os
 import pandas as pd
 import plotly.express as px
+
 from jinja2 import Template
-import datetime
-import os
+from prometheus_api_client import PrometheusConnect
+
 
 class PrometheusMetricsReporter:
     def __init__(self, url, disable_ssl=True, time_range_hours=1):
@@ -17,12 +18,12 @@ class PrometheusMetricsReporter:
 
     def _query_prometheus(self, query):
         return self.prom.custom_query_range(
-            query=query, 
-            start_time=self.start_time, 
-            end_time=self.end_time, 
+            query=query,
+            start_time=self.start_time,
+            end_time=self.end_time,
             step='60s'
         )
-        
+
     def _fetch_data(self):
         self.data = {name: self._query_prometheus(query) for name, query in self.queries.items()}
 
@@ -74,7 +75,7 @@ class PrometheusMetricsReporter:
         html_content = template.render(plots=plots)
         with open(f'{reports_path}/metrics_report.html', 'w') as f:
             f.write(html_content)
-        
+
     def generate_report(self, start_time, end_time, test_name=""):
         self.end_time = end_time
         self.start_time = start_time

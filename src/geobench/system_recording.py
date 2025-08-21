@@ -1,8 +1,7 @@
-from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import time
 import platform
 import psutil
+import time
+
 
 def get_system_info():
     # OS information
@@ -62,7 +61,7 @@ def get_system_info():
                 "percentage": "PermissionError"
             })
         disk_info.append(partition_info)
-    
+
     system_info["disk"] = disk_info
 
     return system_info
@@ -96,7 +95,7 @@ def _record_process_info(duration=30, interval=1):
                         'write_bytes': [],
                         'username': proc_info.get('username', 'N/A')
                     }
-                
+
                 if cpu_usage is not None:
                     process_info[pid]['cpu_usage'].append(cpu_usage)
                 if memory_usage is not None:

@@ -1,10 +1,8 @@
-#!/usr/bin/env python3
-
 import argparse
 import datetime
-import sys
 import os
 import shutil
+import sys
 import webbrowser
 
 from .benchmark import Benchmark
@@ -12,6 +10,7 @@ from .error import MissingParameterError
 from .report import PrometheusMetricsReporter
 
 from . import scenario
+
 
 class CommandLineTool:
     def __init__(self):
@@ -29,7 +28,7 @@ class CommandLineTool:
         self.run_parser.add_argument('-f', '--file', type=str, help='Scenario file name')
         self.run_parser.add_argument('-r', '--repeat', type=int, help='The number of execution repeat', default=1)
         self.run_parser.add_argument('-c', '--converge', type=int, help='The number of converging percentage (in percent)', default=10)
-        
+
         # Subparser for the 'result' subcommand
         self.result_parser = self.subparsers.add_parser('result', help='Manage benchmarking report result')
         # self.result_parser.add_argument('-n','--name', type=str, help='The scenario unique name identifier')
@@ -54,7 +53,7 @@ class CommandLineTool:
     def run(self):
         args = self.parser.parse_args()
         # inventory_path = os.path.abspath(args.inventory)
-        
+
         if args.command == 'run':
             self.handle_run(args)
         elif args.command == 'result':
@@ -75,7 +74,7 @@ class CommandLineTool:
         except MissingParameterError as e:
             print(e)
             sys.exit(1)
-    
+
     def handle_result(self, args):
         if args.subcommand == "list":
             Benchmark.list_all_results()
@@ -124,7 +123,7 @@ class CommandLineTool:
                 output_dir = os.path.abspath(args.output_dir)
             else:
                 output_dir = os.path.abspath(os.path.join(os.path.expanduser("~"), "geobench_saved_results", scenario_id))
-            
+
             try:
                 os.makedirs(output_dir, exist_ok=True)
                 # Copy the entire contents of the source_dir to output_dir
@@ -141,17 +140,17 @@ class CommandLineTool:
                 test_name = instance["test_name"]
                 start_time_ts = instance["start_time"]
                 end_time_ts = instance["end_time"]
-                
+
                 start_ms = int(start_time_ts * 1000)
                 end_ms = int(end_time_ts * 1000)
-                
+
                 # This is a generic Grafana URL pattern. Specific dashboards might vary.
                 # Assuming a dashboard exists that can filter by a 'testname' variable or similar.
                 # Users might need to adjust 'your-dashboard-uid/your-dashboard-name'.
                 # For a more robust solution, dashboard UID and variable names could be configurable.
                 grafana_dashboard_path = "/d/YOUR_DASHBOARD_UID/YOUR_DASHBOARD_NAME"
                 grafana_link = f"{args.grafana_url.rstrip('/')}{grafana_dashboard_path}?orgId=1&from={start_ms}&to={end_ms}&var-testname={test_name}"
-                
+
                 print(f"Attempting to open Grafana for scenario ID {scenario_id} (Test: {test_name})")
                 print(f"URL: {grafana_link}")
                 try:

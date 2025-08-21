@@ -1,9 +1,10 @@
-import yaml
 import itertools
-import re
 import os
+import re
+import yaml
 
 from .error import MissingParameterError
+
 
 # Define the scenario structure
 class Scenario:
@@ -34,11 +35,11 @@ def parse_range_expression(expression):
     match = re.match(r'(\d+):(\d+)(?::(\d+))?', expression)
     if not match:
         raise ValueError(f"Invalid range expression: {expression}")
-    
+
     start = int(match.group(1))
     end = int(match.group(2))
     step = int(match.group(3)) if match.group(3) else 1
-    
+
     return list(range(start, end + 1, step))
 
 def expand_parameters(parameters):
@@ -59,7 +60,7 @@ def generate_scenarios(parameters):
         return [{}]
      # Ensure all values are lists
     normalized_parameters = {k: v if isinstance(v, list) else [v] for k, v in parameters.items()}
-    
+
     keys, values = zip(*normalized_parameters.items())
     scenarios = [dict(zip(keys, combination)) for combination in itertools.product(*values)]
     return scenarios
@@ -67,10 +68,10 @@ def generate_scenarios(parameters):
 def load_scenario(yaml_file, cmd_args):
     with open(yaml_file, 'r') as file:
         scenario_data = yaml.safe_load(file)
-    
+
     # Get the repetition parameter
     args_repeat = cmd_args.repeat
-    # Get scenario name 
+    # Get scenario name
     args_scenario_name = cmd_args.name
 
     name = args_scenario_name if args_scenario_name is not None else scenario_data.get('name', None)
@@ -90,7 +91,7 @@ def load_scenario(yaml_file, cmd_args):
     # Update inputs parameters to absolute path
     for key_param, value_param in inputs.items():
         checked_inputs[key_param] = os.path.abspath(value_param)
-    
+
     # checked_outputs = {}
     # # Update outputs parameters to absolute path
     # for key_param, value_param in outputs.items():
@@ -105,10 +106,10 @@ def load_scenario(yaml_file, cmd_args):
 
     if name is None:
         raise MissingParameterError("Error: 'name' is a mandatory parameter and must be specified either as a command line argument or in the YAML scenario file.")
-    
+
     if type not in ["qgis-process", "qgis-python", "qgis-json", "python", "shell"]:
         raise MissingParameterError(f"Error: '{type}' is not a valid type. Use qgis-process, qgis-python, qgis-json, python, shell script.")
-    
+
     return Scenario(name, repeat, type, command, command_file, checked_inputs, outputs, temp_directory, parameters, output_structure, scenarios, venv, working_dir)
 
 # Example usage

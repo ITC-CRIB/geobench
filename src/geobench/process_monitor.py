@@ -1,16 +1,18 @@
+import asyncio
+import platform
+import psutil
+import statistics
+import subprocess
+import sys
+import threading
+import time
+
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from multiprocessing.dummy import Process
 from pathlib import Path
-import platform
-import sys
-import time
-import psutil
-import subprocess
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import statistics
-import threading
-import asyncio
+
 
 class ProcessMonitor:
     # Initialize the ProcessMonitor class
@@ -37,11 +39,11 @@ class ProcessMonitor:
     # Get CPU usage per cpu
     def get_cpu_usage_per_cpu(self):
         return psutil.cpu_percent(interval=self.interval, percpu=True)
-    
+
     # Async version of get_cpu_usage_per_cpu
     async def get_cpu_usage_per_cpu_async(self):
         return self.get_cpu_usage_per_cpu()
-    
+
     def get_powermetrics_data(self, duration=1000):
         try:
             # Run powermetrics command and capture output
@@ -87,7 +89,7 @@ class ProcessMonitor:
             return self.get_powermetrics_data
         else:
             return None
-    
+
     # Get async power function
     def get_async_power_function(self):
         """
@@ -104,11 +106,11 @@ class ProcessMonitor:
             return self.get_powermetrics_data_async
         else:
             return None
-    
+
     # Convert named tuples to dictionaries
     def _convert_named_tuple_to_dict(self, named_tuple):
         return {field: getattr(named_tuple, field) for field in named_tuple._fields}
-    
+
     # Calculate average available memory information metrics
     def _calculate_average_memory_info(self, memory_data):
         # Initialize a defaultdict to hold sums for each field.
@@ -119,7 +121,7 @@ class ProcessMonitor:
         for memory_snapshot in memory_data:
             for field, value in memory_snapshot.items():
                 sum_data[field] += value
-        
+
         # Calculate the average value for each field.
         avg_data = {field: sum_value / field_counts for field, sum_value in sum_data.items()}
 
@@ -143,10 +145,10 @@ class ProcessMonitor:
 
     async def start_monitoring_with_asyncio(self, parent_process):
         parent_pid = parent_process.pid
-        
+
         # Add the parent process PID to the monitored list
         self.monitored_pids.append(parent_pid)
-        
+
         # Start monitoring the parent process and the system
         self.executor.submit(self.start_system_monitoring, parent_pid)
 
@@ -180,12 +182,12 @@ class ProcessMonitor:
                     # Check if the child process has terminated. A process may have terminated but still detected as part of child processes.
                     if child_pid not in self.terminated_pids:
                         all_tasks.append(self._monitor_single_process(child))
-                
+
                 # Wait for all tasks to complete
                 await asyncio.gather(*all_tasks)
             else:
                 break
-        
+
         # Shutdown the executor
         self.executor.shutdown(wait=True)
         print("Monitoring completed. Calculating statistics...")
@@ -211,7 +213,7 @@ class ProcessMonitor:
             while main_process.is_running():
                 # Create tasks for async execution
                 tasks = []
-                
+
                 # Task to get per-CPU usage of system-wide
                 cpu_task = self.get_cpu_usage_per_cpu_async()
                 tasks.append(cpu_task)
@@ -220,18 +222,18 @@ class ProcessMonitor:
                 if power_function is not None:
                     power_task = power_function()
                     tasks.append(power_task)
-                
+
                 # Wait for all tasks to complete
                 results = await asyncio.gather(*tasks)
-                
+
                 # Get tasks results
                 per_cpu_percent = results[0]
-                
+
                 # Get power usage if power function exists
                 power_usage = None
                 if power_function is not None:
                     power_usage = results[1]
-                
+
                 # Calculate average system-wide CPU usage given CPU usages for all core
                 all_cores_avg_cpu_percent = sum(per_cpu_percent) / len(per_cpu_percent)
                 # Get the current system-wide memory information
@@ -275,11 +277,11 @@ class ProcessMonitor:
             # Get the metrics samples for the process
             metrics_samples = process_metric['logs']
             running_time = 0
-            
+
             # Calculate running time given at least 2 samples
             if len(metrics_samples) > 1:
                 running_time = metrics_samples[-1]['timestamp'] - metrics_samples[0]['timestamp']
-            
+
             # Calculate average CPU and memory usage given at least 1 sample
             avg_cpu_percent = statistics.mean([sample['cpu_percent'] for sample in metrics_samples]) if len(metrics_samples) > 0 else 0
             avg_memory_percent = statistics.mean([sample['memory_percent'] for sample in metrics_samples]) if len(metrics_samples) > 0 else 0
@@ -315,10 +317,10 @@ class ProcessMonitor:
         # Store the calculated average memory usage in the overall metrics
         self.metrics["process_avg_mem"] = process_related_avg_memory_percent
         # Store system-wide logs in the overall metrics
-        self.metrics["log_data"] = self.system_logs_metrics        
+        self.metrics["log_data"] = self.system_logs_metrics
         # Store process-specific metrics in the overall metrics
         self.metrics["process_metrics"] = self.process_metrics
-    
+
     def get_metrics(self):
         return self.metrics
 
