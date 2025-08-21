@@ -32,6 +32,12 @@ dependencies = [
     "requests",
 ]
 
+[project.urls]
+Homepage = "https://github.com/ITC-CRIB/geobench"
+Source = "https://github.com/ITC-CRIB/geobench"
+Issues = "https://github.com/ITC-CRIB/geobench/issues"
+Changelog = "https://github.com/ITC-CRIB/geobench/commits"
+
 [project.scripts]
 geobench = "geobench.main:main"
 
