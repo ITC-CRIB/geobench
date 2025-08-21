@@ -5,7 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "geobench"
 version = "0.1.0"
-description = "Add your description here"
+authors = [
+    { name="Adhitya Bhawiyuga", email="a.bhawiyuga@utwente.nl" },
+    { name="Serkan Girgin", email="girgink@gmail.com"},
+]
+description = "A package and command-line utility to benchmark geospatial workflows."
 readme = "README.md"
 license = {file = "LICENSE"}
 requires-python = ">=3.10"
@@ -31,6 +35,11 @@ dependencies = [
     "pyyaml",
     "requests",
 ]
+keywords = [
+    "geospatial analysis",
+    "benchmarking",
+    "performance monitoring",
+]
 
 [project.urls]
 Homepage = "https://github.com/ITC-CRIB/geobench"
@@ -42,4 +51,7 @@ Changelog = "https://github.com/ITC-CRIB/geobench/commits"
 geobench = "geobench.main:main"
 
 [tool.hatch.build]
-include = ["geobench/**/*"]
+include = ["src/geobench/**/*"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/geobench"]
