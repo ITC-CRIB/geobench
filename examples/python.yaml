@@ -1,0 +1,13 @@
+name: ExamplePythonBenchmark
+repeat: 1
+type: python
+command: script.py
+venv: .venv
+summary: output.json
+temp-directory: ./temp
+output-structure: nested
+metrics:
+  - native
+  - prometheus:
+    - basic
+    - energy

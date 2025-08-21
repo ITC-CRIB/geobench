@@ -1,24 +1,24 @@
-name: ExampleBenchmark
+name: ExampleQGISProcessBenchmark
 repeat: 2
 type: qgis-process
 command: native:buffer
 inputs:
-  INPUT: "./sample-input/enschede/point.shp"
+  INPUT: input.shp
 outputs:
   OUTPUT: output.shp
 summary: output.json
-temp-directory: "./sample-output"
+temp-directory: ./temp
 parameters:
   distance_units: meters
   area_units: m2
   ellipsoid: EPSG:7030
-  SEGMENTS: 19
+  SEGMENTS: 10
   END_CAP_STYLE: 0
   JOIN_STYLE: 0
   MITER_LIMIT: 2
   DISSOLVE: false
   SEPARATE_DISJOINT: false
-  DISTANCE: 
+  DISTANCE:
     - 0.001
     - 0.002
 output-structure: nested

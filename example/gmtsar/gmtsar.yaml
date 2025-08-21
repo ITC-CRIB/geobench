@@ -1,9 +1,0 @@
-name: PreprocBatchTopsSecond
-repeat: 1
-type: shell
-command: /usr/local/bin/preproc_batch_tops.csh data.in dem.grd 2
-summary: output.json
-temp-directory: "./sample-output"
-output-structure: nested
-workdir: /data/ssd/Badar/ilic_adhitya/ilic3x/des/F1/raw
-    
