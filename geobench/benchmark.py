@@ -20,13 +20,12 @@ RUN_PROCESS_JSON_FILENAME = "process.json"
 
 class Benchmark:
 
-    outputs = {}
-
     def __init__(self, scenario: Scenario) -> None:
         self.scenario = scenario
         self.result = {
             "name": scenario.name
         }
+        self.outputs = {}
     
     def _makedirs_if_not_exists(self, dir_path):
         if not os.path.exists(dir_path):
