@@ -1,15 +1,17 @@
-.result/
-reports/
-benchmark_results.csv
-*.pyc
-__pycache__
-sample-output/
-sample-input/
-scenario.yaml
-.venv
-venv
-geobench.egg-info/
-__pycache__/
-build/
-.DS_Store
+# Environment
+.venv/
+
+# Jupyter Notebook
 .ipynb_checkpoints/
+
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+
+# Packaging
+build/
+dist/
+*.egg
+
+# OS-specific
+.DS_Store
