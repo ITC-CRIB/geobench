@@ -1,7 +1,3 @@
-class MissingParameterError(Exception):
-    pass
-
-
 class GeobenchError(Exception):
     """Base class for exceptions in this module."""
     pass
@@ -34,9 +30,4 @@ class TemplateFileNotFoundError(GeobenchCommandError):
 
 class ParameterEncodingError(GeobenchCommandError):
     """Raised when there's an error encoding command parameters."""
-    pass
-
-
-class UnsupportedCommandTypeError(GeobenchCommandError):
-    """Raised when an unsupported command type is specified."""
     pass

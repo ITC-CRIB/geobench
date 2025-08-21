@@ -3,8 +3,6 @@ import os
 import re
 import yaml
 
-from .error import MissingParameterError
-
 
 class Scenario:
     """Defines the scenario structure."""
@@ -59,12 +57,15 @@ def generate_scenarios(parameters: dict):
     return scenarios
 
 
-def load_scenario(yaml_file, cmd_args):
-    with open(yaml_file, 'r') as file:
+def load_scenario(path, args: dict=None):
+    if not args:
+        args = {}
+
+    with open(path, 'r') as file:
         scenario_data = yaml.safe_load(file)
 
-    name = cmd_args.name or scenario_data.get('name')
-    repeat = cmd_args.repeat or scenario_data.get('repeat', 1)
+    name = args.name or scenario_data.get('name')
+    repeat = args.repeat or scenario_data.get('repeat', 1)
     type = scenario_data.get('type')
     command = scenario_data.get('command')
     command_file = scenario_data.get('command-file')

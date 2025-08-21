@@ -12,7 +12,6 @@ from . import command
 from . import system_recording as recording
 
 
-CSV_FILE = 'benchmark_results.csv'
 OUTPUT_JSON_FILENAME = "output.json"
 INDEX_HTML_FILENAME = "index.html"
 RESULT_HTML_FILENAME = "result.html"
@@ -26,7 +25,6 @@ class Benchmark:
 
     benchmark = Benchmark('test1', './test_script.sh')
     benchmark.run()
-    Benchmark.remove_result('test1')
     """
     def __init__(self, scenario: Scenario) -> None:
         self.scenario = scenario
@@ -192,34 +190,6 @@ class Benchmark:
         return all_runs_results
 
 
-    def _save_benchmark_summary_to_csv(self, start_time_total, end_time_total):
-        """Saves the overall benchmark summary to a CSV file."""
-        execution_time_total = end_time_total - start_time_total
-        start_time_hr = datetime.fromtimestamp(start_time_total).strftime('%Y-%m-%d %H:%M:%S')
-        end_time_hr = datetime.fromtimestamp(end_time_total).strftime('%Y-%m-%d %H:%M:%S')
-
-        record = {
-            'test_name': self.scenario.name,
-            'start_time': start_time_total,
-            'end_time': end_time_total,
-            'start_time_hr': start_time_hr,
-            'end_time_hr': end_time_hr,
-            'execution_time': execution_time_total
-        }
-
-        df = pd.DataFrame([record])
-        try:
-            existing_df = pd.read_csv(CSV_FILE)
-            # Remove existing entry for the same test_name to prevent duplicates, then append
-            existing_df = existing_df[existing_df['test_name'] != self.scenario.name]
-            df = pd.concat([existing_df, df], ignore_index=True)
-        except FileNotFoundError:
-            pass # If file doesn't exist, the new df will create it
-
-        df.to_csv(CSV_FILE, index=False)
-        print(f'Test finished. Overall result for "{self.scenario.name}" saved to {CSV_FILE}.')
-
-
     def run(self):
         """Runs the benchmark according to methodology."""
         try:
@@ -242,7 +212,6 @@ class Benchmark:
 
             end_time_total = time.time()
 
-            self._save_benchmark_summary_to_csv(start_time_total, end_time_total)
             print(f"Benchmark run for '{self.scenario.name}' completed.")
         except Exception as e:
             print(f"Error running benchmark for '{self.scenario.name}': {str(e)}")
@@ -252,45 +221,3 @@ class Benchmark:
         finally:
             print("Storing output to files.")
             self._store_output()
-
-
-    @classmethod
-    def remove_result(cls, test_name):
-        try:
-            df = pd.read_csv(CSV_FILE)  # Use module-level constant
-            df = df[df['test_name'] != test_name]
-            df.to_csv(CSV_FILE, index=False) # Use module-level constant
-            print(f'Test result for "{test_name}" deleted.')
-        except FileNotFoundError:
-            print(f'No results found to delete for "{test_name}".')
-
-
-    @classmethod
-    def list_results(cls):
-        try:
-            df = pd.read_csv(CSV_FILE) # Use module-level constant
-            print(df)
-        except FileNotFoundError:
-            print('No results found.')
-
-
-    @classmethod
-    def get_test_instance(cls, test_name):
-        try:
-            df = pd.read_csv(CSV_FILE) # Use module-level constant
-            record = df[df['test_name'] == test_name].to_dict('records')
-            if record:
-                instance = {}
-                instance["test_name"] = test_name
-                instance["start_time"] = record[0]['start_time']
-                instance["end_time"] = record[0]['end_time']
-                instance["start_time_hr"] = record[0]['start_time_hr']
-                instance["end_time_hr"] = record[0]['end_time_hr']
-                instance["execution_time"] = record[0]['execution_time']
-                return instance
-            else:
-                print(f'No test found with the name "{test_name}".')
-                return None
-        except FileNotFoundError:
-            print('No results found.')
-            return None

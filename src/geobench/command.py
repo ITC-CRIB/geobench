@@ -14,7 +14,6 @@ from .error import (
     ScriptNotFoundError,
     TemplateFileNotFoundError,
     ParameterEncodingError,
-    UnsupportedCommandTypeError,
     GeobenchCommandError
 )
 from .process_monitor import ProcessMonitor
@@ -469,7 +468,7 @@ class CommandFactory:
         elif scenario.type.startswith("shell"):
             return Shell(scenario)
         else:
-            raise UnsupportedCommandTypeError(f"Invalid scenario type '{scenario.type}'. Supported types are [qgis-process, qgis-python, python* (e.g., python, python3.9), shell* (e.g., shell, shell-bash)].")
+            raise ValueError(f"Invalid scenario type '{scenario.type}'.")
 
 
 def get_instance(scenario):
