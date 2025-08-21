@@ -21,4 +21,3 @@ parameters:
   DISTANCE:
     - 0.001
     - 0.002
-output-structure: nested

@@ -1,9 +1,11 @@
 import platform
 import psutil
+import statistics
 import time
 
 
 def get_system_info():
+    """Returns system information."""
     # OS information
     system_info = {
         "os": {
@@ -66,7 +68,9 @@ def get_system_info():
 
     return system_info
 
-def _record_process_info(duration=30, interval=1):
+
+def _record_process_info(duration: int=30, interval: int=1):
+    """Records process information."""
     process_info = {}
 
     for _ in range(int(duration / interval)):
@@ -112,19 +116,15 @@ def _record_process_info(duration=30, interval=1):
 
     return process_info
 
-def _average(sum, len):
-    if len > 0:
-        return sum / len
-    return 0
 
-def _calculate_average_usage(process_info):
+def _calculate_average_usage(process_info: dict):
     average_info = []
 
     for pid, info in process_info.items():
-        avg_cpu =  _average( sum(info['cpu_usage']) , len(info['cpu_usage']) )
-        avg_memory = _average( sum(info['memory_usage']) , len(info['memory_usage']) )
-        avg_read_bytes = _average( sum(info['read_bytes']) , len(info['read_bytes']) )
-        avg_write_bytes = _average( sum(info['write_bytes']) , len(info['write_bytes']) )
+        avg_cpu = statistics.mean(info['cpu_usage']) if info['cpu_usage'] else 0
+        avg_memory = statistics.mean(info['memory_usage']) if info['memory_usage'] else 0
+        avg_read_bytes = statistics.mean(info['read_bytes']) if info['read_bytes'] else 0
+        avg_write_bytes = statistics.mean(info['write_bytes']) if info['write_bytes'] else 0
 
         average_info.append({
             'pid': pid,
@@ -133,34 +133,40 @@ def _calculate_average_usage(process_info):
             'avg_memory_usage': avg_memory,
             'avg_read_bytes': avg_read_bytes,
             'avg_write_bytes': avg_write_bytes,
-            'username': info['username']
+            'username': info['username'],
         })
 
     # Sort by average CPU usage in descending order
-    average_info.sort(key=lambda x: x['avg_memory_usage'], reverse=True)
+    average_info.sort(key=lambda x: x['avg_cpu_usage'], reverse=True)
+
     return average_info
 
-# Record all running processes for specific duration, then calculate the average CPU and memory usage
-def record_all_process_info(duration=30):
-    process_info = _record_process_info(duration=duration, interval=1)
+
+def record_all_process_info(duration: int=30, interval: int=1):
+    """Records all running processes for specific duration, then calculates the
+       average CPU and memory usage"""
+    process_info = _record_process_info(duration, interval)
     average_info = _calculate_average_usage(process_info)
 
     return average_info
 
-# Perform baseline monitoring for a specific duration. The function return the average CPU and memory usage.
-def monitor_baseline(duration=15):
-    results = {}
+
+def monitor_baseline(duration: int=15):
+    """Performs baseline monitoring for a specific duration.
+
+    The function returns the average CPU and memory usage.
+    """
     cpu_usage = []
     mem_usage = []
 
-    # Define the start time
     start_time = time.time()
-
-    # Loop until the specified duration has passed
     while time.time() - start_time < duration:
         cpu_usage.append(psutil.cpu_percent(interval=1))
         mem_usage.append(psutil.virtual_memory().percent)
         time.sleep(0.1)
-    results["avg_cpu"] = sum(cpu_usage) / len(cpu_usage) if cpu_usage else 0
-    results["avg_mem"] = sum(mem_usage) / len(mem_usage) if mem_usage else 0
+
+    results = {}
+    results["avg_cpu"] = statistics.mean(cpu_usage) if cpu_usage else 0
+    results["avg_mem"] = statistics.mean(mem_usage) if mem_usage else 0
+
     return results

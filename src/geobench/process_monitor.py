@@ -36,13 +36,16 @@ class ProcessMonitor:
         # List to store the PIDs of terminated processes
         self.terminated_pids = []
 
-    # Get CPU usage per cpu
+
     def get_cpu_usage_per_cpu(self):
+        """Gets CPU usage per cpu."""
         return psutil.cpu_percent(interval=self.interval, percpu=True)
 
-    # Async version of get_cpu_usage_per_cpu
+
     async def get_cpu_usage_per_cpu_async(self):
+        """Async version of get_cpu_usage_per_cpu."""
         return self.get_cpu_usage_per_cpu()
+
 
     def get_powermetrics_data(self, duration=1000):
         try:
@@ -70,27 +73,12 @@ class ProcessMonitor:
             print(f"Error running powermetrics: {e.output}")
             return None
 
-    # Async version of get_powermetrics_data
+
     async def get_powermetrics_data_async(self, duration=1000):
+        """Async version of get_powermetrics_data."""
         return self.get_powermetrics_data(duration)
 
-    def get_power_function(self):
-        """
-        Determines the appropriate power metrics function based on the operating system.
 
-        Returns:
-            function: A reference to the `get_powermetrics_data` method if the operating system is macOS (Darwin).
-                  Returns None for other operating systems.
-        """
-        os_type = platform.system()
-        # Check if the operating system is macOS (Darwin)
-        if os_type == "Darwin":
-            # Return the powermetrics function for macOS
-            return self.get_powermetrics_data
-        else:
-            return None
-
-    # Get async power function
     def get_async_power_function(self):
         """
         Determines the appropriate async power metrics function based on the operating system.
@@ -107,12 +95,14 @@ class ProcessMonitor:
         else:
             return None
 
-    # Convert named tuples to dictionaries
+
     def _convert_named_tuple_to_dict(self, named_tuple):
+        """Converts named tuples to dictionaries."""
         return {field: getattr(named_tuple, field) for field in named_tuple._fields}
 
-    # Calculate average available memory information metrics
+
     def _calculate_average_memory_info(self, memory_data):
+        """Calculates average available memory information metrics."""
         # Initialize a defaultdict to hold sums for each field.
         sum_data = defaultdict(float)
         field_counts = len(memory_data)
@@ -126,6 +116,7 @@ class ProcessMonitor:
         avg_data = {field: sum_value / field_counts for field, sum_value in sum_data.items()}
 
         return avg_data
+
 
     async def _monitor_single_process(self, process):
         try:
@@ -141,7 +132,7 @@ class ProcessMonitor:
             })
         except psutil.NoSuchProcess:
             self.terminated_pids.append(process.pid)
-            # print(f"DEBUG: Skip monitoring for {process.pid}. Running status: {process.is_running()}")
+
 
     async def start_monitoring_with_asyncio(self, parent_process):
         parent_pid = parent_process.pid
@@ -159,7 +150,6 @@ class ProcessMonitor:
             'command': parent_process.cmdline(),
             'logs': []
         }
-        # print(f"DEBUG: Parent process ID: {parent_pid}")
 
         while parent_process.poll() is None:
             # Check if the parent process has terminated. Parent process may have been terminated but still detected as running.
@@ -194,12 +184,14 @@ class ProcessMonitor:
         # Calculate statistics for monitored processes
         self._calculate_statistics()
 
-    # Helper to call async monitor_system function
+
     def start_system_monitoring(self, parent_pid):
+        """Helper to call async monitor_system function."""
         asyncio.run(self.monitor_system(parent_pid))
 
-    # Monitor the system-wide CPU and memory usage
+
     async def monitor_system(self, parent_pid):
+        """Monitors the system-wide CPU and memory usage."""
         # Lists to store the system-wide CPU and memory usage data
         sys_cpu_usage = []
         sys_mem_info = []
@@ -262,16 +254,19 @@ class ProcessMonitor:
             # Calculate the average system-wide memory info
             self.metrics["system_avg_mem"] = self._calculate_average_memory_info(sys_mem_info) if sys_mem_info else 0
 
-    # Run the command and start monitoring the process and the system
+
     def run(self, command):
+        """Runs the command and start monitoring the process and the system."""
         parent_process = subprocess.Popen(command, shell=True)
         asyncio.run(self.start_monitoring_with_asyncio(parent_process))
+
 
     def run_monitoring(self, parent_process):
         asyncio.run(self.start_monitoring_with_asyncio(parent_process))
 
-    # Calculate statistics for monitored processes
+
     def _calculate_statistics(self):
+        """Calculates statistics for monitored processes."""
         # Calculate the average running time for each process
         for pid, process_metric in self.process_metrics.items():
             # Get the metrics samples for the process
@@ -321,32 +316,6 @@ class ProcessMonitor:
         # Store process-specific metrics in the overall metrics
         self.metrics["process_metrics"] = self.process_metrics
 
+
     def get_metrics(self):
         return self.metrics
-
-def main():
-    if len(sys.argv) != 2:
-        print("Usage: python process_tracker.py <path_to_heavy_processes.py>")
-        sys.exit(1)
-
-    script_path = Path(sys.argv[1])
-    if not script_path.is_file():
-        print(f"Error: The file '{script_path}' does not exist.")
-        sys.exit(1)
-
-    python_executable = sys.executable
-    command = [python_executable, str(script_path)]
-
-    print(f"Monitoring: {' '.join(command)}")
-
-    monitor = ProcessMonitor()
-    start_time = datetime.now()
-    monitor.run(' '.join(command))
-    running_time = datetime.now() - start_time
-    print(f"Total running time: {running_time.total_seconds()}s")
-    print("Monitoring complete.")
-    metrics = monitor.get_metrics()
-    print(metrics)
-
-if __name__ == "__main__":
-    main()

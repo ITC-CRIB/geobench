@@ -14,12 +14,14 @@ def clear_linux_cache():
     except Exception as e:
         print(f"Failed to clear cache on Linux: {e}")
 
+
 def clear_windows_memory_cache():
     try:
         ctypes.windll.psapi.EmptyWorkingSet(-1)
         print("Cleared memory cache on Windows.")
     except Exception as e:
         print(f"Failed to clear memory cache on Windows: {e}")
+
 
 def _clear_temp_files():
     temp_dirs = [os.getenv('TEMP'), os.path.join(os.getenv('WINDIR'), 'Temp')]
@@ -42,6 +44,7 @@ def _clear_temp_files():
             print(f"Temporary files in {temp_dir} cleared.")
         except Exception as e:
             print(f"Failed to clear temporary files in {temp_dir}. Error: {e}")
+
 
 def _clear_windows_update_cache():
     windows_update_cache = os.path.join(os.getenv('WINDIR'), 'SoftwareDistribution', 'Download')
@@ -66,6 +69,7 @@ def clear_windows_disk_cache():
         print("This script needs to be run as an administrator.")
         ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, __file__, None, 1)
 
+
 def clear_cache():
     os_type = platform.system()
 
@@ -76,6 +80,3 @@ def clear_cache():
         clear_windows_disk_cache()
     else:
         print(f"Unsupported operating system: {os_type}")
-
-if __name__ == "__main__":
-    clear_cache()

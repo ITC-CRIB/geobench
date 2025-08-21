@@ -2,10 +2,6 @@ class MissingParameterError(Exception):
     pass
 
 
-class WrongQGISCommandError(Exception):
-    pass
-
-
 class GeobenchError(Exception):
     """Base class for exceptions in this module."""
     pass

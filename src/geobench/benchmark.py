@@ -19,8 +19,15 @@ RESULT_HTML_FILENAME = "result.html"
 RUN_RESULT_JSON_FILENAME = "result.json"
 RUN_PROCESS_JSON_FILENAME = "process.json"
 
-class Benchmark:
 
+class Benchmark:
+    """
+    Example usage:
+
+    benchmark = Benchmark('test1', './test_script.sh')
+    benchmark.run()
+    Benchmark.remove_result('test1')
+    """
     def __init__(self, scenario: Scenario) -> None:
         self.scenario = scenario
         self.result = {
@@ -28,32 +35,22 @@ class Benchmark:
         }
         self.outputs = {}
 
+
     def _makedirs_if_not_exists(self, dir_path):
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
 
-    def _create_directories_for_scenarios(self, base_output, name, scenario_combination, repeat):
-        base_dir  =  os.path.join(base_output, name)
-        self._makedirs_if_not_exists(base_dir)
-
-        for idx, scenario in enumerate(scenario_combination):
-            base_dir = os.path.join(base_dir, f"set_{idx + 1}")
-            self._makedirs_if_not_exists(base_dir)
-
-            for i in range(1, repeat + 1):
-                repeat_dir = os.path.join(base_dir, f"run_{i}")
-                self._makedirs_if_not_exists(repeat_dir)
 
     def _save_result(self):
         output_file  =  os.path.join(self.scenario.temp_directory, self.scenario.name, OUTPUT_JSON_FILENAME)
-        # with open(output_file, 'w') as json_file:
-        #     json.dump(self.result, json_file, indent=4)
         self.outputs[output_file] = self.result
+
 
     def _store_output(self):
         for output_file, output in self.outputs.items():
             with open(output_file, 'w') as json_file:
                 json.dump(output, json_file, indent=4)
+
 
     def _setup_environment(self, base_dir):
         """Creates base directories and copies template files."""
@@ -62,12 +59,14 @@ class Benchmark:
             shutil.copy(os.path.join(template_dir, INDEX_HTML_FILENAME), base_dir)
             shutil.copy(os.path.join(template_dir, RESULT_HTML_FILENAME), base_dir)
 
+
     def _record_initial_system_info(self):
         """Records system hardware information."""
         print("Recording system configuration\n")
         system_info = recording.get_system_info()
         self.result["system"] = system_info
         self._save_result()
+
 
     def _get_recording_duration(self):
         """Gets the recording duration from environment or uses default."""
@@ -80,18 +79,9 @@ class Benchmark:
                 pass  # Use default value if conversion fails
         return recording_duration
 
+
     def _perform_pre_run_diagnostics(self, instance, recording_duration):
         """Performs pre-run checks, monitoring, and records software config."""
-        print(f"Check running process for {recording_duration} seconds\n")
-        # Initial running process check (original code recorded this but didn't store in self.result immediately)
-        # recording.record_process_info(duration=recording_duration)
-        # self.result["process"] = running_process # This was commented out in original
-        # self._save_result()
-
-        print(f"Check system requirement\n")
-        instance.check_requirement()
-        # To do: Decide if the system is suitable for testing
-
         print(f"Baseline monitoring for {recording_duration} seconds\n")
         baseline_results = recording.monitor_baseline(duration=recording_duration)
         self.result["baseline"] = baseline_results
@@ -103,6 +93,7 @@ class Benchmark:
         self._save_result() # Save after software config
         print()
         return software_config.get("exec_path")
+
 
     def _execute_single_test_run(self, base_dir, scenario_set_idx, run_idx,
                                  decoded_params_template, instance, exec_path, recording_duration):
@@ -153,16 +144,11 @@ class Benchmark:
         # Save detailed execution result for this run
         run_result_file_abs_path = os.path.join(output_abs_path, RUN_RESULT_JSON_FILENAME)
         run_result_file_rel_path = os.path.join(scen_set_dir_name, run_dir_name, RUN_RESULT_JSON_FILENAME)
-        # with open(run_result_file_abs_path, "w") as f:
-        #     # print(exec_result)
-        #     json.dump(exec_result, f, indent=4)
         self.outputs[run_result_file_abs_path] = exec_result
 
         # Save all running process information for this run
         run_process_file_abs_path = os.path.join(output_abs_path, RUN_PROCESS_JSON_FILENAME)
         run_process_file_rel_path = os.path.join(scen_set_dir_name, run_dir_name, RUN_PROCESS_JSON_FILENAME)
-        # with open(run_process_file_abs_path, "w") as f:
-        #     json.dump(all_processes, f, indent=4)
         self.outputs[run_process_file_abs_path] = all_processes
 
         if "INPUT" in self.scenario.inputs:
@@ -181,11 +167,10 @@ class Benchmark:
             "exec_time": exec_result["end_time"] - exec_result["start_time"],
             "system_avg_cpu": exec_result["system_avg_cpu"],
             "system_avg_mem": exec_result["system_avg_mem"],
-            # "process_avg_cpu": exec_result["process_avg_cpu"],
-            # "process_avg_mem": exec_result["process_avg_mem"],
             "running_process": run_process_file_rel_path,
             "detailed_result": run_result_file_rel_path,
         }
+
 
     def _execute_all_test_runs(self, base_dir, instance, exec_path, recording_duration):
         """Executes all test runs for all scenario combinations."""
@@ -205,6 +190,7 @@ class Benchmark:
                 self.result["summarized_results"] = all_runs_results
                 self._save_result()
         return all_runs_results
+
 
     def _save_benchmark_summary_to_csv(self, start_time_total, end_time_total):
         """Saves the overall benchmark summary to a CSV file."""
@@ -233,8 +219,9 @@ class Benchmark:
         df.to_csv(CSV_FILE, index=False)
         print(f'Test finished. Overall result for "{self.scenario.name}" saved to {CSV_FILE}.')
 
-    # Run the benchmark according to methodology
+
     def run(self):
+        """Runs the benchmark according to methodology."""
         try:
             base_dir = os.path.join(self.scenario.temp_directory, self.scenario.name)
             self._setup_environment(base_dir)
@@ -266,8 +253,9 @@ class Benchmark:
             print("Storing output to files.")
             self._store_output()
 
+
     @classmethod
-    def delete_test_result(cls, test_name):
+    def remove_result(cls, test_name):
         try:
             df = pd.read_csv(CSV_FILE)  # Use module-level constant
             df = df[df['test_name'] != test_name]
@@ -276,13 +264,15 @@ class Benchmark:
         except FileNotFoundError:
             print(f'No results found to delete for "{test_name}".')
 
+
     @classmethod
-    def list_all_results(cls):
+    def list_results(cls):
         try:
             df = pd.read_csv(CSV_FILE) # Use module-level constant
             print(df)
         except FileNotFoundError:
             print('No results found.')
+
 
     @classmethod
     def get_test_instance(cls, test_name):
@@ -304,8 +294,3 @@ class Benchmark:
         except FileNotFoundError:
             print('No results found.')
             return None
-
-# Example usage:
-# benchmark = Benchmark('test1', './test_script.sh')
-# benchmark.run()
-# Benchmark.delete_test_result('test1')

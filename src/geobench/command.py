@@ -18,7 +18,6 @@ from .error import (
     GeobenchCommandError
 )
 from .process_monitor import ProcessMonitor
-# from .process_monitor_threading import ProcessMonitor
 
 
 class CommandType:
@@ -56,16 +55,19 @@ class CommandType:
             results["success"] = False
             print(f"Command executable not found for: {' '.join(command_to_execute)}")
             raise ExecutableNotFoundError(f"Executable not found for command: {' '.join(command_to_execute)}")
+
         except psutil.Error as e: # Catch other psutil errors during Popen or process interaction
             results["success"] = False
             print(f"psutil error during command execution '{' '.join(command_to_execute)}': {e}")
             pid_info = f" (PID: {process.pid})" if process and hasattr(process, 'pid') else ""
             raise GeobenchCommandError(f"psutil error executing command '{' '.join(command_to_execute)}'{pid_info}: {e}")
+
         except Exception as e: # Catch any other unexpected errors
             results["success"] = False
             print(f"Unexpected error during command execution '{' '.join(command_to_execute)}': {e}")
             pid_info = f" (PID: {process.pid})" if process and hasattr(process, 'pid') else ""
             raise GeobenchCommandError(f"Unexpected error executing command '{' '.join(command_to_execute)}'{pid_info}: {e}")
+
         results["finished"] = True
         exec_end_time = time.time()
         results["start_time"] = exec_start_time
@@ -73,12 +75,14 @@ class CommandType:
 
         return results
 
+
     def get_software_config(self):
         raise NotImplementedError("Subclasses must implement get_software_config method")
+
+
     def get_exec_params(self, command, params_dict, output_dir_path):
         raise NotImplementedError("Subclasses must implement get_exec_params method")
-    def check_requirement(self):
-        pass
+
 
 class QGISProcess(CommandType):
     def _get_qgis_directory(self):
@@ -97,6 +101,7 @@ class QGISProcess(CommandType):
             return '/Applications/QGIS.app/Contents/MacOS'
         else:
             raise OSError('Unsupported operating system')
+
 
     def _find_file_prefix(self, directory, prefix):
         executable_extensions = ['.exe', '.bat', '.cmd', '.com', '.ps1']
@@ -119,6 +124,7 @@ class QGISProcess(CommandType):
                     # If not executable, continue search (or could log a warning)
         return None
 
+
     def _get_qgis_process_path(self, qgis_basedir_path):
         # QGIS binary directory
         qgis_bin_dir = ""
@@ -137,6 +143,7 @@ class QGISProcess(CommandType):
             raise ExecutableNotFoundError(f"QGIS 'qgis_process' executable not found in derived path: {qgis_bin_dir}")
         return path_result
 
+
     def _parse_qgis_plugins(self, version):
         # Split the output text into lines
         lines = version.splitlines()
@@ -152,6 +159,7 @@ class QGISProcess(CommandType):
                 parsed_lines.append(line)
 
         return parsed_lines
+
 
     def get_software_config(self):
         software_config = {}
@@ -187,11 +195,13 @@ class QGISProcess(CommandType):
             raise SoftwareConfigurationError(f"OS error during QGIS configuration: {e}")
         return software_config
 
+
     def get_exec_params(self, command, params_dict, output_dir_path):
         params = ["run", command]
         for key, value in params_dict.items():
             params.append(f"--{key}={value}")
         return params
+
 
 class QGISPython(QGISProcess):
     def _find_dir_prefix(self, directory, prefix):
@@ -206,6 +216,7 @@ class QGISPython(QGISProcess):
             if file_name.startswith(prefix):
                 return os.path.join(directory, file_name)
         return None
+
 
     def _get_qgis_python_path(self, qgis_basedir_path):
         # QGIS binary directory
@@ -228,6 +239,7 @@ class QGISPython(QGISProcess):
         if path_result is None:
             raise ExecutableNotFoundError(f"QGIS 'python3' (or similar) executable not found in derived path: {qgis_bin_dir}")
         return path_result
+
 
     def get_software_config(self):
         software_config = {}
@@ -261,6 +273,7 @@ class QGISPython(QGISProcess):
             raise SoftwareConfigurationError(f"OS error during QGIS Python configuration: {e}")
         return software_config
 
+
     def _render_template(self, template_name, **kwargs):
         try:
             with pkg_resources.path(__package__, 'templates') as template_dir:
@@ -271,6 +284,7 @@ class QGISPython(QGISProcess):
             raise TemplateFileNotFoundError(f"Jinja2 template '{template_name}' not found in package templates.")
         except Exception as e: # Catch other potential errors during template rendering
             raise GeobenchCommandError(f"Error rendering template '{template_name}': {e}")
+
 
     def _encode_parameters(self, param_dict):
         try:
@@ -284,6 +298,7 @@ class QGISPython(QGISProcess):
         except Exception as e:
             raise ParameterEncodingError(f"Error encoding parameter dictionary to string for QGISPython: {e}")
 
+
     def get_exec_params(self, command, params_dict, output_dir_path):
         params_str = self._encode_parameters(params_dict)
         script_line_str = f'processing.run("{command}", {params_str})'
@@ -295,8 +310,8 @@ class QGISPython(QGISProcess):
 
         return [program_path]
 
-class Python(CommandType):
 
+class Python(CommandType):
     def get_software_config(self):
         software_config = {}
         os_type = platform.system()
@@ -333,6 +348,7 @@ class Python(CommandType):
         software_config["exec_path"] = [python_executable]
         return software_config
 
+
     def get_exec_params(self, script_path, decoded_params, output_dir_path):
         if not os.path.isfile(script_path):
             raise ScriptNotFoundError(f"Python script not found at: {script_path}")
@@ -347,6 +363,7 @@ class Python(CommandType):
         # The script path for execution should be the one in output_dir_path
         command_with_params = self._encode_parameters(output_file_path, decoded_params)
         return command_with_params
+
 
     def _encode_parameters(self, script_path, params):
         try:
@@ -363,6 +380,7 @@ class Python(CommandType):
         except Exception as e:
             raise ParameterEncodingError(f"Error encoding Python script parameters: {e}")
 
+
 class Shell(CommandType):
     def get_software_config(self):
         splitted_command = self.scenario.command.split(" ")
@@ -372,6 +390,7 @@ class Shell(CommandType):
             "exec_path": [script_path]
         }
         return software_config
+
 
     def get_exec_params(self, command, decoded_params, output_dir_path):
         splitted_command = command.split(" ")
@@ -421,7 +440,9 @@ class Shell(CommandType):
 
         return final_command_list
 
-    def _encode_parameters(self, _, params): # script_path (first arg) is ignored for Shell as it's handled in get_exec_params
+
+    def _encode_parameters(self, _, params):
+        # script_path (first arg) is ignored for Shell as it's handled in get_exec_params
         try:
             param_list = []
             if isinstance(params, dict):
@@ -434,6 +455,7 @@ class Shell(CommandType):
             return param_list
         except Exception as e:
             raise ParameterEncodingError(f"Error encoding shell parameters: {e}")
+
 
 class CommandFactory:
     @staticmethod
@@ -448,6 +470,7 @@ class CommandFactory:
             return Shell(scenario)
         else:
             raise UnsupportedCommandTypeError(f"Invalid scenario type '{scenario.type}'. Supported types are [qgis-process, qgis-python, python* (e.g., python, python3.9), shell* (e.g., shell, shell-bash)].")
+
 
 def get_instance(scenario):
     instance = CommandFactory.create_command(scenario)

@@ -30,7 +30,6 @@ dependencies = [
     "jinja2",
     "pandas",
     "plotly",
-    "prometheus-api-client",
     "psutil",
     "pyyaml",
     "requests",
