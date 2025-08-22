@@ -98,7 +98,7 @@ Follow these steps to set up GeoBench:
 
 - To run the program during development (without installing it as tool), you can execute following command:
 	```
-	python -m geobench.main run -f sample-input/example-scenario.yaml
+	python -m geobench.cli scenario.yaml
 	```
 
 ## Running Benchmarking Scenario

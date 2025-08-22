@@ -1,4 +1,4 @@
-name: ExampleQGISProcessBenchmark
+name: Example QGIS Process Scenario
 repeat: 2
 type: qgis-process
 command: native:buffer
@@ -6,9 +6,7 @@ inputs:
   INPUT: input.shp
 outputs:
   OUTPUT: output.shp
-summary: output.json
-temp-directory: ./temp
-parameters:
+arguments:
   distance_units: meters
   area_units: m2
   ellipsoid: EPSG:7030
