@@ -100,9 +100,9 @@
                 </tr>
             </thead>
             <tbody>
-                <tr v-for="(result, index) in data.summarized_results" :key="index">
+                <tr v-for="(result, index) in data.summary" :key="index">
                     <td><a href="#" @click.prevent="showModal(index)">Set {{ Math.floor(index / 2) + 1 }}, Run {{ (index % 2) + 1 }}</a></td>
-                    <td>{{ result.exec_time.toFixed(2) }}s</td>
+                    <td>{{ result.duration.toFixed(2) }}s</td>
                     <td><a :href="'result.html?path=' + encodeURIComponent(result.detailed_result)" target="_blank">View Details</a></td>
                 </tr>
             </tbody>
@@ -166,7 +166,7 @@
                 });
             },
             showModal(index) {
-                this.selectedParameters = JSON.stringify(this.data.summarized_results[index].parameters, null, 2);
+                this.selectedParameters = JSON.stringify(this.data.summary[index].parameters, null, 2);
                 document.getElementById('parameterModal').style.display = 'block';
             },
             closeModal() {

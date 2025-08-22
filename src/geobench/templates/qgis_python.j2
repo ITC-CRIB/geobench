@@ -1,0 +1,46 @@
+import os
+import platform
+import sys
+
+
+qgis_path = '{{ qgis_path }}'
+
+system = platform.system()
+
+if system == 'Windows':
+    qgis_python_plugin_path = [
+        os.path.join(qgis_path, 'apps', 'qgis', 'python'),
+        os.path.join(qgis_path, 'apps', 'qgis', 'python', 'plugins'),
+    ]
+
+elif system == 'Linux':
+    qgis_python_plugin_path = ['/usr/share/qgis/python/plugins']
+
+elif system == 'Darwin':
+    qgis_python_plugin_path = ['/Applications/QGIS.app/Contents/Resources/python/plugins']
+
+else:
+    print("Unknown operating system.")
+    sys.exit(1)
+
+for path in qgis_python_plugin_path:
+    sys.path.append(path)
+
+from qgis.core import QgsApplication
+from qgis.analysis import QgsNativeAlgorithms
+
+QgsApplication.setPrefixPath(qgis_path, True)
+
+qgs = QgsApplication([], False)
+
+qgs.initQgis()
+
+import processing
+from processing.core.Processing import Processing
+
+Processing.initialize()
+QgsApplication.processingRegistry().addProvider(QgsNativeAlgorithms())
+
+{{ qgis_code }}
+
+qgs.exitQgis()
