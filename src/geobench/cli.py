@@ -19,6 +19,7 @@ class CLI:
         self.parser.add_argument('filename', type=str, help='Scenario filename.')
         self.parser.add_argument('-n','--name', type=str, help='Scenario name.')
         self.parser.add_argument('-r', '--repeat', type=int, help='Number of repeats.')
+        self.parser.add_argument('-o', '--outdir', type=str, help="Output directory.")
         self.parser.add_argument('-c', '--clean', action='store_true')
         self.parser.add_argument('-d', '--debug', action='store_true')
         # TODO: Add more scenario arguments for further customization.
