@@ -1,8 +1,4 @@
-import asyncio
-import platform
 import psutil
-import statistics
-import sys
 import time
 
 
@@ -10,89 +6,92 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class ProcessMonitor:
-    """Process monitor class."""
+def get_process_info(process) -> dict:
+    """Returns process information.
 
-    def __init__(self, process, interval: float=1.0):
-        """Initializes process monitor object.
+    Args:
+        process: Process.
 
-        Args:
-            process: Process.
-            interval (float): Interval between each sample (s) (default = 1.0).
-        """
-        self.process = process
-        self.interval = interval
-
-
-    def get_process_info(self, process) -> dict:
-        return {
-            'pid': process.pid,
-            'name': process.name(),
-            'command': process.cmdline(),
-            'metrics': [],
-        }
+    Returns:
+        Dictionary of process information.
+    """
+    return {
+        'pid': process.pid,
+        'parent_pid': process.ppid(),
+        'name': process.name(),
+        'executable': process.exe(),
+        'command': process.cmdline(),
+        'environment': process.environ(),
+        'create_time': process.create_time(),
+        'metrics': [],
+    }
 
 
-    async def get_process_metrics(self, process):
-        try:
-            self.processes[process.pid]['metrics'].append({
-                'step': self.step,
-                'timestamp': time.time(),
-                'cpu_percent': process.cpu_percent(interval=self.interval),
-                'memory_percent': process.memory_percent(),
-                'num_threads': process.num_threads(),
-            })
+def monitor_process(process, interval: float=1.0):
+    """Monitors process and system metrics while process is running.
 
-        except psutil.NoSuchProcess:
-            self.done.append(process.pid)
+    Args:
+        process: Process to be monitored.
+        interval (float): Interval between each sample (s) (default = 1.0).
+    """
+    step = 0
+    system_metrics = []
+    process_metrics = {process.pid: get_process_info(process)}
 
+    # Initialize metrics
+    psutil.cpu_percent()
+    process.cpu_percent()
 
-    async def get_system_metrics(self):
-        self.system.append({
-            'step': self.step,
+    # Monitoring loop
+    while True:
+        step += 1
+
+        # Stop if process has terminated
+        if process.poll() is not None:
+            break
+
+        # Get related processes
+        processes = [process]
+        for child in process.children(recursive=True):
+            try:
+                if child.pid not in process_metrics:
+                    process_metrics[child.pid] = get_process_info(child)
+
+                processes.append(child)
+                child.cpu_percent()
+
+            except psutil.NoSuchProcess:
+                pass
+
+        # Sleep
+        time.sleep(interval)
+
+        # Get system metrics
+        system_metrics.append({
+            'step': step,
             'timestamp': time.time(),
-            'cpu_percent': psutil.cpu_percent(interval=self.interval, percpu=True),
+            'cpu_percent': psutil.cpu_percent(percpu=True),
             'memory_usage': psutil.virtual_memory()._asdict(),
         })
 
+        # Get process metrics
+        for p in processes:
+            try:
+                with p.oneshot():
+                    process_metrics[p.pid]['metrics'].append({
+                        'step': step,
+                        'timestamp': time.time(),
+                        'cpu_percent': p.cpu_percent(),
+                        'memory_percent': p.memory_percent(),
+                        'num_threads': p.num_threads(),
+                    })
 
-    def monitor(self):
-        return asyncio.run(self._monitor())
+            except psutil.NoSuchProcess:
+                pass
 
+    out = {
+        'system': system_metrics,
+        'processes': process_metrics,
+    }
 
-    async def _monitor(self):
-        self.step = 0
-        self.processes = {}
-        self.system = []
-        self.done = []
-
-        self.processes[self.process.pid] = self.get_process_info(self.process)
-
-        while True:
-            status = self.process.poll()
-            if status is not None or self.process.pid in self.done:
-                break
-
-            self.step += 1
-
-            tasks = []
-            tasks.append(self.get_system_metrics())
-            tasks.append(self.get_process_metrics(self.process))
-
-            for child in self.process.children(recursive=True):
-                if child.pid in self.done:
-                    continue
-
-                if child.pid not in self.processes:
-                    self.processes[child.pid] = self.get_process_info(child)
-
-                tasks.append(self.get_process_metrics(child))
-
-            await asyncio.gather(*tasks)
-
-        out = {
-            'system': self.system,
-            'processes': self.processes,
-        }
-
-        return out
+    return out

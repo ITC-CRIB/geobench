@@ -1,7 +1,7 @@
 import psutil
 import time
 
-from ..monitor import ProcessMonitor
+from ..monitor import monitor_process
 
 
 class Executor:
@@ -59,8 +59,7 @@ class Executor:
             process = psutil.Popen(command, shell=False, cwd=self.scenario.workdir)
             out['pid'] = process.pid
 
-            process_monitor = ProcessMonitor(process)
-            metrics = process_monitor.monitor()
+            metrics = monitor_process(process)
 
             out.update(metrics)
 
