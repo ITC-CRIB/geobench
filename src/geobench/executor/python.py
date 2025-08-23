@@ -61,7 +61,7 @@ class PythonExecutor(Executor):
 
         out = [command]
 
-        for key, val in args:
+        for key, val in args.items():
             try:
                 int(key)
                 out.append(val)

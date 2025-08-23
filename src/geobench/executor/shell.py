@@ -38,12 +38,12 @@ class ShellExecutor(Executor):
 
         system = platform.system()
 
-        if system == 'Windows' and os.path.basename().lower() == 'cmd.exe':
+        if system == 'Windows' and os.path.basename(self.config['executable']).lower() == 'cmd.exe':
             out.append('/C')
 
         out.append(command)
 
-        for key, val in args:
+        for key, val in args.items():
             try:
                 int(key)
                 out.append(val)
