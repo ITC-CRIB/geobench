@@ -77,8 +77,8 @@
         <h2>System Information</h2>
         <div v-if="data.system">
             <p><strong>OS:</strong> {{ data.system.os.system }} {{ data.system.os.release }}</p>
-            <p><strong>CPU Cores:</strong> {{ data.system.cpu.physical_cores }}</p>
-            <p><strong>CPU Usage:</strong> {{ data.system.cpu.usage }}%</p>
+            <p><strong>CPU Cores:</strong> {{ data.system.cpu.physical_count }}</p>
+            <p><strong>CPU Usage:</strong> {{ data.system.cpu.percent }}%</p>
         </div>
         
         <div class="charts">

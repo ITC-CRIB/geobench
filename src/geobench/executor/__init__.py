@@ -59,10 +59,9 @@ class Executor:
             process = psutil.Popen(command, shell=False, cwd=self.scenario.workdir)
             out['pid'] = process.pid
 
-            process_monitor = ProcessMonitor()
-            process_monitor.monitor(process)
+            process_monitor = ProcessMonitor(process)
+            metrics = process_monitor.monitor()
 
-            metrics = process_monitor.get_metrics()
             out.update(metrics)
 
             out['finished'] = True

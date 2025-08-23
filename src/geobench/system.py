@@ -20,23 +20,16 @@ def get_system_info():
 
     # CPU information
     out['cpu'] = {
-        'physical_cores': psutil.cpu_count(logical=False),
-        'total_cores': psutil.cpu_count(logical=True),
+        'physical_count': psutil.cpu_count(logical=False),
+        'logical_count': psutil.cpu_count(logical=True),
         'max_frequency': psutil.cpu_freq().max,
         'min_frequency': psutil.cpu_freq().min,
-        'current_frequency': psutil.cpu_freq().current,
-        'usage': psutil.cpu_percent(interval=1),
+        'frequency': psutil.cpu_freq().current,
+        'percent': psutil.cpu_percent(interval=0.1, percpu=True),
     }
 
     # Memory information
-    mem = psutil.virtual_memory()
-    out['memory'] = {
-        'total': mem.total,
-        'available': mem.available,
-        'percentage': mem.percent,
-        'used': mem.used,
-        'free': mem.free,
-    }
+    out['memory'] = psutil.virtual_memory()._asdict()
 
     # Disk information
     out['disk'] = []
@@ -47,13 +40,7 @@ def get_system_info():
             'fstype': partition.fstype,
         }
         try:
-            usage = psutil.disk_usage(partition.mountpoint)
-            info.update({
-                'total_size': usage.total,
-                'used': usage.used,
-                'free': usage.free,
-                'percentage': usage.percent,
-            })
+            info.update(psutil.disk_usage(partition.mountpoint)._asdict())
 
         except PermissionError:
             pass
@@ -74,8 +61,8 @@ def monitor_system(duration: float=10.0, interval: float=1.0):
         Dictionary of system monitoring results.
     """
     timestamps = []
-    cpu_usages = []
-    mem_usages = []
+    cpu_percents = []
+    memory_percents = []
     processes = []
     summary = {}
 
@@ -86,8 +73,8 @@ def monitor_system(duration: float=10.0, interval: float=1.0):
             break
 
         timestamps.append(now)
-        cpu_usages.append(psutil.cpu_percent())
-        mem_usages.append(psutil.virtual_memory().percent)
+        cpu_percents.append(psutil.cpu_percent())
+        memory_percents.append(psutil.virtual_memory().percent)
 
         data = []
         for proc in psutil.process_iter(['pid', 'name', 'username', 'cpu_percent', 'memory_percent', 'status']):
@@ -115,8 +102,8 @@ def monitor_system(duration: float=10.0, interval: float=1.0):
 
                 item = {
                     'pid': pid,
-                    'cpu_usage': info['cpu_percent'],
-                    'memory_usage': info['memory_percent'],
+                    'cpu_percent': info['cpu_percent'],
+                    'memory_percent': info['memory_percent'],
                     'read_bytes': read_bytes,
                     'write_bytes': write_bytes,
                 }
@@ -133,25 +120,25 @@ def monitor_system(duration: float=10.0, interval: float=1.0):
 
     for item in summary.values():
         data = item['data']
-        item['avg_cpu_usage'] = statistics.mean([item['cpu_usage'] for item in data])
-        item['avg_memory_usage'] = statistics.mean([item['memory_usage'] for item in data])
+        item['avg_cpu_percent'] = statistics.mean([item['cpu_percent'] for item in data])
+        item['avg_memory_percent'] = statistics.mean([item['memory_percent'] for item in data])
         item['read_bytes'] = data[-1]['read_bytes'] - data[0]['read_bytes']
         item['write_bytes'] = data[-1]['write_bytes'] - data[0]['write_bytes']
         del item['data']
 
     summary = list(summary.values())
-    summary.sort(key=lambda item: item['avg_cpu_usage'], reverse=True)
+    summary.sort(key=lambda item: item['avg_cpu_percent'], reverse=True)
 
     return {
         'duration': duration,
         'interval': interval,
         'start_time': timestamps[0],
         'end_time': timestamps[-1],
-        'avg_cpu_usage': statistics.mean(cpu_usages) if cpu_usages else None,
-        'avg_mem_usage': statistics.mean(mem_usages) if mem_usages else None,
+        'avg_cpu_percent': statistics.mean(cpu_percents) if cpu_percents else None,
+        'avg_memory_percent': statistics.mean(memory_percents) if memory_percents else None,
         'process_summary': summary,
         'timestamps': timestamps,
-        'cpu_usages': cpu_usages,
-        'mem_usages': mem_usages,
+        'cpu_percents': cpu_percents,
+        'memory_percents': memory_percents,
         'processes': processes,
     }
