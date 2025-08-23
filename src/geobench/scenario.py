@@ -9,7 +9,7 @@ import yaml
 
 from .cache import clear_cache
 from .executor.factory import create_executor
-from .system import get_system_info, monitor_system
+from .monitor import get_system_info, monitor_system
 
 
 import logging
@@ -259,17 +259,21 @@ class Scenario:
 def load_scenario(path, **kwargs):
     """Loads scenario from a YAML file and customizes it if required.
 
+    See Scenario class initialization method for available arguments.
+
     Args:
         path (str): Path of the YAML file.
-        **kwargs: Custom scenario parameters.
+        **kwargs: Custom scenario arguments.
 
     Returns:
         Scenario object.
     """
+    # Load scenario from file
     logger.debug(f"Loading scenario from {path}.")
     with open(path, 'r', encoding='utf-8') as file:
         scenario = yaml.safe_load(file)
 
+    # Update scenario arguments
     logger.debug(f"Updating scenario with {kwargs}.")
     scenario.update(kwargs)
 
@@ -279,10 +283,12 @@ def load_scenario(path, **kwargs):
     if not scenario.get('name'):
         scenario['name'] = os.path.splitext(os.path.basename(path))[0]
 
+    # Sanitize arguments
     args = {}
     for key in inspect.signature(Scenario.__init__).parameters.keys():
         val = scenario.get(key)
         if key != 'self' and val is not None:
             args[key] = val
 
+    # Create scenario
     return Scenario(**args)
