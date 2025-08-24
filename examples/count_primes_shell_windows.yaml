@@ -1,0 +1,12 @@
+name: Count Primes Shell Windows
+type: shell
+command: count_primes.bat
+arguments:
+    cores:
+    - 4
+    - 8
+    num:
+    - 1000000
+    - 2000000
+repeat: 2
+idle_time: 2

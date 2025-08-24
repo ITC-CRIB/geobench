@@ -1,5 +1,0 @@
-name: Example Python Scenario
-type: python
-command: script.py
-repeat: 1
-venv: .venv

@@ -1,16 +1,16 @@
-name: Example QGIS Process Scenario
-repeat: 2
+name: Buffer QGIS Process
 type: qgis-process
 command: native:buffer
+repeat: 1
 inputs:
-  INPUT: input.shp
+  INPUT: data/enschede/point.shp
 outputs:
   OUTPUT: output.shp
-arguments:
+parameters:
   distance_units: meters
   area_units: m2
   ellipsoid: EPSG:7030
-  SEGMENTS: 10
+  SEGMENTS: 19
   END_CAP_STYLE: 0
   JOIN_STYLE: 0
   MITER_LIMIT: 2
