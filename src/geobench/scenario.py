@@ -28,7 +28,10 @@ class Scenario:
         outputs: list | dict=None,
         arguments: list | dict=None,
         repeat: int=1,
-        idle_time: float=10.0,
+        run_wait: float=5.0,
+        run_monitor: float=5.0,
+        system_wait: float=5.0,
+        system_monitor: float=5.0,
         workdir: str=None,
         basedir: str=None,
         outdir: str=None,
@@ -44,7 +47,10 @@ class Scenario:
             outputs (list | dict): Dictionary of outputs (optional).
             arguments (list | dict): Arguments (optional).
             repeat (int): Number of repetations (default = 1).
-            idle_time (int): Idle time between runs (s) (default = 10.0).
+            run_wait (float): Idle wait time before and after each run (s) (default = 5.0)
+            run_monitor (float): Monitoring time before and after each run (s) (default = 5.0).
+            system_wait (float): Wait time before and after all runs (s) (default = 5.0)
+            system_monitor (float): Monitoring time before and after all runs (s) (default = 5.0)
             workdir (str): Working directory path (default = current working directory).
             basedir (str): Base directory path (default = current working directory).
             outdir (str): Output directory path (default = generated from name)
@@ -83,7 +89,10 @@ class Scenario:
         self.outputs = outputs or {}
         self.arguments = arguments or {}
         self.repeat = repeat or 1
-        self.idle_time = idle_time or 0.0
+        self.run_wait = run_wait or 0.0
+        self.run_monitor = run_monitor or 0.0
+        self.system_wait = system_wait or 0.0
+        self.system_monitor = system_monitor or 0.0
 
         cwd = os.getcwd()
 
@@ -166,17 +175,37 @@ class Scenario:
         self._store('result.json', result)
 
 
-    def benchmark(self, clean: bool=False):
-        """Performs benchmarking of the scenario."""
+    def benchmark(self, clean: bool=False) -> dict:
+        """Performs benchmarking of the scenario.
+
+        Args:
+            clean (bool): Set True to clean the output directory, if exists.
+
+        Returns:
+            Benchmarking results.
+        """
         result = {}
 
         try:
             print("Running scenario {}.".format(self.name))
 
-            print("Creating executor.")
+            num_sets = len(self.sets)
+            num_runs = num_sets * self.repeat
+            print("{} scenario {} with {} {}, {} {} in total.".format(
+                num_sets,
+                "sets" if num_sets > 1 else "set",
+                self.repeat,
+                "repeats" if self.repeat > 1 else "repeat",
+                num_runs,
+                "runs" if num_runs > 1 else "run",
+            ))
+
+            # Create executor
+            print("Creating {} executor.".format(self.type))
             executor = create_executor(self)
 
-            print("Setting up output directory.")
+            # Set up output directory
+            print("Setting up output directory {}.".format(self.outdir))
             if os.path.exists(self.outdir):
                 if os.path.isdir(self.outdir):
                     if not clean:
@@ -190,34 +219,48 @@ class Scenario:
                     return {}
             os.makedirs(self.outdir)
 
-            print("Clearing system caches.")
-            clear_cache()
-
+            # Store executor configuration
             print("Storing executor configuration.")
             result['config'] = executor.config
             self._store_result(result)
 
+            # Perform system cleanup
+            print("Clearing system caches.")
+            clear_cache()
+
+            # Idle wait before the runs, if required
+            # REMARK: Allowing some time after cleanup is recommended.
+            if self.system_wait:
+                print("Waiting {} s before the scenario runs.".format(self.system_wait))
+                time.sleep(self.system_wait)
+
+            # Store system information
             print("Storing system information.")
             result['system'] = get_system_info()
             self._store_result(result)
 
-            print("Baseline monitoring for {} s.".format(self.idle_time))
-            result['baseline'] = monitor_system(self.idle_time)
-            self._store_result(result)
+            # Perform baseline monitoring before the runs, if required
+            if self.system_monitor:
+                print("Baseline monitoring for {} s.".format(self.system_monitor))
+                result['baseline'] = monitor_system(self.system_monitor)
+                self._store_result(result)
 
-            num_sets = len(self.sets)
-
-            print("Executing {} scenario set(s) with {} repeat(s).".format(num_sets, self.repeat))
+            # Start execution loop
+            print("Executing the runs.")
             start_time = time.time()
 
             len_sets = len(str(num_sets))
             len_runs = len(str(self.repeat))
 
+            # For each scenario set
             for i, data in enumerate(self.sets):
                 set_id = i + 1
 
+                # For each repetation
                 for j in range(self.repeat):
                     run_id = j + 1
+
+                    print("Scenario set {}, run {}:".format(set_id, run_id))
 
                     path = os.path.join(
                         f"set_{set_id:0{len_sets}d}",
@@ -229,31 +272,69 @@ class Scenario:
 
                     result_path = os.path.join(abs_path, 'result.json')
 
-                    print("Executing scenario set {}, run {}.".format(set_id, run_id))
+                    out = {
+                        'set': set_id,
+                        'run': run_id,
+                        'arguments': data['arguments'],
+                    }
+
+                    # Perform system cleanup
+                    print("Clearing system caches.")
+                    clear_cache()
+
+                    # Idle wait before the run, if required
+                    if self.run_wait:
+                        print("Waiting {} s before the run.".format(self.run_wait))
+                        time.sleep(self.run_wait)
+
+                    # Perform baseline monitoring before the run, if required
+                    if self.run_monitor:
+                        print("Baseline monitoring for {} s.".format(self.run_monitor))
+                        out['baseline'] = monitor_system(self.run_monitor)
+                        self._store(result_path, out)
+
+                    # Perform the run
+                    print("Executing the run.")
 
                     args = executor.get_arguments(self.command, data['arguments'])
 
-                    out = executor.execute(args)
+                    out.update(executor.execute(args))
 
-                    out.update({
-                        'set': set_id,
-                        'run': run_id,
-                    })
                     self._store(result_path, out)
 
-                    print("Endline monitoring for {} s.".format(self.idle_time))
-                    out['endline'] = monitor_system(self.idle_time)
-                    self._store(result_path, out)
+                    # Idle wait after the run, if required
+                    if self.run_wait:
+                        print("Waiting {} s after the run.".format(self.run_wait))
+                        time.sleep(self.run_wait)
+
+                    # Perform endline monitoring after the run, if required
+                    if self.run_monitor:
+                        print("Endline monitoring for {} s.".format(self.run_monitor))
+                        out['endline'] = monitor_system(self.run_monitor)
+                        self._store(result_path, out)
 
             duration = time.time() - start_time
 
             print("{} run(s) completed in {} s.".format(num_sets, duration))
+
+            # Idle wait after the runs, if required
+            if self.system_wait:
+                print("Waiting {} s after the scenario runs.".format(self.system_wait))
+                time.sleep(self.system_wait)
+
+            # Perform endline monitoring after the runs, if required
+            if self.system_monitor:
+                print("Endline monitoring for {} s.".format(self.system_monitor))
+                result['endline'] = monitor_system(self.system_monitor)
+                self._store_result(result)
 
         except KeyboardInterrupt:
             print("Benchmark run interrupted by user.")
 
         except Exception as err:
             raise
+
+        return result
 
 
 def load_scenario(path, **kwargs):
