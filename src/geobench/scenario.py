@@ -1,3 +1,4 @@
+import copy
 import inspect
 import itertools
 import json
@@ -168,7 +169,7 @@ class Scenario:
     def _store(self, filename: str, content: dict):
         path = os.path.join(self.outdir, filename)
         with open(path, 'w', encoding='utf-8') as file:
-            json.dump(content, file, indent=2)
+            json.dump(content, file, ensure_ascii=False, indent=2)
 
 
     def _store_result(self, result: dict):
@@ -293,10 +294,32 @@ class Scenario:
                         out['baseline'] = monitor_system(self.run_monitor)
                         self._store(result_path, out)
 
+                    # Modify run-specific arguments
+                    args = copy.deepcopy(data['arguments'])
+
+                    # Set input file paths
+                    if isinstance(self.inputs, dict):
+                        logger.debug("Modifying input paths.")
+                        for key in self.inputs.keys():
+                            args[key] = os.path.normpath(
+                                args[key] if os.path.isabs(args[key]) else
+                                os.path.join(self.workdir, args[key])
+                            )
+
+                    # Set output file paths
+                    if isinstance(self.outputs, dict):
+                        logger.debug("Modifying output paths.")
+                        for key in self.outputs.keys():
+                            args[key] = os.path.normpath(
+                                args[key] if os.path.isabs(args[key]) else
+                                os.path.join(abs_path, args[key])
+                            )
+
+                    # Get execution arguments
+                    args = executor.get_arguments(self.command, args)
+
                     # Perform the run
                     print("Executing the run.")
-
-                    args = executor.get_arguments(self.command, data['arguments'])
 
                     out.update(executor.execute(args))
 
@@ -313,6 +336,12 @@ class Scenario:
                         out['endline'] = monitor_system(self.run_monitor)
                         self._store(result_path, out)
 
+                    # TODO: Store input files in the output directory.
+                    # TODO: Store output files in the output directory, if required.
+
+                # TODO: Generate summary of the set runs.
+                # TODO: Store summary of the set runs.
+
             duration = time.time() - start_time
 
             print("{} run(s) completed in {} s.".format(num_sets, duration))
@@ -327,6 +356,9 @@ class Scenario:
                 print("Endline monitoring for {} s.".format(self.system_monitor))
                 result['endline'] = monitor_system(self.system_monitor)
                 self._store_result(result)
+
+            # TODO: Generate summary of all runs.
+            # TODO: Store summary of all runs.
 
         except KeyboardInterrupt:
             print("Benchmark run interrupted by user.")
