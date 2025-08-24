@@ -56,7 +56,12 @@ class Executor:
         }
 
         try:
-            process = psutil.Popen(command, shell=False, cwd=self.scenario.workdir)
+            process = psutil.Popen(
+                command,
+                shell=False,
+                cwd=self.scenario.workdir,
+                env=self.config.get('environment', {})
+            )
             out['pid'] = process.pid
 
             metrics = monitor_process(process)

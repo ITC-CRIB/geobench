@@ -11,37 +11,26 @@ from .qgis_process import QGISProcessExecutor
 class QGISPythonExecutor(QGISProcessExecutor):
     """QGIS Python executor class."""
 
-    def _get_qgis_python_path(self, qgis_path: str) -> str | None:
-        """Returns QGIS Python executable path.
+    @staticmethod
+    def get_qgis_python_path() -> str | None:
+        """Returns QGIS Python executable path."""
+        bin_path = QGISProcessExecutor.get_qgis_bin_path()
 
-        Args:
-            qgis_path (str): QGIS path.
-
-        Returns:
-            QGIS Python executable path if found, None otherwise.
-        """
         system = platform.system()
 
         if system == 'Windows':
-            qgis_apps_path = os.path.join(qgis_path, 'apps')
+            qgis_apps_path = os.path.join(bin_path, '..', 'apps')
+
             matches = [
                 entry.name for entry in os.scandir(qgis_apps_path)
                 if entry.is_dir() and entry.name.lower().startswith('python')
             ]
             if not matches:
                 return None
-            bin_path =  os.path.join(matches[0], qgis_apps_path)
 
-        elif system == 'Linux':
-            bin_path = qgis_path
+            bin_path =  os.path.join(qgis_apps_path, matches[0])
 
-        elif system == 'Darwin':
-            bin_path = os.path.join(qgis_path, 'bin')
-
-        else:
-            raise RuntimeError("Unsupported operating system.")
-
-        path = self._find_executable(bin_path, 'python3')
+        path = QGISProcessExecutor.find_executable(bin_path, 'python3')
         if not path:
             raise FileNotFoundError("QGIS Python executable not found.")
 
@@ -52,8 +41,7 @@ class QGISPythonExecutor(QGISProcessExecutor):
         """Returns executor configuration."""
         config = {}
 
-        qgis_path = self._get_qgis_path()
-        qgis_python_path = self._get_qgis_python_path(qgis_path)
+        qgis_python_path = __class__.get_qgis_python_path()
 
         try:
             result = subprocess.run(
@@ -64,12 +52,13 @@ class QGISPythonExecutor(QGISProcessExecutor):
             )
 
             if result.returncode != 0:
-                raise RuntimeError(f"QGIS Python '--version' command failed with exit code {result.returncode}.")
+                raise RuntimeError("QGIS Python failed with exit code {}.".format(result.returncode))
 
             config['executable'] = qgis_python_path
+            config['environment'] = __class__.get_qgis_environment()
 
         except subprocess.SubprocessError as err:
-            raise RuntimeError("Error running QGIS Python '--version'.") from err
+            raise RuntimeError("Error running QGIS Python.") from err
 
         return config
 
@@ -90,7 +79,7 @@ class QGISPythonExecutor(QGISProcessExecutor):
             env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
             template = env.get_template('qgis_python.j2')
             script = template.render(
-                qgis_path=self._get_qgis_path(),
+                qgis_path=self.get_qgis_path(),
                 qgis_bin_path=os.path.dirname(self.config['executable']),
                 qgis_code=qgis_code,
             )

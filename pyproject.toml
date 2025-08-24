@@ -28,10 +28,9 @@ classifiers = [
 ]
 dependencies = [
     "jinja2",
-    "plotly",
     "psutil",
+    "python-dotenv",
     "pyyaml",
-    "requests",
 ]
 keywords = [
     "geospatial analysis",
