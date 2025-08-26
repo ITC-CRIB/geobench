@@ -127,10 +127,10 @@ def monitor_system(duration: float=10.0, interval: float=1.0):
 
                 item = {
                     'pid': pid,
-                    'cpu_percent': info['cpu_percent'],
-                    'memory_percent': info['memory_percent'],
-                    'read_bytes': read_bytes,
-                    'write_bytes': write_bytes,
+                    'cpu_percent': info['cpu_percent'] if info['cpu_percent'] is not None else 0.0,
+                    'memory_percent': info['memory_percent'] if info['memory_percent'] is not None else 0.0,
+                    'read_bytes': read_bytes if read_bytes is not None else 0,
+                    'write_bytes': write_bytes if write_bytes is not None else 0,
                 }
 
                 data.append(item)
@@ -145,10 +145,21 @@ def monitor_system(duration: float=10.0, interval: float=1.0):
 
     for item in summary.values():
         data = item['data']
-        item['avg_cpu_percent'] = statistics.mean([item['cpu_percent'] for item in data])
-        item['avg_memory_percent'] = statistics.mean([item['memory_percent'] for item in data])
-        item['read_bytes'] = data[-1]['read_bytes'] - data[0]['read_bytes']
-        item['write_bytes'] = data[-1]['write_bytes'] - data[0]['write_bytes']
+        # Only include non-None values for calculating average CPU and memory 
+        cpu_percent_list = [item['cpu_percent'] for item in data if item['cpu_percent'] is not None]
+        if cpu_percent_list:
+            item['avg_cpu_percent'] = statistics.mean(cpu_percent_list)
+        memory_percent_list = [item['memory_percent'] for item in data if item['memory_percent'] is not None]
+        if memory_percent_list:
+            item['avg_memory_percent'] = statistics.mean(memory_percent_list)
+        # Check if read/write bytes are available at the first and last data points
+        if len(data) > 0:
+            # Calculate read/write bytes if the values are not None
+            if data[-1]['read_bytes'] and data[0]['read_bytes']:
+                item['read_bytes'] = data[-1]['read_bytes'] - data[0]['read_bytes']
+            # Calculate read/write bytes if the values are not None
+            if data[-1]['write_bytes'] and data[0]['write_bytes']:
+                item['write_bytes'] = data[-1]['write_bytes'] - data[0]['write_bytes']
         del item['data']
 
     summary = list(summary.values())

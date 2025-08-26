@@ -13,5 +13,10 @@ build/
 dist/
 *.egg
 
+uv.lock
+
 # OS-specific
 .DS_Store
+
+# temporary output
+buffer-qgis-process/

@@ -3,7 +3,13 @@ import os
 import platform
 import shlex
 import subprocess
-import winreg
+# replace unconditional winreg import and add helpers
+import glob
+import shutil
+try:
+    import winreg  # Windows only
+except Exception:
+    winreg = None  # type: ignore
 
 from . import Executor
 
@@ -18,10 +24,10 @@ class QGISProcessExecutor(Executor):
 
         if system == 'Windows':
             try:
-                with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, r'QGIS Project\Shell\open\command') as key:
-                    val, _ = winreg.QueryValueEx(key, None)
-                    return os.path.dirname(shlex.split(val)[0])
-
+                if winreg is not None:
+                    with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, r'QGIS Project\Shell\open\command') as key:
+                        val, _ = winreg.QueryValueEx(key, None)
+                        return os.path.dirname(shlex.split(val)[0])
             except FileNotFoundError:
                 pass
 
@@ -32,15 +38,37 @@ class QGISProcessExecutor(Executor):
             path = os.environ.get('QGIS_PREFIX_PATH')
             if path:
                 path = path.replace('\\', '/').split('/')
-                if path[-2].lower() == 'apps' and path[-1].lower() == 'qgis':
+                if len(path) >= 2 and path[-2].lower() == 'apps' and path[-1].lower() == 'qgis':
                     path = path[:-2]
-                return(os.sep.join(path + ['bin']))
+                return (os.sep.join(path + ['bin']))
 
         elif system == 'Linux':
             return '/usr/bin'
 
         elif system == 'Darwin':
-            return '/Applications/QGIS.app/Contents/MacOS/bin'
+            # 1) Respect explicit prefix if provided
+            prefix = os.environ.get('QGIS_PREFIX_PATH')
+            if prefix:
+                cand = os.path.join(prefix, 'bin')
+                if os.path.isdir(cand):
+                    return cand
+
+            # 2) If qgis_process is on PATH (Homebrew or symlink), use its directory
+            qp = shutil.which('qgis_process')
+            if qp:
+                return os.path.dirname(os.path.realpath(qp))
+
+            # 3) Look for official app bundles under /Applications starting with "QGIS"
+            #    Include standard names first, then any QGIS*.app
+            for app in sorted(glob.glob('/Applications/QGIS*.app'), reverse=True):
+                cand = os.path.join(app, 'Contents', 'MacOS', 'bin')
+                if os.path.isdir(cand):
+                    return cand
+
+            # 4) Common Homebrew bins (Apple Silicon and Intel)
+            for hb in ('/opt/homebrew/bin', '/usr/local/bin'):
+                if os.path.isfile(os.path.join(hb, 'qgis_process')):
+                    return hb
 
         else:
             raise RuntimeError("Unsupported operating system.")
