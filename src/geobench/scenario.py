@@ -11,7 +11,7 @@ import yaml
 from .cache import clear_cache
 from .executor.factory import create_executor
 from .monitor import get_system_info, monitor_system
-
+from .report import calculate_run_summary
 
 import logging
 logger = logging.getLogger(__name__)
@@ -338,9 +338,13 @@ class Scenario:
 
                     # TODO: Store input files in the output directory.
                     # TODO: Store output files in the output directory, if required.
+                    
 
                 # TODO: Generate summary of the set runs.
+                run_summary = calculate_run_summary(out)
                 # TODO: Store summary of the set runs.
+                run_summary_path = os.path.join(abs_path, 'summary.json')
+                self._store(run_summary_path, run_summary)
 
             duration = time.time() - start_time
 
