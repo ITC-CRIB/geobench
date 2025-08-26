@@ -337,8 +337,21 @@ class Scenario:
                         self._store(result_path, out)
 
                     # TODO: Store input files in the output directory.
+                    for key, value in self.inputs.items():
+                        input_path = os.path.normpath(
+                            value if os.path.isabs(value) else
+                            os.path.join(self.workdir, value)
+                        )
+                        # Copy input file
+                        shutil.copy(input_path, abs_path)
                     # TODO: Store output files in the output directory, if required.
-                    
+                    for key, value in self.outputs.items():
+                        output_path = os.path.normpath(
+                            value if os.path.isabs(value) else
+                            os.path.join(self.workdir, value)
+                        )
+                        # Copy output file
+                        shutil.copy(output_path, abs_path)
 
                 # TODO: Generate summary of the set runs.
                 run_summary = calculate_run_summary(out)
