@@ -19,4 +19,4 @@ uv.lock
 .DS_Store
 
 # temporary output
-buffer-qgis-process/
+test/
