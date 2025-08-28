@@ -11,7 +11,7 @@ import yaml
 from .cache import clear_cache
 from .executor.factory import create_executor
 from .monitor import get_system_info, monitor_system
-from .report import calculate_run_summary
+from .report import calculate_run_summary, generate_html_report
 
 import logging
 logger = logging.getLogger(__name__)
@@ -253,6 +253,8 @@ class Scenario:
             len_sets = len(str(num_sets))
             len_runs = len(str(self.repeat))
 
+            run_list = []
+
             # For each scenario set
             for i, data in enumerate(self.sets):
                 set_id = i + 1
@@ -352,7 +354,8 @@ class Scenario:
                         )
                         # Copy output file
                         shutil.copy(output_path, abs_path)
-
+                # Append run output to the list
+                run_list.append(out)
                 # TODO: Generate summary of the set runs.
                 run_summary = calculate_run_summary(out)
                 # TODO: Store summary of the set runs.
@@ -376,6 +379,10 @@ class Scenario:
 
             # TODO: Generate summary of all runs.
             # TODO: Store summary of all runs.
+
+            # Generate report
+            report_path = os.path.join(self.outdir, 'report.html')
+            generate_html_report(system_data=result, run_data=run_list, output_path=report_path)
 
         except KeyboardInterrupt:
             print("Benchmark run interrupted by user.")

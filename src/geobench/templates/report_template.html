@@ -258,6 +258,9 @@
                     <li><span class="info-label">OS:</span> {{ system_data.system.os.system }} {{ system_data.system.os.release }}</li>
                     <li><span class="info-label">Machine:</span> {{ system_data.system.os.machine }}</li>
                     <li><span class="info-label">Node:</span> {{ system_data.system.os.node }}</li>
+                    <li><span class="info-label">Release:</span> {{ system_data.system.os.release }}</li>
+                    <li><span class="info-label">Version:</span> {{ system_data.system.os.version }}</li>
+                    <li><span class="info-label">Machine:</span> {{ system_data.system.os.machine }}</li>
                     {% endif %}
                 </ul>
             </div>
@@ -275,6 +278,40 @@
                     {% endif %}
                 </ul>
             </div>
+            
+            {% if system_data.config %}
+            <div class="info-card">
+                <h3>Configuration Information</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+                    <div>
+                        {% if system_data.config.executable %}
+                        <h4 style="margin: 0 0 10px 0; color: #555; font-size: 1em;">Executable</h4>
+                        <p style="margin: 0; word-break: break-all; font-size: 0.9em;">{{ system_data.config.executable }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        {% if system_data.config.environment %}
+                        <h4 style="margin: 0 0 10px 0; color: #555; font-size: 1em;">Environment Variables</h4>
+                        <ul class="info-list">
+                            {% for key, value in system_data.config.environment.items() %}
+                            <li><span class="info-label">{{ key }}:</span> {{ value|truncate(60) }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if system_data.config.versions %}
+                <div>
+                    <h4 style="margin: 0 0 10px 0; color: #555; font-size: 1em;">Version Information</h4>
+                    <ul style="list-style: disc; padding-left: 20px; margin: 0; font-size: 0.9em;">
+                        {% for version in system_data.config.versions %}
+                        <li style="margin-bottom: 5px;">{{ version }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
         {% endif %}
 
@@ -313,35 +350,6 @@
         </div>
         {% endif %}
 
-        <!-- System Overview Chart -->
-        {% if charts.system_overview_chart %}
-        <div class="chart-section">
-            <div class="chart-header">
-                <h2>System Overview</h2>
-            </div>
-            <div class="chart-content">
-                {{ charts.system_overview_chart|safe }}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- System Performance Charts -->
-        <div class="chart-section">
-            <div class="chart-header">
-                <h2>System Performance</h2>
-            </div>
-            <div class="chart-content">
-                <div class="chart-grid">
-                    <div>
-                        {{ charts.system_cpu_chart|safe }}
-                    </div>
-                    <div>
-                        {{ charts.system_memory_chart|safe }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Execution Steps Details -->
         {% if run_data %}
         {% set run_list = run_data if run_data is iterable and run_data is not string else [run_data] %}
@@ -354,7 +362,7 @@
                     <ul class="info-list">
                         <li><span class="info-label">Set:</span> {{ run.set if run.set else 'N/A' }}</li>
                         <li><span class="info-label">Run:</span> {{ run.run if run.run else 'N/A' }}</li>
-                        <li><span class="info-label">Execution Time:</span> {{ "%.2f"|format(run.execution_time if run.execution_time else 0) }} seconds</li>
+                        <li><span class="info-label">Execution Time:</span> {{ "%.2f"|format(run.end_time - run.start_time if run.start_time and run.end_time else 0) }} seconds</li>
                         <li><span class="info-label">Finished:</span> {{ 'Yes' if run.finished else 'No' }}</li>
                         <li><span class="info-label">Success:</span> {{ 'Yes' if run.success else 'No' }}</li>
                     </ul>
@@ -365,7 +373,7 @@
                     <h3>Arguments</h3>
                     <ul class="info-list">
                         {% for key, value in run.arguments.items() %}
-                        <li><span class="info-label">{{ key }}:</span> {{ value|truncate(60) }}</li>
+                        <li><span class="info-label">{{ key }}:</span> {{ value }}</li>
                         {% endfor %}
                     </ul>
                 </div>
@@ -379,6 +387,15 @@
                     <h3>Process Performance</h3>
                 </div>
                 <div class="chart-content">
+                    <div class="chart-grid">
+                        <div>
+                            {{ run.charts.system_cpu_chart|safe }}
+                        </div>
+                        <div>
+                            {{ run.charts.system_memory_chart|safe }}
+                        </div>
+                    </div>
+
                     <div class="chart-grid">
                         <div>
                             {{ run.charts.process_cpu_chart|safe }}

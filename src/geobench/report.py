@@ -52,26 +52,51 @@ def calculate_run_summary(run_result: dict) -> dict:
     process_stats = {}
     if run_result["processes"]:
         for pid, process_info in run_result["processes"].items():
-            process_metrics = process_info["metrics"]
-            del process_info["metrics"]
-            process_stats[pid] = {
-                **process_info,
-                "avg_cpu_percent": statistics.mean(
-                    [m["cpu_percent"] for m in process_metrics if m["cpu_percent"] is not None]
-                )
-                if process_metrics
-                else 0.0,
-                "avg_memory_percent": statistics.mean(
-                    [m["memory_percent"] for m in process_metrics if m["memory_percent"] is not None]
-                )
-                if process_metrics  
-                else 0.0,
-                "max_num_threads": max(
-                    [m["num_threads"] for m in process_metrics if m["num_threads"] is not None]
-                )
-                if process_metrics
-                else 0,
-            }
+            if process_info["metrics"]:
+                process_metrics = process_info["metrics"]
+                # del process_info["metrics"]
+
+                cpu_timeline = []
+                memory_timeline = []
+                thread_timeline = []
+                step_timeline = []
+
+                for m in process_metrics:
+                    if "step" in m:
+                        step_timeline.append(m["step"])
+                    if "cpu_percent" in m:
+                        cpu_timeline.append(m["cpu_percent"])
+                    if "memory_percent" in m:
+                        memory_timeline.append(m["memory_percent"])
+                    if "num_threads" in m:
+                        thread_timeline.append(m["num_threads"])
+
+                calculated_stats = {
+                    "step_timeline": step_timeline,
+                    "cpu_timeline": cpu_timeline,
+                    "memory_timeline": memory_timeline,
+                    "thread_timeline": thread_timeline,
+                    "avg_cpu_percent": statistics.mean(
+                        cpu_timeline
+                    )
+                    if process_metrics
+                    else 0.0,
+                    "avg_memory_percent": statistics.mean(
+                        memory_timeline
+                    )
+                    if process_metrics
+                    else 0.0,
+                    "max_num_threads": max(
+                        thread_timeline
+                    )
+                    if process_metrics
+                    else 0,
+                }
+
+                process_info.update(calculated_stats)
+
+                process_stats[pid] = process_info
+
         summary["processes"] = process_stats
 
     return summary
@@ -122,14 +147,15 @@ def create_line_chart(data: Dict[str, List], title: str, x_title: str, y_title: 
     
     return fig.to_html(include_plotlyjs=False, div_id=div_id)
 
-def create_bar_chart(labels: List[str], values: List[float], title: str, 
-                    x_title: str, y_title: str, div_id: str, 
+def create_bar_chart(labels=None, values=None, data=None, title: str = '', 
+                    x_title: str = '', y_title: str = '', div_id: str = '', 
                     color: str = '#1f77b4', orientation: str = 'v') -> str:
     """Create a generalized bar chart.
     
     Args:
-        labels: List of labels for bars
-        values: List of values for bars
+        labels: List of labels for bars (optional if data dict is provided)
+        values: List of values for bars (optional if data dict is provided)
+        data: Dictionary with labels as keys and values as values (alternative to labels/values)
         title: Chart title
         x_title: X-axis title
         y_title: Y-axis title
@@ -140,8 +166,20 @@ def create_bar_chart(labels: List[str], values: List[float], title: str,
     Returns:
         str: HTML div containing the Plotly chart
     """
+    # Handle dictionary input
+    if data is not None:
+        if isinstance(data, dict):
+            labels = list(data.keys())
+            values = list(data.values())
+        else:
+            return f"<div>Invalid data format for {title}. Expected dictionary.</div>"
+    
+    # Validate input
     if not labels or not values:
         return f"<div>No data available for {title}</div>"
+    
+    if len(labels) != len(values):
+        return f"<div>Labels and values length mismatch for {title}</div>"
     
     if orientation == 'v':
         fig = go.Figure(data=[go.Bar(x=labels, y=values, marker_color=color)])
@@ -158,13 +196,14 @@ def create_bar_chart(labels: List[str], values: List[float], title: str,
     
     return fig.to_html(include_plotlyjs=False, div_id=div_id)
 
-def create_pie_chart(labels: List[str], values: List[float], title: str, 
-                    div_id: str, colors: List[str] = None) -> str:
+def create_pie_chart(labels=None, values=None, data=None, title: str = '', 
+                    div_id: str = '', colors: List[str] = None) -> str:
     """Create a generalized pie chart.
     
     Args:
-        labels: List of labels for pie slices
-        values: List of values for pie slices
+        labels: List of labels for pie slices (optional if data dict is provided)
+        values: List of values for pie slices (optional if data dict is provided)
+        data: Dictionary with labels as keys and values as values (alternative to labels/values)
         title: Chart title
         div_id: HTML div ID for the chart
         colors: Optional list of colors for the slices
@@ -172,8 +211,20 @@ def create_pie_chart(labels: List[str], values: List[float], title: str,
     Returns:
         str: HTML div containing the Plotly chart
     """
+    # Handle dictionary input
+    if data is not None:
+        if isinstance(data, dict):
+            labels = list(data.keys())
+            values = list(data.values())
+        else:
+            return f"<div>Invalid data format for {title}. Expected dictionary.</div>"
+    
+    # Validate input
     if not labels or not values:
         return f"<div>No data available for {title}</div>"
+    
+    if len(labels) != len(values):
+        return f"<div>Labels and values length mismatch for {title}</div>"
     
     # Filter out zero values
     filtered_data = [(label, value) for label, value in zip(labels, values) if value > 0]
@@ -195,18 +246,20 @@ def create_pie_chart(labels: List[str], values: List[float], title: str,
     
     return fig.to_html(include_plotlyjs=False, div_id=div_id)
 
-def create_multi_series_line_chart(x_values: List, series_data: Dict[str, List], 
+def create_multi_series_line_chart(series_data: Dict[str, Dict[str, List]], 
                                   title: str, x_title: str, y_title: str, 
                                   div_id: str, colors: List[str] = None) -> str:
-    """Create a line chart with multiple series sharing the same x-axis.
+    """Create a line chart with multiple series, each with their own x and y values.
     
-    Series with different lengths are supported. Each series will be plotted
-    using the minimum of its length and the x_values length.
+    Each series can have different x-axis values and different lengths, allowing
+    for data points that start or end at arbitrary timepoints.
     
     Args:
-        x_values: List of x-axis values (timestamps, steps, etc.)
-        series_data: Dictionary where keys are series names and values are y-values.
-                    Series can have different lengths.
+        series_data: Dictionary where keys are series names and values are dictionaries
+                    containing 'x' and 'y' keys with their respective data lists.
+                    Format: {'series_name': {'x': [x_values], 'y': [y_values]}}
+                    Alternatively, for backward compatibility, if values are just lists,
+                    they will be treated as y-values with auto-generated x-values.
         title: Chart title
         x_title: X-axis title
         y_title: Y-axis title
@@ -216,7 +269,7 @@ def create_multi_series_line_chart(x_values: List, series_data: Dict[str, List],
     Returns:
         str: HTML div containing the Plotly chart
     """
-    if not series_data or not x_values:
+    if not series_data:
         return f"<div>No data available for {title}</div>"
     
     if colors is None:
@@ -224,14 +277,32 @@ def create_multi_series_line_chart(x_values: List, series_data: Dict[str, List],
     
     fig = go.Figure()
     
-    for i, (series_name, y_values) in enumerate(series_data.items()):
-        if y_values:
-            # Handle series with different lengths by taking the minimum of available data
-            min_length = min(len(x_values), len(y_values))
-            if min_length > 0:
-                series_x = x_values[:min_length]
-                series_y = y_values[:min_length]
+    for i, (series_name, data) in enumerate(series_data.items()):
+        if data:
+            # Handle backward compatibility: if data is a list, treat as y-values
+            if isinstance(data, list):
+                series_x = list(range(len(data)))
+                series_y = data
+            # Handle new format: data is a dict with 'x' and 'y' keys
+            elif isinstance(data, dict) and 'x' in data and 'y' in data:
+                x_values = data['x']
+                y_values = data['y']
                 
+                if not x_values or not y_values:
+                    continue
+                    
+                # Take minimum length to ensure x and y have same number of points
+                min_length = min(len(x_values), len(y_values))
+                if min_length > 0:
+                    series_x = x_values[:min_length]
+                    series_y = y_values[:min_length]
+                else:
+                    continue
+            else:
+                # Skip invalid data format
+                continue
+            
+            if series_x and series_y:
                 fig.add_trace(go.Scatter(
                     x=series_x,
                     y=series_y,
@@ -244,319 +315,11 @@ def create_multi_series_line_chart(x_values: List, series_data: Dict[str, List],
         title=title,
         xaxis_title=x_title,
         yaxis_title=y_title,
-        hovermode='x',
+        hovermode='x unified',
         template='plotly_white'
     )
     
     return fig.to_html(include_plotlyjs=False, div_id=div_id)
-
-# Specific Chart Functions Using Generalized Functions
-
-def create_system_cpu_chart(system_data: List[Dict]) -> str:
-    """Create a line chart showing system CPU usage over time."""
-    if not system_data:
-        return "<div>No system data available</div>"
-    
-    cpu_percent = []
-    for data in system_data:
-        if isinstance(data, dict) and 'cpu_percent' in data:
-            cpu_val = data['cpu_percent']
-            if isinstance(cpu_val, list):
-                cpu_percent.append(statistics.mean([c for c in cpu_val if c is not None]))
-            else:
-                cpu_percent.append(cpu_val if cpu_val is not None else 0)
-        else:
-            cpu_percent.append(0)
-    
-    data_dict = {'System CPU Usage': cpu_percent}
-    return create_line_chart(
-        data=data_dict,
-        title='System CPU Usage Over Time',
-        x_title='Time Steps',
-        y_title='CPU Usage (%)',
-        div_id='system-cpu-chart'
-    )
-
-def create_system_memory_chart(system_data: List[Dict]) -> str:
-    """Create a line chart showing system memory usage over time."""
-    if not system_data:
-        return "<div>No system data available</div>"
-    
-    memory_data = {}
-    
-    # Extract memory types
-    for data in system_data:
-        memory_usage = data.get('memory_usage', {})
-        for mem_type, value in memory_usage.items():
-            if mem_type not in memory_data:
-                memory_data[mem_type] = []
-            memory_data[mem_type].append(value if value is not None else 0)
-    
-    # If no memory_usage field, try to extract from memory field
-    if not memory_data:
-        for data in system_data:
-            memory_info = data.get('memory', {})
-            if memory_info:
-                for mem_type, value in memory_info.items():
-                    if mem_type not in memory_data:
-                        memory_data[mem_type] = []
-                    memory_data[mem_type].append(value if value is not None else 0)
-    
-    if not memory_data:
-        return "<div>No memory data available</div>"
-    
-    # Rename keys for better display
-    display_data = {f'Memory {k}': v for k, v in memory_data.items()}
-    
-    return create_line_chart(
-        data=display_data,
-        title='System Memory Usage Over Time',
-        x_title='Time Steps',
-        y_title='Memory Usage (%)',
-        div_id='system-memory-chart'
-    )
-
-def create_process_cpu_chart(processes_data: Dict) -> str:
-    """Create a bar chart showing average CPU usage per process."""
-    if not processes_data:
-        return "<div>No process data available</div>"
-    
-    process_names = []
-    cpu_averages = []
-    
-    for pid, process_info in processes_data.items():
-        metrics = process_info.get('metrics', [])
-        if metrics:
-            cpu_values = [m['cpu_percent'] for m in metrics if m.get('cpu_percent') is not None]
-            avg_cpu = statistics.mean(cpu_values) if cpu_values else 0
-            process_names.append(f"{process_info.get('name', 'Unknown')} ({pid})")
-            cpu_averages.append(avg_cpu)
-    
-    return create_bar_chart(
-        labels=process_names,
-        values=cpu_averages,
-        title='Average CPU Usage by Process',
-        x_title='Process (PID)',
-        y_title='CPU Usage (%)',
-        div_id='process-cpu-chart',
-        color='#ff7f0e'
-    )
-
-def create_process_memory_chart(processes_data: Dict) -> str:
-    """Create a bar chart showing average memory usage per process."""
-    if not processes_data:
-        return "<div>No process data available</div>"
-    
-    process_names = []
-    memory_averages = []
-    
-    for pid, process_info in processes_data.items():
-        metrics = process_info.get('metrics', [])
-        if metrics:
-            memory_values = [m['memory_percent'] for m in metrics if m.get('memory_percent') is not None]
-            avg_memory = statistics.mean(memory_values) if memory_values else 0
-            process_names.append(f"{process_info.get('name', 'Unknown')} ({pid})")
-            memory_averages.append(avg_memory)
-    
-    return create_bar_chart(
-        labels=process_names,
-        values=memory_averages,
-        title='Average Memory Usage by Process',
-        x_title='Process (PID)',
-        y_title='Memory Usage (%)',
-        div_id='process-memory-chart',
-        color='#2ca02c'
-    )
-
-def create_process_timeline_chart(processes_data: Dict) -> str:
-    """Create a timeline chart showing when processes were active."""
-    if not processes_data:
-        return "<div>No process data available</div>"
-    
-    # Find common timestamps
-    all_timestamps = set()
-    for process_info in processes_data.values():
-        metrics = process_info.get('metrics', [])
-        for metric in metrics:
-            all_timestamps.add(metric.get('timestamp', 0))
-    
-    if not all_timestamps:
-        return "<div>No timestamp data available</div>"
-    
-    timestamps = sorted(list(all_timestamps))
-    series_data = {}
-    
-    for pid, process_info in processes_data.items():
-        metrics = process_info.get('metrics', [])
-        if metrics:
-            # Create a mapping of timestamp to CPU value
-            cpu_by_timestamp = {m['timestamp']: m.get('cpu_percent', 0) for m in metrics}
-            
-            # Fill in values for all timestamps
-            cpu_values = [cpu_by_timestamp.get(ts, 0) for ts in timestamps]
-            series_name = f"{process_info.get('name', 'Unknown')} ({pid})"
-            series_data[series_name] = cpu_values
-    
-    return create_multi_series_line_chart(
-        x_values=timestamps,
-        series_data=series_data,
-        title='Process CPU Usage Timeline',
-        x_title='Timestamp',
-        y_title='CPU Usage (%)',
-        div_id='process-timeline-chart'
-    )
-
-def create_system_overview_chart(system_data: Dict) -> str:
-    """Create a dashboard-style overview of system information."""
-    if not system_data or 'system' not in system_data:
-        return "<div>No system overview data available</div>"
-    
-    system_info = system_data['system']
-    
-    # Create subplots for different metrics
-    fig = make_subplots(
-        rows=2, cols=2,
-        subplot_titles=('CPU Cores', 'Memory Distribution', 'Disk Usage', 'System Load'),
-        specs=[[{"type": "indicator"}, {"type": "pie"}],
-               [{"type": "pie"}, {"type": "indicator"}]]
-    )
-    
-    # CPU cores indicator
-    cpu_info = system_info.get('cpu', {})
-    fig.add_trace(
-        go.Indicator(
-            mode="number",
-            value=cpu_info.get('logical_count', 0),
-            title={"text": "CPU Cores"},
-            number={'suffix': " cores"}
-        ),
-        row=1, col=1
-    )
-    
-    # Memory pie chart
-    memory_info = system_info.get('memory', {})
-    if memory_info:
-        used = memory_info.get('used', 0)
-        available = memory_info.get('available', 0)
-        if used > 0 or available > 0:
-            fig.add_trace(
-                go.Pie(
-                    labels=['Used', 'Available'],
-                    values=[used, available],
-                    name="Memory"
-                ),
-                row=1, col=2
-            )
-    
-    # Disk usage pie chart
-    disk_info = system_info.get('disk', [])
-    if disk_info:
-        disk = disk_info[0]  # Use first disk
-        used = disk.get('used', 0)
-        free = disk.get('free', 0)
-        if used > 0 or free > 0:
-            fig.add_trace(
-                go.Pie(
-                    labels=['Used', 'Free'],
-                    values=[used, free],
-                    name="Disk"
-                ),
-                row=2, col=1
-            )
-    
-    # System load indicator
-    baseline = system_data.get('baseline', {})
-    cpu_load = baseline.get('avg_cpu_percent', 0)
-    fig.add_trace(
-        go.Indicator(
-            mode="gauge+number",
-            value=cpu_load,
-            title={'text': "Avg CPU Load"},
-            gauge={'axis': {'range': [None, 100]},
-                   'bar': {'color': "darkblue"},
-                   'steps': [{'range': [0, 50], 'color': "lightgray"},
-                            {'range': [50, 80], 'color': "yellow"},
-                            {'range': [80, 100], 'color': "red"}],
-                   'threshold': {'line': {'color': "red", 'width': 4},
-                               'thickness': 0.75, 'value': 90}}
-        ),
-        row=2, col=2
-    )
-    
-    fig.update_layout(
-        title='System Overview',
-        height=600,
-        template='plotly_white'
-    )
-    
-    return fig.to_html(include_plotlyjs=False, div_id="system-overview-chart")
-
-# Additional utility functions for creating charts from monitoring data
-
-def create_memory_distribution_pie_chart(memory_info: Dict) -> str:
-    """Create a standalone pie chart for memory distribution."""
-    if not memory_info:
-        return "<div>No memory information available</div>"
-    
-    labels = []
-    values = []
-    
-    for key, value in memory_info.items():
-        if isinstance(value, (int, float)) and value > 0:
-            labels.append(key.capitalize())
-            values.append(value)
-    
-    return create_pie_chart(
-        labels=labels,
-        values=values,
-        title='Memory Distribution',
-        div_id='memory-distribution-chart'
-    )
-
-def create_disk_usage_pie_chart(disk_info: List[Dict]) -> str:
-    """Create a standalone pie chart for disk usage."""
-    if not disk_info:
-        return "<div>No disk information available</div>"
-    
-    # Use first disk or combine all disks
-    disk = disk_info[0] if disk_info else {}
-    
-    labels = ['Used', 'Free']
-    values = [disk.get('used', 0), disk.get('free', 0)]
-    
-    return create_pie_chart(
-        labels=labels,
-        values=values,
-        title='Disk Usage Distribution',
-        div_id='disk-usage-chart',
-        colors=['#ff6b6b', '#4ecdc4']
-    )
-
-def create_process_threads_chart(processes_data: Dict) -> str:
-    """Create a bar chart showing maximum threads per process."""
-    if not processes_data:
-        return "<div>No process data available</div>"
-    
-    process_names = []
-    max_threads = []
-    
-    for pid, process_info in processes_data.items():
-        metrics = process_info.get('metrics', [])
-        if metrics:
-            thread_counts = [m['num_threads'] for m in metrics if m.get('num_threads') is not None]
-            max_thread_count = max(thread_counts) if thread_counts else 0
-            process_names.append(f"{process_info.get('name', 'Unknown')} ({pid})")
-            max_threads.append(max_thread_count)
-    
-    return create_bar_chart(
-        labels=process_names,
-        values=max_threads,
-        title='Maximum Threads by Process',
-        x_title='Process (PID)',
-        y_title='Thread Count',
-        div_id='process-threads-chart',
-        color='#9467bd'
-    )
 
 def generate_html_report(system_data: Dict, run_data: List[Dict], output_path: str = "report.html") -> str:
     """Generate a comprehensive HTML report with all charts.
@@ -569,50 +332,44 @@ def generate_html_report(system_data: Dict, run_data: List[Dict], output_path: s
     Returns:
         str: Path to the generated HTML report
     """
-    # Generate all charts
-    # For step data, we don't have system-level metrics in the same structure
-    # Calculate summary statistics
-    
+    # Generate charts for all running data
     for run in run_data:
-
         process_names = []
         average_cpu_data = []
         average_memory_data = []
         cpu_series_data = {}
 
-        step_id = [m["step"] for m in run["system"] if "step" in m]
+        # Calculate summary statistics
+        run_summary = calculate_run_summary(run)
 
-        for pid, process_info in run["processes"].items():
-            process_metrics = process_info["metrics"]
-            process_name = "{} {}".format(process_info.get("name", None), pid)
-            
-            cpu_timeline = [m["cpu_percent"] for m in process_metrics if m["cpu_percent"] is not None]
-            memory_timeline = [m["memory_percent"] for m in process_metrics if m["memory_percent"] is not None]
-            thread_timeline = [m["num_threads"] for m in process_metrics if m["num_threads"] is not None]
+        avg_system_cpu = run_summary["avg_system_cpu"]
+        avg_system_memory = run_summary["avg_system_memory"]
 
-            average_cpu = statistics.mean(
-                cpu_timeline
-            ) if process_metrics else 0.0
+        if "total" in avg_system_memory:
+            del avg_system_memory["total"]
 
-            average_memory = statistics.mean(
-                memory_timeline
-            ) if process_metrics else 0.0
-
-            max_thread = max(thread_timeline) if thread_timeline else 0
-
-            process_info.update({
-                'avg_cpu_percent': average_cpu,
-                'avg_memory_percent': average_memory,
-                'max_num_threads': max_thread
-            })
-
-            # Append to list for chart generation
-            average_cpu_data.append(average_cpu)
-            average_memory_data.append(average_memory)
-            process_names.append(process_name)
-            cpu_series_data[process_name] = cpu_timeline
+        # Convert processes summary statistics into chart data
+        for pid, process_info in run_summary["processes"].items():
+            process_names.append(f"{process_info.get('name', None)} {pid}")
+            average_cpu_data.append(process_info.get("avg_cpu_percent", 0.0))
+            average_memory_data.append(process_info.get("avg_memory_percent", 0.0))
+            cpu_series_data[pid] = {"x": process_info.get("step_timeline", []), "y": process_info.get("cpu_timeline", [])}
 
         run.update({"charts": {
+            'system_cpu_chart': create_bar_chart(
+                labels=[f"{i}" for i in range(1, len(avg_system_cpu) + 1)],
+                values=avg_system_cpu,
+                title='Average System CPU Usage (per-core)',
+                x_title='CPU Core',
+                y_title='CPU Usage (%)',
+                div_id='system-cpu-chart',
+                color='#1f77b4'
+            ),
+            'system_memory_chart': create_pie_chart(
+                data=avg_system_memory,
+                title='Average System Memory Usage',
+                div_id='system-memory-chart',
+            ),
             'process_cpu_chart': create_bar_chart(
                 labels=process_names,
                 values=average_cpu_data,
@@ -632,7 +389,6 @@ def generate_html_report(system_data: Dict, run_data: List[Dict], output_path: s
                 color='#2ca02c'
             ),
             'process_timeline_chart': create_multi_series_line_chart(
-                x_values=step_id,
                 series_data=cpu_series_data,
                 title='Process CPU Usage Timeline',
                 x_title='Timestamp',
@@ -640,20 +396,13 @@ def generate_html_report(system_data: Dict, run_data: List[Dict], output_path: s
                 div_id='process-timeline-chart'
             )}
         })
-    # So we'll focus on process data and use system_data for system charts
-    system_charts = {
-        'system_cpu_chart': create_system_cpu_chart([]),  # No step-level system data
-        'system_memory_chart': create_system_memory_chart([]),  # No step-level system data
-        'system_overview_chart': create_system_overview_chart(system_data),
-    }
     
     # Prepare template context
     context = {
         'title': 'GeoBench Performance Report',
         'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'system_data': system_data,
-        'run_data': run_data,
-        'charts': system_charts
+        'run_data': run_data
     }
     
     # Load and render template
