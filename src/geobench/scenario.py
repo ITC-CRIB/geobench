@@ -362,13 +362,13 @@ class Scenario:
                                 shutil.copy(output_path, abs_path)
                         except Exception as e:
                             logger.error(f"Error copying output file {output_path} to {abs_path}: {e}")
-                # Append run output to the list
-                run_list.append(out)
+                    # Append run output to the list
+                    run_list.append(out)
                 # TODO: Generate summary of the set runs.
-                run_summary = calculate_run_summary(out)
+                    run_summary = calculate_run_summary(out)
                 # TODO: Store summary of the set runs.
-                run_summary_path = os.path.join(abs_path, 'summary.json')
-                self._store(run_summary_path, run_summary)
+                    run_summary_path = os.path.join(abs_path, 'summary.json')
+                    self._store(run_summary_path, run_summary)
 
             duration = time.time() - start_time
 

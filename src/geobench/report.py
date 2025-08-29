@@ -339,6 +339,7 @@ def generate_html_report(system_data: Dict, run_data: List[Dict], output_path: s
     Returns:
         str: Path to the generated HTML report
     """
+    div_id_counter = 1
     # Generate charts for all running data
     for run in run_data:
         process_names = []
@@ -382,13 +383,13 @@ def generate_html_report(system_data: Dict, run_data: List[Dict], output_path: s
                 title='Average System CPU Usage (per-core)',
                 x_title='CPU Core',
                 y_title='CPU Usage (%)',
-                div_id='system-cpu-chart',
+                div_id=f'system-cpu-chart-{div_id_counter}',
                 color='#1f77b4'
             ),
             'system_memory_chart': create_pie_chart(
                 data=avg_system_memory,
                 title='Average System Memory Usage',
-                div_id='system-memory-chart',
+                div_id=f'system-memory-chart-{div_id_counter}',
             ),
             'process_cpu_chart': create_bar_chart(
                 labels=process_names,
@@ -396,7 +397,7 @@ def generate_html_report(system_data: Dict, run_data: List[Dict], output_path: s
                 title='Average CPU Usage by Process',
                 x_title='Process (PID)',
                 y_title='CPU Usage (%)',
-                div_id='process-cpu-chart',
+                div_id=f'process-cpu-chart-{div_id_counter}',
                 color='#ff7f0e'
             ),
             'process_memory_chart': create_bar_chart(
@@ -405,7 +406,7 @@ def generate_html_report(system_data: Dict, run_data: List[Dict], output_path: s
                 title='Average Memory Usage by Process',
                 x_title='Process (PID)',
                 y_title='Memory Usage (%)',
-                div_id='process-memory-chart',
+                div_id=f'process-memory-chart-{div_id_counter}',
                 color='#2ca02c'
             ),
             'process_timeline_chart': create_multi_series_line_chart(
@@ -413,9 +414,10 @@ def generate_html_report(system_data: Dict, run_data: List[Dict], output_path: s
                 title='Process CPU Usage Timeline',
                 x_title='Timestamp',
                 y_title='CPU Usage (%)',
-                div_id='process-timeline-chart'
+                div_id=f'process-timeline-chart-{div_id_counter}'
             )}
         })
+        div_id_counter += 1
     
     # Prepare template context
     context = {
