@@ -25,136 +25,53 @@ Follow these steps to set up GeoBench:
    git pull
    ```
 
-- For **Windows** user, specify the directory location of your QGIS installation directory. Open **Terminal** program, and set the directory location of QGIS in `QGIS_PATH`environment variable. 
-	- If you are using Command-Line
-		```
-		set QGIS_PATH="C:\Program Files\QGIS 3.34.9"
-		```
-	- If you are using PowerShell
-		```
-	   $env:QGIS_PATH="C:\Program Files\QGIS 3.34.9"
-	   ```
-
 ## Installation as Tool
-
-- Install `uv`
-	- macOS and Linux
-	```
-	curl -LsSf https://astral.sh/uv/install.sh | sh
-	```
-	- Windows (from Powershell/Terminal)
-	```
-	powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-	```
-	- Using `pip`
-	```
-	pip install uv
-	```
-
-- Run the installation process
+- Using `pip`
+  ```
+  pip install .
+  ```
+- Using `uv`
+	- Install `uv` tool
+		- MacOS and Linux
+		```
+		curl -LsSf https://astral.sh/uv/install.sh | sh
+		```
+		- Windows (from Powershell/Terminal)
+		```
+		powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+		```
+	- Run the installation process
 	```
 	uv tool install . --upgrade
 	```
-
-- Note: to update the tool, you need to pull from github and do the installation again.
-
+- To run the program you can execute following command:
+	```
+	geobench scenario.yaml
+	```
 ## Development
 - **Set up and activate the Python environment**:
-   - **Using `uv` (recommended) **:
-	```
-	uv sync
-	```
-   
    - **Using `venv`**:
      ```bash
      python3 -m venv .venv
      source .venv/bin/activate   # On Windows, use `.venv\Scripts\activate`
+	 pip install -r requirements.txt
      ```
-
-   - **Using `virtualenv`**:
-     ```bash
-     pip install virtualenv
-     virtualenv .venv
-     source .venv/bin/activate   # On Windows, use `.venv\Scripts\activate`
-     ```
-
-- **Install required packages**:
-   - **Using `uv` (recommended)**:
-   ```
-   uv sync
-   ```
-
-   - **Using `pip`**:
-   ```bash
-   pip install -r requirements.txt
-   ```
    
-- During development, create two directories: `sample-input` and `sample-output`. Both directories will be ignored from Git push and pull activities.
+    - **Using `uv` (recommended) **:
 	```
-	mkdir sample-input
-	mkdir sample-output
+	uv sync
 	```
-- You can copy the example shapefile as input in `sample-input` directory.
 
 - To run the program during development (without installing it as tool), you can execute following command:
 	```
 	python -m geobench.cli scenario.yaml
 	```
 
-## Running Benchmarking Scenario
-A benchmarking scenario is represented in a YAML file. For the time being, there are two scenario types supported in this tool: `qgis-process` and `qgis-python`. The `qgis-json` and `arcgis-command` will be supported later.
-
-### Running qgis-process scenario type
-In this scenario type, the QGIS benchmarking is performed by running `qgis_process` command in terminal. The sample scenario file can be accessed in `example/qgis-process/example-scenario.yaml`.
-
-- Copy the sample scenario to directory `sample-input`
+## Running the scenario
+For example, you can run the example by using following command for provided example of QGIS process.
 	```
-	cp example/qgis-process/example-scenario.yaml sample-input/example-scenario.yaml
+	geobench examples/buffer_qgis_process.yaml
 	```
-- Modify the parameter in the YAML file. Make sure the `INPUT` and `OUTPUT` paths are exist and accessible.
-- To run the benchmark, use the following command:
-
-	```bash
-	geobench run -f sample-input/example-scenario.yaml
-	```
-
-### Running qgis-python scenario type
-In this scenario type, the QGIS benchmarking is performed by running QGIS python code specified by user. The sample code and scenario files can be accessed in `example/qgis-process/example-scenario.yaml`.
-
-- Copy the sample scenario to directory `sample-input`
-   ```
-   cp example/qgis-python/example-scenario-python.yaml sample-input/example-scenario-python.yaml
-   ```
-- Copy the sample code and scenario files to directory `sample-input`
-   ```
-   cp example/qgis-python/example-scenario-python.yaml sample-input/example-scenario-python.yaml
-   cp example/qgis-python/program.py sample-input/program.py
-   ```
-- Modify the Python code. For **Windows** user, make sure you define the right path on the QGIS_PATH variable. 
-- Modify the YAML file. Make sure the `INPUT` and `OUTPUT` paths are exist and accessible.
-- To run the benchmark, use the following command:
-
-	```bash
-	geobench run -f sample-input/example-scenario-python.yaml
-	```
-## Environment Variables
-- `QGIS_PATH`: defining the installation path of QGIS
-- `GB_RECORD_DURATION`: defining the system recording duration (in seconds)
-
-## Development Roadmap
-- [x] Recording the system configuration including the OS, computer name, CPU, memory, disk. This feature has been tested in MacOS and Windows. The output is written to file in JSON structure.
-- [x] Recording the running process of a computer for a specific duration. The program tracks and calculates the average CPU and memory usage of each running process.
-- [x] The program checks the availability of the GIS command/libraries on the computer. For the time being the program supports `qgis_process` and QGIS `python` command checking.
-- [x] Perform baseline monitoring to record the average CPU and memory usage for a specific duration. The output is written to file in JSON structure.
-- [x] Generate any possible test combination from the parameters and input defined on the YAML scenario file. For the time being, the program supports `qgis-process` and `qgis-python` type of execution.
-- [x] Record running process for a specific duration before execution is performed. The output is stored to file in JSON strcuture.
-- [x] Execute the generated command and store the command output to a specific folder. For the time being, our program supports nested directory structure for the output.
-- [x] During the execution, our program records parameters as well as following metrics: average CPU and memory usage, start time, end time, and execution time.
-- [x] Accommodate new YAML scenario template
-- [ ] Support `arcgis` and `qgis-json` type of execution
-- [ ] Support flat output directory structure
-- [ ] Suitability criteria to decide whether the execution should be continued
-- [ ] System cleaning and preparation
 ---
 
 Feel free to contribute to the development of GeoBench by submitting issues or pull requests on the repository. For more details on contributing, please refer to the CONTRIBUTING.md file in the repository.

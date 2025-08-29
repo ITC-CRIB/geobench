@@ -21,7 +21,8 @@ def calculate_run_summary(run_result: dict) -> dict:
     summary = {
         "avg_system_cpu": [],
         "avg_system_memory": {},
-        "process": {}
+        "num_processes": 0,
+        "processes": {}
     }
     # Calculate Average per-core system CPU usage
     system_per_cpu_list = []
@@ -51,10 +52,10 @@ def calculate_run_summary(run_result: dict) -> dict:
 
     process_stats = {}
     if run_result["processes"]:
-        for pid, process_info in run_result["processes"].items():
-            if process_info["metrics"]:
+        summary["num_processes"] = len(run_result["processes"])
+        for pid, process_info in run_result.get("processes", {}).items():
+            if "metrics" in process_info:
                 process_metrics = process_info["metrics"]
-                # del process_info["metrics"]
 
                 cpu_timeline = []
                 memory_timeline = []
@@ -62,34 +63,40 @@ def calculate_run_summary(run_result: dict) -> dict:
                 step_timeline = []
 
                 for m in process_metrics:
-                    if "step" in m:
-                        step_timeline.append(m["step"])
-                    if "cpu_percent" in m:
-                        cpu_timeline.append(m["cpu_percent"])
-                    if "memory_percent" in m:
-                        memory_timeline.append(m["memory_percent"])
-                    if "num_threads" in m:
-                        thread_timeline.append(m["num_threads"])
+                    if (step := m.get("step", None)) is not None:
+                        step_timeline.append(step)
+                    if (cpu := m.get("cpu_percent", None)) is not None:
+                        cpu_timeline.append(cpu)
+                    if (mem := m.get("memory_percent", None)) is not None:
+                        memory_timeline.append(mem)
+                    if (threads := m.get("num_threads", None)) is not None:
+                        thread_timeline.append(threads)
+
+                # Calculate process running time
+                running_time = 0
+                if len(process_metrics) >= 2:
+                    running_time = process_metrics[-1]["timestamp"] - process_metrics[0]["timestamp"]
 
                 calculated_stats = {
                     "step_timeline": step_timeline,
                     "cpu_timeline": cpu_timeline,
                     "memory_timeline": memory_timeline,
                     "thread_timeline": thread_timeline,
+                    "running_time": running_time,
                     "avg_cpu_percent": statistics.mean(
                         cpu_timeline
                     )
-                    if process_metrics
+                    if cpu_timeline
                     else 0.0,
                     "avg_memory_percent": statistics.mean(
                         memory_timeline
                     )
-                    if process_metrics
+                    if memory_timeline
                     else 0.0,
                     "max_num_threads": max(
                         thread_timeline
                     )
-                    if process_metrics
+                    if thread_timeline
                     else 0,
                 }
 
@@ -339,9 +346,10 @@ def generate_html_report(system_data: Dict, run_data: List[Dict], output_path: s
         average_memory_data = []
         cpu_series_data = {}
 
-        # Calculate summary statistics
+        # Calculate summary statistics for each run
         run_summary = calculate_run_summary(run)
 
+        # Extract average system metrics from summary data
         avg_system_cpu = run_summary["avg_system_cpu"]
         avg_system_memory = run_summary["avg_system_memory"]
 
@@ -349,12 +357,24 @@ def generate_html_report(system_data: Dict, run_data: List[Dict], output_path: s
             del avg_system_memory["total"]
 
         # Convert processes summary statistics into chart data
-        for pid, process_info in run_summary["processes"].items():
+        for pid, process_info in run_summary.get("processes", {}).items():
             process_names.append(f"{process_info.get('name', None)} {pid}")
             average_cpu_data.append(process_info.get("avg_cpu_percent", 0.0))
             average_memory_data.append(process_info.get("avg_memory_percent", 0.0))
-            cpu_series_data[pid] = {"x": process_info.get("step_timeline", []), "y": process_info.get("cpu_timeline", [])}
-
+            
+            # Transform process CPU usage over time into time series data for visualization
+            process_step_timeline = []
+            process_cpu_timeline = []
+            for m in process_info.get("metrics", []):
+                if (step := m.get("step", None)) is not None:
+                    process_step_timeline.append(step)
+                if (cpu := m.get("cpu_percent", None)) is not None:
+                    process_cpu_timeline.append(cpu)
+            cpu_series_data[pid] = {
+                "x": process_step_timeline,
+                "y": process_cpu_timeline
+            }
+            
         run.update({"charts": {
             'system_cpu_chart': create_bar_chart(
                 labels=[f"{i}" for i in range(1, len(avg_system_cpu) + 1)],
