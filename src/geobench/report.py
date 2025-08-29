@@ -19,6 +19,12 @@ def calculate_run_summary(run_result: dict) -> dict:
         dict: A dictionary containing the summary statistics.
     """
     summary = {
+        "set": run_result.get("set", 0),
+        "run": run_result.get("run", 0),
+        "arguments": run_result.get("arguments", {}),
+        "running_time": 0,
+        "start_time": run_result.get("start_time", 0),
+        "end_time": run_result.get("end_time", 0),
         "avg_system_cpu": [],
         "avg_system_memory": {},
         "num_processes": 0,
@@ -50,6 +56,9 @@ def calculate_run_summary(run_result: dict) -> dict:
             avg_mem = statistics.mean(mem_usage) if mem_usage else 0.0
             summary["avg_system_memory"][type] = avg_mem
 
+    if "starting_time" in run_result and "ending_time" in run_result:
+        summary["running_time"] = run_result["ending_time"] - run_result["starting_time"]
+
     process_stats = {}
     if run_result["processes"]:
         summary["num_processes"] = len(run_result["processes"])
@@ -78,10 +87,6 @@ def calculate_run_summary(run_result: dict) -> dict:
                     running_time = process_metrics[-1]["timestamp"] - process_metrics[0]["timestamp"]
 
                 calculated_stats = {
-                    "step_timeline": step_timeline,
-                    "cpu_timeline": cpu_timeline,
-                    "memory_timeline": memory_timeline,
-                    "thread_timeline": thread_timeline,
                     "running_time": running_time,
                     "avg_cpu_percent": statistics.mean(
                         cpu_timeline
@@ -328,7 +333,7 @@ def create_multi_series_line_chart(series_data: Dict[str, Dict[str, List]],
     
     return fig.to_html(include_plotlyjs=False, div_id=div_id)
 
-def generate_html_report(system_data: Dict, run_data: List[Dict], output_path: str = "report.html") -> str:
+def generate_html_report(system_data: Dict, run_summaries: List[Dict], output_path: str = "report.html") -> str:
     """Generate a comprehensive HTML report with all charts.
     
     Args:
@@ -341,14 +346,11 @@ def generate_html_report(system_data: Dict, run_data: List[Dict], output_path: s
     """
     div_id_counter = 1
     # Generate charts for all running data
-    for run in run_data:
+    for run_summary in run_summaries:
         process_names = []
         average_cpu_data = []
         average_memory_data = []
         cpu_series_data = {}
-
-        # Calculate summary statistics for each run
-        run_summary = calculate_run_summary(run)
 
         # Extract average system metrics from summary data
         avg_system_cpu = run_summary["avg_system_cpu"]
@@ -376,7 +378,7 @@ def generate_html_report(system_data: Dict, run_data: List[Dict], output_path: s
                 "y": process_cpu_timeline
             }
             
-        run.update({"charts": {
+        run_summary.update({"charts": {
             'system_cpu_chart': create_bar_chart(
                 labels=[f"{i}" for i in range(1, len(avg_system_cpu) + 1)],
                 values=avg_system_cpu,
@@ -424,7 +426,7 @@ def generate_html_report(system_data: Dict, run_data: List[Dict], output_path: s
         'title': 'GeoBench Performance Report',
         'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'system_data': system_data,
-        'run_data': run_data
+        'run_data': run_summaries
     }
     
     # Load and render template
@@ -453,7 +455,7 @@ if __name__ == "__main__":
     report_dir_path = sys.argv[1]
     output_path = sys.argv[2]
 
-    step_report_path = []
+    run_report_path = []
     system_report_path = None
     # Iterate through sub directory
     for root, dirs, files in os.walk(report_dir_path):
@@ -463,17 +465,18 @@ if __name__ == "__main__":
                 if root == report_dir_path:
                     system_report_path = os.path.join(root, filename)
                 else:
-                    step_report_path.append(os.path.join(root, filename))
+                    run_report_path.append(os.path.join(root, filename))
 
-    step_report = []
-    for path in step_report_path:
+    run_summaries = []
+    for path in run_report_path:
         with open(path, 'r') as f:
-            step_data = json.load(f)
-            step_report.append(step_data)
+            run_data = json.load(f)
+            summary = calculate_run_summary(run_data)
+            run_summaries.append(summary)
 
     with open(system_report_path, 'r') as f:
         system_data = json.load(f)
 
-    generate_html_report(system_data, step_report, output_path)
+    generate_html_report(system_data, run_summaries, output_path)
 
 #%%

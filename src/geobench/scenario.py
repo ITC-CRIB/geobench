@@ -253,7 +253,7 @@ class Scenario:
             len_sets = len(str(num_sets))
             len_runs = len(str(self.repeat))
 
-            run_list = []
+            run_summaries = []
 
             # For each scenario set
             for i, data in enumerate(self.sets):
@@ -350,6 +350,7 @@ class Scenario:
                                 shutil.copy(input_path, abs_path)
                         except Exception as e:
                             logger.error(f"Error copying input file {input_path} to {abs_path}: {e}")
+
                     # TODO: Store output files in the output directory, if required.
                     for key, value in self.outputs.items():
                         output_path = os.path.normpath(
@@ -362,13 +363,19 @@ class Scenario:
                                 shutil.copy(output_path, abs_path)
                         except Exception as e:
                             logger.error(f"Error copying output file {output_path} to {abs_path}: {e}")
+
                     # Append run output to the list
-                    run_list.append(out)
-                # TODO: Generate summary of the set runs.
                     run_summary = calculate_run_summary(out)
+                    run_summaries.append(run_summary)
+                # TODO: Generate summary of the set runs.
+                set_summary = {
+                    "set": set_id,
+                    "num_runs": self.repeat,
+                    "runs": run_summaries
+                }
                 # TODO: Store summary of the set runs.
-                    run_summary_path = os.path.join(abs_path, 'summary.json')
-                    self._store(run_summary_path, run_summary)
+                set_summary_path = os.path.join(self.outdir, f"set_{set_id:0{len_sets}d}", 'summary.json')
+                self._store(set_summary_path, set_summary)
 
             duration = time.time() - start_time
 
@@ -390,7 +397,7 @@ class Scenario:
 
             # Generate report
             report_path = os.path.join(self.outdir, 'report.html')
-            generate_html_report(system_data=result, run_data=run_list, output_path=report_path)
+            generate_html_report(system_data=result, run_summaries=run_summaries, output_path=report_path)
 
         except KeyboardInterrupt:
             print("Benchmark run interrupted by user.")
