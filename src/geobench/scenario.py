@@ -345,15 +345,23 @@ class Scenario:
                             os.path.join(self.workdir, value)
                         )
                         # Copy input file
-                        shutil.copy(input_path, abs_path)
+                        try:
+                            if os.path.exists(input_path) and not os.path.exists(abs_path):
+                                shutil.copy(input_path, abs_path)
+                        except Exception as e:
+                            logger.error(f"Error copying input file {input_path} to {abs_path}: {e}")
                     # TODO: Store output files in the output directory, if required.
                     for key, value in self.outputs.items():
                         output_path = os.path.normpath(
                             value if os.path.isabs(value) else
-                            os.path.join(self.workdir, value)
+                            os.path.join(abs_path, value)
                         )
                         # Copy output file
-                        shutil.copy(output_path, abs_path)
+                        try: 
+                            if os.path.exists(output_path) and not os.path.exists(abs_path):
+                                shutil.copy(output_path, abs_path)
+                        except Exception as e:
+                            logger.error(f"Error copying output file {output_path} to {abs_path}: {e}")
                 # Append run output to the list
                 run_list.append(out)
                 # TODO: Generate summary of the set runs.
