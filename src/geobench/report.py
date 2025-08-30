@@ -19,11 +19,10 @@ def calculate_run_summary(run_result: dict) -> dict:
         dict: A dictionary containing the summary statistics.
     """
     summary = {
-        # "set": run_result.get("set", 0),
         "run": run_result.get("run", 0),
-        # "arguments": run_result.get("arguments", {}),
         "running_time": 0,
         "success": run_result.get("success", False),
+        "finished": run_result.get("finished", False),
         "start_time": run_result.get("start_time", 0),
         "end_time": run_result.get("end_time", 0),
         "avg_system_cpu": [],

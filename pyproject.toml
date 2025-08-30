@@ -33,6 +33,7 @@ dependencies = [
     "pyyaml",
     "plotly",
     "numpy",
+    "ipykernel"
 ]
 keywords = [
     "geospatial analysis",
