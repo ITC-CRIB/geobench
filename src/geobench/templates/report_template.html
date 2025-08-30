@@ -14,6 +14,15 @@
             line-height: 1.6;
         }
         
+        .set-header {
+            background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 30px 0 20px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -351,22 +360,76 @@
         {% endif %}
 
         <!-- Execution Steps Details -->
-        {% if run_data %}
-        {% set run_list = run_data if run_data is iterable and run_data is not string else [run_data] %}
-        {% for run in run_list %}
-        <div class="summary-section">
-            <h2>Set {{ run.set }} - Run {{ run.run }} Execution Details</h2>
-            <div class="system-info">
-                <div class="info-card">
-                    <h3>Execution Status</h3>
-                    <ul class="info-list">
-                        <li><span class="info-label">Set:</span> {{ run.set if run.set else 'N/A' }}</li>
-                        <li><span class="info-label">Run:</span> {{ run.run if run.run else 'N/A' }}</li>
-                        <li><span class="info-label">Execution Time:</span> {{ "%.2f"|format(run.end_time - run.start_time if run.start_time and run.end_time else 0) }} seconds</li>
-                        <li><span class="info-label">Finished:</span> {{ 'Yes' if run.finished else 'No' }}</li>
-                        <li><span class="info-label">Success:</span> {{ 'Yes' if run.success else 'No' }}</li>
-                    </ul>
+        {% if set_summaries %}
+        {% for set_data in set_summaries %}
+            <!-- Set header -->
+            <div class="set-header">
+                <h2 style="margin: 0; font-size: 1.8em;">Set {{ set_data.set }}</h2>
+                {% if set_data.description %}
+                <p style="margin-top: 10px; margin-bottom: 0; opacity: 0.9;">{{ set_data.description }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Set Summary -->
+            <div class="summary-section">
+                <h3>Summary</h3>
+                <div class="metrics-grid">
+                    
+                    {% if set_data.total is not none %}
+                    <div class="metric-card">
+                        <h3>Total Runs</h3>
+                        <div class="metric-value">{{ set_data.total }}</div>
+                        <div class="metric-unit">runs</div>
+                    </div>
+                    {% endif %}
+
+                    {% if set_data.success is not none %}
+                    <div class="metric-card">
+                        <h3>Success Rate</h3>
+                        <div class="metric-value">
+                            {{ "%.1f"|format(set_data.success * 100) }}
+                        </div>
+                        <div class="metric-unit">percent</div>
+                    </div>
+                    {% endif %}
+
+                    {% if set_data.arguments %}
+                    <div class="metric-card">
+                        <h3>Common Arguments</h3>
+                            {% if set_data.arguments is mapping %}
+                                <ul style="margin: 5px 0; padding-left: 20px; font-size: 0.9em;">
+                                    {% for key, value in set_data.arguments.items() %}
+                                    <li>{{ key }}: {{ value }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% elif set_data.arguments is iterable %}
+                                <ul style="margin: 5px 0; padding-left: 20px; font-size: 0.9em;">
+                                    {% for item in set_data.arguments %}
+                                    <li>{{ item }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
+            </div>
+            
+            
+            <!-- Run details within the set -->
+            {% set run_list = set_data.runs if set_data.runs is defined and set_data.runs is iterable else [] %}
+            {% for run in run_list %}
+            <div class="summary-section">
+                <h2>Run {{ run.run }} Execution Details</h2>
+                <div class="system-info">
+                    <div class="info-card">
+                        <!-- <h3>Execution Status</h3> -->
+                        <ul class="info-list">
+                            <li><span class="info-label">Run:</span> {{ run.run if run.run else 'N/A' }}</li>
+                            <li><span class="info-label">Execution Time:</span> {{ "%.2f"|format(run.end_time - run.start_time if run.start_time and run.end_time else 0) }} seconds</li>
+                            <li><span class="info-label">Finished:</span> {{ 'Yes' if run.finished else 'No' }}</li>
+                            <li><span class="info-label">Success:</span> {{ 'Yes' if run.success else 'No' }}</li>
+                        </ul>
+                    </div>
 
                 {% if run.arguments %}
                 <div class="info-card">
@@ -445,6 +508,7 @@
             </div>
             {% endif %}
         </div>
+        {% endfor %}
         {% endfor %}
         {% endif %}
 

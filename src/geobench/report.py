@@ -19,10 +19,11 @@ def calculate_run_summary(run_result: dict) -> dict:
         dict: A dictionary containing the summary statistics.
     """
     summary = {
-        "set": run_result.get("set", 0),
+        # "set": run_result.get("set", 0),
         "run": run_result.get("run", 0),
-        "arguments": run_result.get("arguments", {}),
+        # "arguments": run_result.get("arguments", {}),
         "running_time": 0,
+        "success": run_result.get("success", False),
         "start_time": run_result.get("start_time", 0),
         "end_time": run_result.get("end_time", 0),
         "avg_system_cpu": [],
@@ -333,7 +334,7 @@ def create_multi_series_line_chart(series_data: Dict[str, Dict[str, List]],
     
     return fig.to_html(include_plotlyjs=False, div_id=div_id)
 
-def generate_html_report(system_data: Dict, run_summaries: List[Dict], output_path: str = "report.html") -> str:
+def generate_html_report(system_data: Dict, set_summaries: List[Dict], output_path: str = "report.html") -> str:
     """Generate a comprehensive HTML report with all charts.
     
     Args:
@@ -345,88 +346,99 @@ def generate_html_report(system_data: Dict, run_summaries: List[Dict], output_pa
         str: Path to the generated HTML report
     """
     div_id_counter = 1
-    # Generate charts for all running data
-    for run_summary in run_summaries:
-        process_names = []
-        average_cpu_data = []
-        average_memory_data = []
-        cpu_series_data = {}
+    # For each set summary
+    for set_summary in set_summaries:
 
-        # Extract average system metrics from summary data
-        avg_system_cpu = run_summary["avg_system_cpu"]
-        avg_system_memory = run_summary["avg_system_memory"]
+        # Get run summaries
+        run_summaries = set_summary.get("runs", [])
+        
+        # For each run summary in a set
+        for run_summary in run_summaries:
+            # Init data structure
+            process_names = []
+            average_cpu_data = []
+            average_memory_data = []
+            cpu_series_data = {}
 
-        if "total" in avg_system_memory:
-            del avg_system_memory["total"]
+            # Extract average system metrics from summary data
+            avg_system_cpu = run_summary.get("avg_system_cpu", [])
+            avg_system_memory = run_summary.get("avg_system_memory", {})
 
-        # Convert processes summary statistics into chart data
-        for pid, process_info in run_summary.get("processes", {}).items():
-            process_names.append(f"{process_info.get('name', None)} {pid}")
-            average_cpu_data.append(process_info.get("avg_cpu_percent", 0.0))
-            average_memory_data.append(process_info.get("avg_memory_percent", 0.0))
-            
-            # Transform process CPU usage over time into time series data for visualization
-            process_step_timeline = []
-            process_cpu_timeline = []
-            for m in process_info.get("metrics", []):
-                if (step := m.get("step", None)) is not None:
-                    process_step_timeline.append(step)
-                if (cpu := m.get("cpu_percent", None)) is not None:
-                    process_cpu_timeline.append(cpu)
-            cpu_series_data[pid] = {
-                "x": process_step_timeline,
-                "y": process_cpu_timeline
-            }
-            
-        run_summary.update({"charts": {
-            'system_cpu_chart': create_bar_chart(
-                labels=[f"{i}" for i in range(1, len(avg_system_cpu) + 1)],
-                values=avg_system_cpu,
-                title='Average System CPU Usage (per-core)',
-                x_title='CPU Core',
-                y_title='CPU Usage (%)',
-                div_id=f'system-cpu-chart-{div_id_counter}',
-                color='#1f77b4'
-            ),
-            'system_memory_chart': create_pie_chart(
-                data=avg_system_memory,
-                title='Average System Memory Usage',
-                div_id=f'system-memory-chart-{div_id_counter}',
-            ),
-            'process_cpu_chart': create_bar_chart(
-                labels=process_names,
-                values=average_cpu_data,
-                title='Average CPU Usage by Process',
-                x_title='Process (PID)',
-                y_title='CPU Usage (%)',
-                div_id=f'process-cpu-chart-{div_id_counter}',
-                color='#ff7f0e'
-            ),
-            'process_memory_chart': create_bar_chart(
-                labels=process_names,
-                values=average_memory_data,
-                title='Average Memory Usage by Process',
-                x_title='Process (PID)',
-                y_title='Memory Usage (%)',
-                div_id=f'process-memory-chart-{div_id_counter}',
-                color='#2ca02c'
-            ),
-            'process_timeline_chart': create_multi_series_line_chart(
-                series_data=cpu_series_data,
-                title='Process CPU Usage Timeline',
-                x_title='Timestamp',
-                y_title='CPU Usage (%)',
-                div_id=f'process-timeline-chart-{div_id_counter}'
-            )}
-        })
-        div_id_counter += 1
+            # Delete total from average system memory data
+            if "total" in avg_system_memory:
+                del avg_system_memory["total"]
+
+            # Convert processes summary statistics into chart data
+            # For each process info in run summary
+            for pid, process_info in run_summary.get("processes", {}).items():
+                process_names.append(f"{process_info.get('name', None)} {pid}")
+                average_cpu_data.append(process_info.get("avg_cpu_percent", 0.0))
+                average_memory_data.append(process_info.get("avg_memory_percent", 0.0))
+                
+                # Transform process CPU usage over time into time series data for visualization
+                process_step_timeline = []
+                process_cpu_timeline = []
+                for m in process_info.get("metrics", []):
+                    if (step := m.get("step", None)) is not None:
+                        process_step_timeline.append(step)
+                    if (cpu := m.get("cpu_percent", None)) is not None:
+                        process_cpu_timeline.append(cpu)
+                cpu_series_data[pid] = {
+                    "x": process_step_timeline,
+                    "y": process_cpu_timeline
+                }
+                
+                # Create charts
+                run_summary.update({"charts": {
+                    'system_cpu_chart': create_bar_chart(
+                        labels=[f"{i}" for i in range(1, len(avg_system_cpu) + 1)],
+                        values=avg_system_cpu,
+                        title='Average System CPU Usage (per-core)',
+                        x_title='CPU Core',
+                        y_title='CPU Usage (%)',
+                        div_id=f'system-cpu-chart-{div_id_counter}',
+                        color='#1f77b4'
+                    ),
+                    'system_memory_chart': create_pie_chart(
+                        data=avg_system_memory,
+                        title='Average System Memory Usage',
+                        div_id=f'system-memory-chart-{div_id_counter}',
+                    ),
+                    'process_cpu_chart': create_bar_chart(
+                        labels=process_names,
+                        values=average_cpu_data,
+                        title='Average CPU Usage by Process',
+                        x_title='Process (PID)',
+                        y_title='CPU Usage (%)',
+                        div_id=f'process-cpu-chart-{div_id_counter}',
+                        color='#ff7f0e'
+                    ),
+                    'process_memory_chart': create_bar_chart(
+                        labels=process_names,
+                        values=average_memory_data,
+                        title='Average Memory Usage by Process',
+                        x_title='Process (PID)',
+                        y_title='Memory Usage (%)',
+                        div_id=f'process-memory-chart-{div_id_counter}',
+                        color='#2ca02c'
+                    ),
+                    'process_timeline_chart': create_multi_series_line_chart(
+                        series_data=cpu_series_data,
+                        title='Process CPU Usage Timeline',
+                        x_title='Timestamp',
+                        y_title='CPU Usage (%)',
+                        div_id=f'process-timeline-chart-{div_id_counter}'
+                    )}
+                })
+
+                div_id_counter += 1
     
     # Prepare template context
     context = {
         'title': 'GeoBench Performance Report',
         'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'system_data': system_data,
-        'run_data': run_summaries
+        'set_summaries': set_summaries,
     }
     
     # Load and render template
@@ -467,16 +479,36 @@ if __name__ == "__main__":
                 else:
                     run_report_path.append(os.path.join(root, filename))
 
-    run_summaries = []
-    for path in run_report_path:
-        with open(path, 'r') as f:
-            run_data = json.load(f)
-            summary = calculate_run_summary(run_data)
-            run_summaries.append(summary)
+    if (system_report_path := os.path.join(report_dir_path, "result.json")):
+        with open(system_report_path, 'r') as f:
+            system_data = json.load(f)
 
-    with open(system_report_path, 'r') as f:
-        system_data = json.load(f)
+    # Iterate for directory inside report_dir_path (one-level)
+    set_summaries = []
+    for set_items in os.listdir(report_dir_path):
+        if os.path.isdir(os.path.join(report_dir_path, set_items)):
+            set_summary = {
+                "set": 0,
+                "arguments": {},
+                "runs": []
+            }
 
-    generate_html_report(system_data, run_summaries, output_path)
+            sorted_listdir = sorted(os.listdir(os.path.join(report_dir_path, set_items)))
+            for run_items in sorted_listdir:
+                if os.path.isdir(os.path.join(report_dir_path, set_items, run_items)):
+                    if (run_path := os.path.join(report_dir_path, set_items, run_items, "result.json")):
+                        with open(run_path, 'r') as f:
+                            run_data = json.load(f)
+                            set_summary["set"] = run_data.get("set", 0)
+                            set_summary["arguments"] = run_data.get("arguments", {})
+                            summary = calculate_run_summary(run_data)
+                            set_summary["runs"].append(summary)
+                            
+            runs_len = len(set_summary["runs"])
+            set_summary["total"] = runs_len
+            set_summary["success"] = (sum(1 for run in set_summary["runs"] if run["success"]) / runs_len) if runs_len > 0 else 0
+            set_summaries.append(set_summary)
+
+    generate_html_report(system_data, set_summaries, output_path)
 
 #%%

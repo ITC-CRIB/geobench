@@ -253,12 +253,14 @@ class Scenario:
             len_sets = len(str(num_sets))
             len_runs = len(str(self.repeat))
 
-            run_summaries = []
-
+            
+            set_summaries = []
             # For each scenario set
             for i, data in enumerate(self.sets):
                 set_id = i + 1
 
+                # Reset run summaries list
+                run_summaries = []
                 # For each repetation
                 for j in range(self.repeat):
                     run_id = j + 1
@@ -364,15 +366,24 @@ class Scenario:
                         except Exception as e:
                             logger.error(f"Error copying output file {output_path} to {abs_path}: {e}")
 
-                    # Append run output to the list
+                    # Calculate run summary
                     run_summary = calculate_run_summary(out)
+                    # Append run summaries to the list for generating set runs summary and report
                     run_summaries.append(run_summary)
+
                 # TODO: Generate summary of the set runs.
+                total_runs = len(run_summaries)
+                success_rate = (sum(1 for run in run_summaries if run["success"]) / total_runs) if total_runs > 0 else 0
                 set_summary = {
                     "set": set_id,
-                    "num_runs": self.repeat,
+                    "arguments": args,
+                    "total": total_runs,
+                    "success": success_rate,
                     "runs": run_summaries
                 }
+                # Append set summary to the list for generating report
+                set_summaries.append(set_summary)
+
                 # TODO: Store summary of the set runs.
                 set_summary_path = os.path.join(self.outdir, f"set_{set_id:0{len_sets}d}", 'summary.json')
                 self._store(set_summary_path, set_summary)
@@ -395,9 +406,9 @@ class Scenario:
             # TODO: Generate summary of all runs.
             # TODO: Store summary of all runs.
 
-            # Generate report
+            # Generate report from set summaries
             report_path = os.path.join(self.outdir, 'report.html')
-            generate_html_report(system_data=result, run_summaries=run_summaries, output_path=report_path)
+            generate_html_report(system_data=result, set_summaries=set_summaries, output_path=report_path)
 
         except KeyboardInterrupt:
             print("Benchmark run interrupted by user.")
