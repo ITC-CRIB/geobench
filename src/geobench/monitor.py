@@ -231,13 +231,24 @@ def monitor_process(process, interval: float=1.0):
         for p in processes:
             try:
                 with p.oneshot():
-                    process_metrics[p.pid]['metrics'].append({
+                    try:
+                        io_counters = p.io_counters()
+                        read_bytes = io_counters.read_bytes
+                        write_bytes = io_counters.write_bytes
+                    except (psutil.AccessDenied, AttributeError):
+                        read_bytes = 0
+                        write_bytes = 0
+                    collected_metric = {
                         'step': step,
                         'timestamp': time.time(),
                         'cpu_percent': p.cpu_percent(),
                         'memory_percent': p.memory_percent(),
                         'num_threads': p.num_threads(),
-                    })
+                        'read_bytes': read_bytes,
+                        'write_bytes': write_bytes,
+                    }
+
+                    process_metrics[p.pid]['metrics'].append(collected_metric)
 
             except psutil.NoSuchProcess:
                 pass

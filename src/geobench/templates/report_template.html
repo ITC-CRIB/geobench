@@ -184,6 +184,56 @@
             background-color: #f8f9fa;
         }
         
+        .status-success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .status-failed {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .status-incomplete {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        
+        .runs-summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+        
+        .runs-summary-table th,
+        .runs-summary-table td {
+            padding: 10px 8px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .runs-summary-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            font-size: 0.85em;
+            text-align: center;
+        }
+        
+        .runs-summary-table td {
+            text-align: center;
+        }
+        
+        .runs-summary-table td:first-child {
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .runs-summary-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
         .system-info {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -232,6 +282,97 @@
             padding: 20px;
             color: #666;
             font-size: 0.9em;
+        }
+        
+        .baseline-endline-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .baseline-endline-table th,
+        .baseline-endline-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .baseline-endline-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .baseline-endline-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .collapsible {
+            background-color: #f1f3f4;
+            color: #333;
+            cursor: pointer;
+            padding: 15px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 1.1em;
+            font-weight: 600;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .collapsible:hover {
+            background-color: #e8eaed;
+        }
+        
+        .collapsible:after {
+            content: '\002B';
+            color: #666;
+            font-weight: bold;
+            float: right;
+            margin-left: 5px;
+        }
+        
+        .collapsible.active:after {
+            content: "\2212";
+        }
+        
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+            background-color: white;
+            border-radius: 0 0 8px 8px;
+        }
+        
+        .collapsible-content.active {
+            max-height: 1000px;
+            transition: max-height 0.2s ease-in;
+        }
+        
+        .collapsible-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+        
+        .collapsible-table th,
+        .collapsible-table td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .collapsible-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            font-size: 0.9em;
+        }
+        
+        .collapsible-table tr:hover {
+            background-color: #f8f9fa;
         }
         
         @media (max-width: 768px) {
@@ -393,6 +534,26 @@
                     </div>
                     {% endif %}
 
+                    {% if set_data.avg_run_time is not none %}
+                    <div class="metric-card">
+                        <h3>Average Exec Time</h3>
+                        <div class="metric-value">
+                            {{ "%.1f"|format(set_data.avg_run_time) }}
+                        </div>
+                        <div class="metric-unit">seconds</div>
+                    </div>
+                    {% endif %}
+
+                    {% if set_data.stdev_run_time is not none %}
+                    <div class="metric-card">
+                        <h3>Std Dev Exec Time</h3>
+                        <div class="metric-value">
+                            {{ "%.1f"|format(set_data.stdev_run_time) }}
+                        </div>
+                        <div class="metric-unit">seconds</div>
+                    </div>
+                    {% endif %}
+
                     {% if set_data.arguments %}
                     <div class="metric-card">
                         <h3>Common Arguments</h3>
@@ -414,9 +575,84 @@
                 </div>
             </div>
             
+            <!-- Runs Summary Table -->
+            {% set run_list = set_data.runs if set_data.runs is defined and set_data.runs is iterable else [] %}
+            {% if run_list %}
+            <div class="summary-section">
+                <h3>Runs Summary</h3>
+                <table class="runs-summary-table">
+                    <thead>
+                        <tr>
+                            <th>Run</th>
+                            <th>Status</th>
+                            <th>Execution Time (s)</th>
+                            <th>Avg System CPU (%)</th>
+                            <th>Avg System Memory (%)</th>
+                            <th>Avg Process CPU (%)</th>
+                            <th>Avg Process Memory (%)</th>
+                            <th>Max Threads</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for run in run_list %}
+                        <tr>
+                            <td>{{ run.run if run.run else 'N/A' }}</td>
+                            <td>
+                                {% if run.success %}
+                                    <span class="status-success">✓ Success</span>
+                                {% elif run.finished %}
+                                    <span class="status-failed">✗ Failed</span>
+                                {% else %}
+                                    <span class="status-incomplete">⚠ Incomplete</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ "%.2f"|format(run.end_time - run.start_time if run.start_time and run.end_time else 0) }}</td>
+                            <td>
+                                {% if run.avg_system_cpu_overall %}
+                                    {{ "%.2f"|format(run.avg_system_cpu_overall) }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if run.avg_system_memory_overall %}
+                                    {{ "%.2f"|format(run.avg_system_memory_overall) }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if run.processes %}
+                                    {% set total_cpu = run.processes.values() | sum(attribute='avg_cpu_percent') %}
+                                    {{ "%.2f"|format(total_cpu) }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if run.processes %}
+                                    {% set total_memory = run.processes.values() | sum(attribute='avg_memory_percent') %}
+                                    {{ "%.4f"|format(total_memory) }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if run.processes %}
+                                    {% set max_threads = run.processes.values() | max(attribute='max_num_threads') %}
+                                    {{ max_threads.max_num_threads if max_threads else 'N/A' }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
             
             <!-- Run details within the set -->
-            {% set run_list = set_data.runs if set_data.runs is defined and set_data.runs is iterable else [] %}
             {% for run in run_list %}
             <div class="summary-section">
                 <h2>Run {{ run.run }} Execution Details</h2>
@@ -443,6 +679,99 @@
                 {% endif %}
             </div>
 
+            <!-- Baseline and Endline Analysis -->
+            {% if run.baseline or run.endline %}
+            <div style="margin-top: 20px;">
+                <h3>Baseline and Endline Analysis</h3>
+                <table class="baseline-endline-table">
+                    <thead>
+                        <tr>
+                            <th>Activity</th>
+                            <th>Duration (s)</th>
+                            <th>Avg CPU (%)</th>
+                            <th>Avg Memory (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if run.baseline %}
+                        <tr>
+                            <td><strong>Baseline</strong></td>
+                            <td>{{ "%.2f"|format(run.baseline.duration if run.baseline.duration else 0) }}</td>
+                            <td>{{ "%.2f"|format(run.baseline.avg_cpu_percent if run.baseline.avg_cpu_percent else 0) }}</td>
+                            <td>{{ "%.2f"|format(run.baseline.avg_memory_percent if run.baseline.avg_memory_percent else 0) }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if run.endline %}
+                        <tr>
+                            <td><strong>Endline</strong></td>
+                            <td>{{ "%.2f"|format(run.endline.duration if run.endline.duration else 0) }}</td>
+                            <td>{{ "%.2f"|format(run.endline.avg_cpu_percent if run.endline.avg_cpu_percent else 0) }}</td>
+                            <td>{{ "%.2f"|format(run.endline.avg_memory_percent if run.endline.avg_memory_percent else 0) }}</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+
+                <!-- Collapsible Process Summary for Baseline -->
+                {% if run.baseline and run.baseline.process_summary %}
+                <button type="button" class="collapsible" onclick="toggleCollapsible(this)">
+                    Baseline Process Summary Details
+                </button>
+                <div class="collapsible-content">
+                    <table class="collapsible-table">
+                        <thead>
+                            <tr>
+                                <th>PID</th>
+                                <th>Name</th>
+                                <th>Avg CPU (%)</th>
+                                <th>Avg Memory (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for process in run.baseline.process_summary %}
+                            <tr>
+                                <td>{{ process.pid if process.pid else 'N/A' }}</td>
+                                <td>{{ process.name if process.name else 'N/A' }}</td>
+                                <td>{{ "%.2f"|format(process.avg_cpu_percent if process.avg_cpu_percent else 0) }}</td>
+                                <td>{{ "%.2f"|format(process.avg_memory_percent if process.avg_memory_percent else 0) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                <!-- Collapsible Process Summary for Endline -->
+                {% if run.endline and run.endline.process_summary %}
+                <button type="button" class="collapsible" onclick="toggleCollapsible(this)">
+                    Endline Process Summary Details
+                </button>
+                <div class="collapsible-content">
+                    <table class="collapsible-table">
+                        <thead>
+                            <tr>
+                                <th>PID</th>
+                                <th>Name</th>
+                                <th>Avg CPU (%)</th>
+                                <th>Avg Memory (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for process in run.endline.process_summary %}
+                            <tr>
+                                <td>{{ process.pid if process.pid else 'N/A' }}</td>
+                                <td>{{ process.name if process.name else 'N/A' }}</td>
+                                <td>{{ "%.2f"|format(process.avg_cpu_percent if process.avg_cpu_percent else 0) }}</td>
+                                <td>{{ "%.2f"|format(process.avg_memory_percent if process.avg_memory_percent else 0) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
             <!-- Process Performance Charts for this run -->
             {% if run.charts %}
             <div class="chart-section" style="margin-top: 20px;">
@@ -467,12 +796,28 @@
                             {{ run.charts.process_memory_chart|safe }}
                         </div>
                     </div>
+
+                    <div class="chart-grid">
+                        <div>
+                            {{ run.charts.process_read_bytes_chart|safe }}
+                        </div>
+                        <div>
+                            {{ run.charts.process_write_bytes_chart|safe }}
+                        </div>
+                    </div>
                     
                     <div class="chart-grid-single">
                         <div>
                             {{ run.charts.process_timeline_chart|safe }}
                         </div>
                     </div>
+
+                    <div class="chart-grid-single">
+                        <div>
+                            {{ run.charts.process_memory_timeline_chart|safe }}
+                        </div>
+                    </div>
+
                 </div>
             </div>
             {% endif %}
@@ -489,6 +834,8 @@
                             <th>Executable</th>
                             <th>Avg CPU (%)</th>
                             <th>Avg Memory (%)</th>
+                            <th>Avg I/O Read (MB)</th>
+                            <th>Avg I/O Write (MB)</th>
                             <th>Max Threads</th>
                         </tr>
                     </thead>
@@ -500,6 +847,8 @@
                             <td>{{ process.executable|truncate(50) }}</td>
                             <td>{{ "%.2f"|format(process.avg_cpu_percent) }}</td>
                             <td>{{ "%.4f"|format(process.avg_memory_percent) }}</td>
+                            <td>{{ "%.2f"|format(process.avg_read_bytes/1024) }}</td>
+                            <td>{{ "%.2f"|format(process.avg_write_bytes/1024) }}</td>
                             <td>{{ process.max_num_threads }}</td>
                         </tr>
                         {% endfor %}
@@ -517,5 +866,19 @@
             <p>Report generated by GeoBench Performance Monitoring Tool</p>
         </div>
     </div>
+    
+    <script>
+        function toggleCollapsible(element) {
+            element.classList.toggle("active");
+            var content = element.nextElementSibling;
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+                content.classList.remove("active");
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+                content.classList.add("active");
+            }
+        }
+    </script>
 </body>
 </html>

@@ -26,10 +26,15 @@ def calculate_run_summary(run_result: dict) -> dict:
         "start_time": run_result.get("start_time", 0),
         "end_time": run_result.get("end_time", 0),
         "avg_system_cpu": [],
+        "avg_system_cpu_overall": 0,
         "avg_system_memory": {},
+        "avg_system_memory_overall": 0,
         "num_processes": 0,
-        "processes": {}
+        "processes": {},
+        "baseline": run_result.get("baseline", {}),
+        "endline": run_result.get("endline", {})
     }
+
     # Calculate Average per-core system CPU usage
     system_per_cpu_list = []
     if run_result["system"]:
@@ -42,8 +47,11 @@ def calculate_run_summary(run_result: dict) -> dict:
         for cpu_usage in system_per_cpu_list:
             avg_cpu = statistics.mean(cpu_usage) if cpu_usage else 0.0
             summary["avg_system_cpu"].append(avg_cpu)
+        
+        # Then, calculate the overall average
+        summary["avg_system_cpu_overall"] = statistics.mean(summary["avg_system_cpu"]) if summary["avg_system_cpu"] else 0.0
 
-    # Calculate Average per-type system memory usage
+    # Calculate average per-type system memory usage
     system_memory_dict = {}
     if run_result["system"]:
         for system_data in run_result["system"]:
@@ -55,22 +63,35 @@ def calculate_run_summary(run_result: dict) -> dict:
         for type, mem_usage in system_memory_dict.items():
             avg_mem = statistics.mean(mem_usage) if mem_usage else 0.0
             summary["avg_system_memory"][type] = avg_mem
+        
+        # Then, calculate the overall memory usage
+        total_memory_usage = summary["avg_system_memory"].get("total", 0.0)
+        used_memory_usage = summary["avg_system_memory"].get("used", 0.0)
+        overall_memory_usage = used_memory_usage / total_memory_usage * 100 if total_memory_usage > 0 else 0.0
+        summary["avg_system_memory_overall"] = overall_memory_usage
 
-    if "starting_time" in run_result and "ending_time" in run_result:
-        summary["running_time"] = run_result["ending_time"] - run_result["starting_time"]
+    # Calculate running time of a single run
+    if "start_time" in run_result and "end_time" in run_result:
+        summary["run_time"] = run_result["end_time"] - run_result["start_time"]
 
     process_stats = {}
+    # Calculate process statistics
     if run_result["processes"]:
+        # Calculate number of processes on a run
         summary["num_processes"] = len(run_result["processes"])
+        # For each process, calculate its metrics
         for pid, process_info in run_result.get("processes", {}).items():
             if "metrics" in process_info:
                 process_metrics = process_info["metrics"]
 
                 cpu_timeline = []
                 memory_timeline = []
+                io_write_bytes_timeline = []
+                io_read_bytes_timeline = []
                 thread_timeline = []
                 step_timeline = []
 
+                # Store timeline data into lists
                 for m in process_metrics:
                     if (step := m.get("step", None)) is not None:
                         step_timeline.append(step)
@@ -80,12 +101,18 @@ def calculate_run_summary(run_result: dict) -> dict:
                         memory_timeline.append(mem)
                     if (threads := m.get("num_threads", None)) is not None:
                         thread_timeline.append(threads)
+                    if (io_read := m.get("read_bytes", None)) is not None:
+                        io_read_bytes_timeline.append(io_read)
+                    if (io_write := m.get("write_bytes", None)) is not None:
+                        io_write_bytes_timeline.append(io_write)
 
                 # Calculate process running time
                 running_time = 0
                 if len(process_metrics) >= 2:
+                    # Get start and end timestamps
                     running_time = process_metrics[-1]["timestamp"] - process_metrics[0]["timestamp"]
 
+                # Calculate CPU, memory, and I/O statistics
                 calculated_stats = {
                     "running_time": running_time,
                     "avg_cpu_percent": statistics.mean(
@@ -93,10 +120,40 @@ def calculate_run_summary(run_result: dict) -> dict:
                     )
                     if cpu_timeline
                     else 0.0,
+                    "stdev_cpu_percent": statistics.stdev(
+                        cpu_timeline
+                    )
+                    if len(cpu_timeline) > 1
+                    else 0.0,
                     "avg_memory_percent": statistics.mean(
                         memory_timeline
                     )
                     if memory_timeline
+                    else 0.0,
+                    "stdev_memory_percent": statistics.stdev(
+                        memory_timeline
+                    )
+                    if len(memory_timeline) > 1
+                    else 0.0,
+                    "avg_read_bytes": statistics.mean(
+                        io_read_bytes_timeline
+                    )
+                    if io_read_bytes_timeline
+                    else 0.0,
+                    "stdev_read_bytes": statistics.stdev(
+                        io_read_bytes_timeline
+                    )
+                    if len(io_read_bytes_timeline) > 1
+                    else 0.0,
+                    "avg_write_bytes": statistics.mean(
+                        io_write_bytes_timeline
+                    )
+                    if io_write_bytes_timeline
+                    else 0.0,
+                    "stdev_write_bytes": statistics.stdev(
+                        io_write_bytes_timeline
+                    )
+                    if len(io_write_bytes_timeline) > 1
                     else 0.0,
                     "max_num_threads": max(
                         thread_timeline
@@ -104,11 +161,14 @@ def calculate_run_summary(run_result: dict) -> dict:
                     if thread_timeline
                     else 0,
                 }
-
+                
+                # Update process info with calculated stats
                 process_info.update(calculated_stats)
-
+                
+                # Store updated process info
                 process_stats[pid] = process_info
 
+        # Store process statistics in summary
         summary["processes"] = process_stats
 
     return summary
@@ -357,15 +417,18 @@ def generate_html_report(system_data: Dict, set_summaries: List[Dict], output_pa
             process_names = []
             average_cpu_data = []
             average_memory_data = []
+            average_write_bytes_data = []
+            average_read_bytes_data = []
             cpu_series_data = {}
+            memory_series_data = {}
 
             # Extract average system metrics from summary data
             avg_system_cpu = run_summary.get("avg_system_cpu", [])
             avg_system_memory = run_summary.get("avg_system_memory", {})
 
-            # Delete total from average system memory data
-            if "total" in avg_system_memory:
-                del avg_system_memory["total"]
+            # Select only available, free, used, active, inactive, wired
+            memory_keys = ["available", "free", "used", "active", "inactive", "wired"]
+            filtered_avg_system_memory = {key: avg_system_memory[key] for key in memory_keys if key in avg_system_memory}
 
             # Convert processes summary statistics into chart data
             # For each process info in run summary
@@ -373,20 +436,29 @@ def generate_html_report(system_data: Dict, set_summaries: List[Dict], output_pa
                 process_names.append(f"{process_info.get('name', None)} {pid}")
                 average_cpu_data.append(process_info.get("avg_cpu_percent", 0.0))
                 average_memory_data.append(process_info.get("avg_memory_percent", 0.0))
-                
+                average_write_bytes_data.append(process_info.get("avg_write_bytes", 0.0)/1024)
+                average_read_bytes_data.append(process_info.get("avg_read_bytes", 0.0)/1024)
+
                 # Transform process CPU usage over time into time series data for visualization
                 process_step_timeline = []
                 process_cpu_timeline = []
+                process_memory_timeline = []
                 for m in process_info.get("metrics", []):
                     if (step := m.get("step", None)) is not None:
                         process_step_timeline.append(step)
                     if (cpu := m.get("cpu_percent", None)) is not None:
                         process_cpu_timeline.append(cpu)
+                    if (mem := m.get("memory_percent", None)) is not None:
+                        process_memory_timeline.append(mem)
                 cpu_series_data[pid] = {
                     "x": process_step_timeline,
                     "y": process_cpu_timeline
                 }
-                
+                memory_series_data[pid] = {
+                    "x": process_step_timeline,
+                    "y": process_memory_timeline
+                }
+
                 # Create charts
                 run_summary.update({"charts": {
                     'system_cpu_chart': create_bar_chart(
@@ -398,10 +470,14 @@ def generate_html_report(system_data: Dict, set_summaries: List[Dict], output_pa
                         div_id=f'system-cpu-chart-{div_id_counter}',
                         color='#1f77b4'
                     ),
-                    'system_memory_chart': create_pie_chart(
-                        data=avg_system_memory,
+                    'system_memory_chart': create_bar_chart(
+                        labels=[f"{key}" for key in filtered_avg_system_memory.keys()],
+                        values=[val for key,val in filtered_avg_system_memory.items()],
                         title='Average System Memory Usage',
+                        x_title='Memory Block',
+                        y_title='Memory Usage (%)',
                         div_id=f'system-memory-chart-{div_id_counter}',
+                        color='#ff7f0e'
                     ),
                     'process_cpu_chart': create_bar_chart(
                         labels=process_names,
@@ -421,12 +497,37 @@ def generate_html_report(system_data: Dict, set_summaries: List[Dict], output_pa
                         div_id=f'process-memory-chart-{div_id_counter}',
                         color='#2ca02c'
                     ),
+                    'process_write_bytes_chart': create_bar_chart(
+                        labels=process_names,
+                        values=average_write_bytes_data,
+                        title='Average I/O Write Bytes by Process',
+                        x_title='Process (PID)',
+                        y_title='Write (MB)',
+                        div_id=f'process-write-bytes-chart-{div_id_counter}',
+                        color='#2ca02c'
+                    ),
+                    'process_read_bytes_chart': create_bar_chart(
+                        labels=process_names,
+                        values=average_read_bytes_data,
+                        title='Average I/O Read Bytes by Process',
+                        x_title='Process (PID)',
+                        y_title='Read (MB)',
+                        div_id=f'process-read-bytes-chart-{div_id_counter}',
+                        color='#2ca02c'
+                    ),
                     'process_timeline_chart': create_multi_series_line_chart(
                         series_data=cpu_series_data,
                         title='Process CPU Usage Timeline',
                         x_title='Timestamp',
                         y_title='CPU Usage (%)',
                         div_id=f'process-timeline-chart-{div_id_counter}'
+                    ),
+                    'process_memory_timeline_chart': create_multi_series_line_chart(
+                        series_data=memory_series_data,
+                        title='Process Memory Usage Timeline',
+                        x_title='Timestamp',
+                        y_title='Memory Usage (%)',
+                        div_id=f'process-memory-timeline-chart-{div_id_counter}'
                     )}
                 })
 
@@ -506,6 +607,12 @@ if __name__ == "__main__":
             runs_len = len(set_summary["runs"])
             set_summary["total"] = runs_len
             set_summary["success"] = (sum(1 for run in set_summary["runs"] if run["success"]) / runs_len) if runs_len > 0 else 0
+
+            run_time_list = [run["run_time"] for run in set_summary["runs"] if "run_time" in run]
+            avg_run_time = statistics.mean(run_time_list) if run_time_list else 0
+            stdev_run_time = statistics.stdev(run_time_list) if len(run_time_list) > 1 else 0
+            set_summary["avg_run_time"] = avg_run_time
+            set_summary["stdev_run_time"] = stdev_run_time
             set_summaries.append(set_summary)
 
     generate_html_report(system_data, set_summaries, output_path)

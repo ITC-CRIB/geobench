@@ -5,6 +5,7 @@ import json
 import os
 import re
 import shutil
+import statistics
 import time
 import yaml
 
@@ -373,12 +374,21 @@ class Scenario:
 
                 # TODO: Generate summary of the set runs.
                 total_runs = len(run_summaries)
+                
                 success_rate = (sum(1 for run in run_summaries if run["success"]) / total_runs) if total_runs > 0 else 0
+
+                # Calculate average and standard deviation of execution time for all runs in a set
+                run_time_list = [run["run_time"] for run in run_summaries if "run_time" in run]
+                avg_run_time = statistics.mean(run_time_list) if run_time_list else 0
+                stdev_run_time = statistics.stdev(run_time_list) if len(run_time_list) > 1 else 0
+
                 set_summary = {
                     "set": set_id,
                     "arguments": args,
                     "total": total_runs,
                     "success": success_rate,
+                    "avg_run_time": avg_run_time,
+                    "stdev_run_time": stdev_run_time,
                     "runs": run_summaries
                 }
                 # Append set summary to the list for generating report
