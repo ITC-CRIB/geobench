@@ -563,9 +563,30 @@ def generate_html_report(system_data: Dict, set_summaries: List[Dict], output_pa
     }
     
     # Load and render template
-    template_dir = os.path.join(os.path.dirname(__file__), 'templates')
-    env = Environment(loader=FileSystemLoader(template_dir))
-    template = env.get_template('report_template.html')
+    try:
+        # For Python 3.9+, use importlib.resources
+        from importlib import resources
+        try:
+            template_files = resources.files('geobench.templates')
+            template_content = (template_files / 'report_template.html').read_text(encoding='utf-8')
+        except AttributeError:
+            # For Python 3.7-3.8, use importlib_resources backport approach
+            with resources.open_text('geobench.templates', 'report_template.html') as f:
+                template_content = f.read()
+        env = Environment()
+        template = env.from_string(template_content)
+    except (ImportError, ModuleNotFoundError):
+        # Fallback for environments where importlib.resources might not work
+        try:
+            import pkg_resources
+            template_content = pkg_resources.resource_string('geobench', 'templates/report_template.html').decode('utf-8')
+            env = Environment()
+            template = env.from_string(template_content)
+        except:
+            # Final fallback to file system (for development)
+            template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+            env = Environment(loader=FileSystemLoader(template_dir))
+            template = env.get_template('report_template.html')
     
     html_content = template.render(context)
     

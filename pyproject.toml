@@ -49,7 +49,10 @@ Changelog = "https://github.com/ITC-CRIB/geobench/commits"
 geobench = "geobench.cli:main"
 
 [tool.hatch.build]
-include = ["src/geobench/**/*"]
+include = [
+    "src/geobench/**/*.py",
+    "src/geobench/templates/**/*",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/geobench"]
