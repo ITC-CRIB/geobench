@@ -70,6 +70,25 @@ def calculate_run_summary(run_result: dict) -> dict:
         overall_memory_usage = used_memory_usage / total_memory_usage * 100 if total_memory_usage > 0 else 0.0
         summary["avg_system_memory_overall"] = overall_memory_usage
 
+    # Calculate average system disk and net
+    system_disk_bytes_read_list = []
+    system_disk_bytes_write_list = []
+    system_net_bytes_sent_list = []
+    system_net_bytes_recv_list = []
+    for system_data in run_result.get('system', []):
+        system_disk_bytes_read_list.append(system_data.get('disk_bytes_read', 0))
+        system_disk_bytes_write_list.append(system_data.get('disk_bytes_write', 0))
+        system_net_bytes_sent_list.append(system_data.get('net_bytes_sent', 0))
+        system_net_bytes_recv_list.append(system_data.get('net_bytes_recv', 0))
+    summary['avg_disk_bytes'] = {
+        'read': statistics.mean(system_disk_bytes_read_list) if system_disk_bytes_read_list else 0.0,
+        'write': statistics.mean(system_disk_bytes_write_list) if system_disk_bytes_write_list else 0.0
+    }
+    summary['avg_net_bytes'] = {
+        'sent': statistics.mean(system_net_bytes_sent_list) if system_net_bytes_sent_list else 0.0,
+        'recv': statistics.mean(system_net_bytes_recv_list) if system_net_bytes_recv_list else 0.0
+    }
+
     # Calculate running time of a single run
     if "start_time" in run_result and "end_time" in run_result:
         summary["run_time"] = run_result["end_time"] - run_result["start_time"]
@@ -425,6 +444,8 @@ def generate_html_report(system_data: Dict, set_summaries: List[Dict], output_pa
             # Extract average system metrics from summary data
             avg_system_cpu = run_summary.get("avg_system_cpu", [])
             avg_system_memory = run_summary.get("avg_system_memory", {})
+            avg_system_disk = run_summary.get("avg_disk_bytes", {})
+            avg_system_net = run_summary.get("avg_net_bytes", {})
 
             # Select only available, free, used, active, inactive, wired
             memory_keys = ["available", "free", "used", "active", "inactive", "wired"]
@@ -478,6 +499,24 @@ def generate_html_report(system_data: Dict, set_summaries: List[Dict], output_pa
                         y_title='Memory Usage (%)',
                         div_id=f'system-memory-chart-{div_id_counter}',
                         color='#ff7f0e'
+                    ),
+                    'system_disk_activity_chart': create_bar_chart(
+                        labels=[f"{key}" for key in avg_system_disk.keys()],
+                        values=[val/1024 for key, val in avg_system_disk.items()],
+                        title='Average System Disk Activity',
+                        x_title='Disk Activity',
+                        y_title='Disk Usage (MB)',
+                        div_id=f'system-disk-chart-{div_id_counter}',
+                        color='#1f77b4'
+                    ),
+                    'system_net_activity_chart': create_bar_chart(
+                        labels=[f"{key}" for key in avg_system_net.keys()],
+                        values=[val/1024 for key, val in avg_system_net.items()],
+                        title='Average System Network Activity',
+                        x_title='Net Activity',
+                        y_title='Net Traffic (MB)',
+                        div_id=f'system-net-chart-{div_id_counter}',
+                        color='#1f77b4'
                     ),
                     'process_cpu_chart': create_bar_chart(
                         labels=process_names,

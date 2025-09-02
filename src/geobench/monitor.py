@@ -220,12 +220,37 @@ def monitor_process(process, interval: float=1.0):
         time.sleep(interval)
 
         # Get system metrics
-        system_metrics.append({
+        sys_metric = {
             'step': step,
             'timestamp': time.time(),
             'cpu_percent': psutil.cpu_percent(percpu=True),
             'memory_usage': psutil.virtual_memory()._asdict(),
+        }
+        try:
+            net_io_counters = psutil.net_io_counters()
+            sys_net_bytes_sent = net_io_counters.bytes_sent
+            sys_net_bytes_recv = net_io_counters.bytes_recv
+        except (psutil.AccessDenied, AttributeError):
+            sys_net_bytes_sent = 0
+            sys_net_bytes_recv = 0
+        
+        try:
+            disk_io_counters = psutil.net_io_counters()
+            sys_disk_bytes_read = disk_io_counters.read_bytes
+            sys_disk_bytes_write = disk_io_counters.write_bytes
+        except (psutil.AccessDenied, AttributeError):
+            sys_disk_bytes_read = 0
+            sys_disk_bytes_write = 0
+
+        # Update metrics
+        sys_metric.update({
+            'net_bytes_sent': sys_net_bytes_sent,
+            'net_bytes_recv': sys_net_bytes_recv,
+            'disk_bytes_read': sys_disk_bytes_read,
+            'disk_bytes_write': sys_disk_bytes_write
         })
+
+        system_metrics.append(sys_metric)
 
         # Get process metrics
         for p in processes:

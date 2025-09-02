@@ -776,7 +776,7 @@
             {% if run.charts %}
             <div class="chart-section" style="margin-top: 20px;">
                 <div class="chart-header">
-                    <h3>Resource Utilizations</h3>
+                    <h3>System-wide Resource Utilizations</h3>
                 </div>
                 <div class="chart-content">
                     <div class="chart-grid">
@@ -788,6 +788,19 @@
                         </div>
                     </div>
 
+                    <div class="chart-grid">
+                        <div>
+                            {{ run.charts.system_disk_activity_chart|safe }}
+                        </div>
+                        <div>
+                            {{ run.charts.system_net_activity_chart|safe }}
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-header">
+                    <h3>Process Resource Utilizations</h3>
+                </div>
+                <div class="chart-content">
                     <div class="chart-grid">
                         <div>
                             {{ run.charts.process_cpu_chart|safe }}
