@@ -72,7 +72,7 @@ class JupyterBenchmark:
             os.makedirs(self.outdir)
         
         self.result = {
-            'name': name,
+            'run': name,
             'start_time': None,
             'end_time': None,
             'system': None,
@@ -227,7 +227,7 @@ class JupyterBenchmark:
         
         # Create run data structure
         self._current_run = {
-            'name': run_name,
+            'run': run_name,
             'directory': run_dir,
             'start_time': time.time(),
             'success': False,
@@ -379,11 +379,22 @@ class JupyterBenchmark:
             set_id = i + 1
             run_summaries = [calculate_run_summary(run)]
             
+            # Calculate statistics for the set
+            total_runs = len(run_summaries)
+            success_rate = (sum(1 for run_summary in run_summaries if run_summary["success"]) / total_runs) if total_runs > 0 else 0
+            
+            # Calculate average and standard deviation of execution time for all runs in a set
+            run_time_list = [run_summary["run_time"] for run_summary in run_summaries if "run_time" in run_summary]
+            avg_run_time = statistics.mean(run_time_list) if run_time_list else 0
+            stdev_run_time = statistics.stdev(run_time_list) if len(run_time_list) > 1 else 0
+            
             set_summary = {
                 "set": set_id,
                 "arguments": run.get('arguments', {}),
-                "total": 1,
-                "success": 1.0 if run.get('success', False) else 0.0,
+                "total": total_runs,
+                "success": success_rate,
+                "avg_run_time": avg_run_time,
+                "stdev_run_time": stdev_run_time,
                 "runs": run_summaries
             }
             set_summaries.append(set_summary)
