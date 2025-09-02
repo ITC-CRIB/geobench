@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 
-class JupyterBenchmark:
+class Geobench:
     """Class for benchmarking code execution in Jupyter notebooks."""
     
     def __init__(
@@ -150,24 +150,60 @@ class JupyterBenchmark:
             time.sleep(interval)
 
             # Get system metrics
-            system_metrics.append({
+            sys_metric = {
                 'step': step,
                 'timestamp': time.time(),
                 'cpu_percent': psutil.cpu_percent(percpu=True),
                 'memory_usage': psutil.virtual_memory()._asdict(),
+            }
+            try:
+                net_io_counters = psutil.net_io_counters()
+                sys_net_bytes_sent = net_io_counters.bytes_sent
+                sys_net_bytes_recv = net_io_counters.bytes_recv
+            except (psutil.AccessDenied, AttributeError):
+                sys_net_bytes_sent = 0
+                sys_net_bytes_recv = 0
+            
+            try:
+                disk_io_counters = psutil.disk_io_counters()
+                sys_disk_bytes_read = disk_io_counters.read_bytes
+                sys_disk_bytes_write = disk_io_counters.write_bytes
+            except (psutil.AccessDenied, AttributeError):
+                sys_disk_bytes_read = 0
+                sys_disk_bytes_write = 0
+
+            # Update metrics
+            sys_metric.update({
+                'net_bytes_sent': sys_net_bytes_sent,
+                'net_bytes_recv': sys_net_bytes_recv,
+                'disk_bytes_read': sys_disk_bytes_read,
+                'disk_bytes_write': sys_disk_bytes_write
             })
+
+            system_metrics.append(sys_metric)
 
             # Get process metrics
             for p in processes:
                 try:
                     with p.oneshot():
-                        process_metrics[p.pid]['metrics'].append({
+                        try:
+                            io_counters = p.io_counters()
+                            read_bytes = io_counters.read_bytes
+                            write_bytes = io_counters.write_bytes
+                        except (psutil.AccessDenied, AttributeError):
+                            read_bytes = 0
+                            write_bytes = 0
+                        collected_metric = {
                             'step': step,
                             'timestamp': time.time(),
                             'cpu_percent': p.cpu_percent(),
                             'memory_percent': p.memory_percent(),
                             'num_threads': p.num_threads(),
-                        })
+                            'read_bytes': read_bytes,
+                            'write_bytes': write_bytes,
+                        }
+
+                        process_metrics[p.pid]['metrics'].append(collected_metric)
 
                 except psutil.NoSuchProcess:
                     pass
@@ -259,7 +295,7 @@ class JupyterBenchmark:
         
         return self
     
-    def finish(self, success: bool=True):
+    def stop(self, success: bool=True):
         """Finish benchmarking.
         
         Args:
@@ -359,7 +395,7 @@ class JupyterBenchmark:
             success = False
         
         # Finish benchmarking (this will stop the monitoring thread)
-        self.finish(success)
+        self.stop(success)
 
         self.generate_report()
         
@@ -407,7 +443,7 @@ class JupyterBenchmark:
         return report_path
 
 # Create convenient decorator for benchmarking
-def benchmark(name: str=None, **kwargs):
+def geobench(name: str=None, **kwargs):
     """Decorator for benchmarking a function.
     
     Args:
@@ -420,7 +456,7 @@ def benchmark(name: str=None, **kwargs):
     def decorator(func):
         def wrapper(*args, **kwargs_call):
             benchmark_name = name or func.__name__
-            bench = JupyterBenchmark(benchmark_name, **kwargs)
+            bench = Geobench(benchmark_name, **kwargs)
             return bench.benchmark(func, *args, **kwargs_call)
         return wrapper
     return decorator

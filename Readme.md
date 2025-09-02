@@ -80,13 +80,13 @@ Feel free to contribute to the development of GeoBench by submitting issues or p
 
 GeoBench now supports benchmarking directly within Jupyter notebooks. There are three ways to use this functionality:
 
-### 1. Using the JupyterBenchmark Class
+### 1. Using the Geobench Class
 
 ```python
-from geobench.jupyter import JupyterBenchmark
+from geobench import Geobench
 
 # Create a benchmark instance
-bench = JupyterBenchmark(
+bench = Geobench(
     name="my-benchmark",
     outdir="results",
     run_monitor=2.0,
@@ -100,18 +100,18 @@ bench.start("my-function")
 result = my_function()
 
 # Finish benchmarking
-bench.finish(True)  # Pass True for success, False for failure
+bench.stop(True)  # Pass True for success, False for failure
 
 # Generate HTML report
 bench.generate_report()
 ```
 
-### 2. Using the Benchmark Decorator
+### 2. Using the `@geobench` Decorator
 
 ```python
-from geobench.jupyter import benchmark
+from geobench import geobench
 
-@benchmark(name="my-function-benchmark", outdir="results", clean=True)
+@geobench(name="my-function-benchmark", outdir="results", clean=True)
 def my_function():
     # Your code here
     return result
