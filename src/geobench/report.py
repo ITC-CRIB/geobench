@@ -154,26 +154,8 @@ def calculate_run_summary(run_result: dict) -> dict:
                     )
                     if len(memory_timeline) > 1
                     else 0.0,
-                    "avg_read_bytes": statistics.mean(
-                        io_read_bytes_timeline
-                    )
-                    if io_read_bytes_timeline
-                    else 0.0,
-                    "stdev_read_bytes": statistics.stdev(
-                        io_read_bytes_timeline
-                    )
-                    if len(io_read_bytes_timeline) > 1
-                    else 0.0,
-                    "avg_write_bytes": statistics.mean(
-                        io_write_bytes_timeline
-                    )
-                    if io_write_bytes_timeline
-                    else 0.0,
-                    "stdev_write_bytes": statistics.stdev(
-                        io_write_bytes_timeline
-                    )
-                    if len(io_write_bytes_timeline) > 1
-                    else 0.0,
+                    "avg_read_bytes": io_read_bytes_timeline[-1] - io_read_bytes_timeline[0] if len(io_read_bytes_timeline) > 1 else 0.0,
+                    "avg_write_bytes": io_write_bytes_timeline[-1] - io_write_bytes_timeline[0] if len(io_write_bytes_timeline) > 1 else 0.0,
                     "max_num_threads": max(
                         thread_timeline
                     )
