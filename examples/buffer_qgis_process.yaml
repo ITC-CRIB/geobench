@@ -6,7 +6,7 @@ inputs:
   INPUT: data/enschede/point.shp
 outputs:
   OUTPUT: output.shp
-parameters:
+arguments:
   distance_units: meters
   area_units: m2
   ellipsoid: EPSG:7030
