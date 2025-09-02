@@ -31,7 +31,7 @@ dependencies = [
     "psutil",
     "python-dotenv",
     "pyyaml",
-    "plotly",
+    "plotly[express]",
 ]
 keywords = [
     "geospatial analysis",

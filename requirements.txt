@@ -2,4 +2,4 @@ jinja2
 psutil
 python-dotenv
 pyyaml
-plotly
+plotly[express]
