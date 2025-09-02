@@ -3,5 +3,3 @@ psutil
 python-dotenv
 pyyaml
 plotly
-numpy
-ipykernel

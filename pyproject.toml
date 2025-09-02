@@ -32,8 +32,6 @@ dependencies = [
     "python-dotenv",
     "pyyaml",
     "plotly",
-    "numpy",
-    "ipykernel"
 ]
 keywords = [
     "geospatial analysis",
