@@ -180,12 +180,13 @@ def monitor_system(duration: float=10.0, interval: float=1.0):
     }
 
 
-def monitor_process(process, interval: float=1.0):
+def monitor_process(process, interval: float=1.0, stop_event=None) -> dict:
     """Monitors process and system metrics while process is running.
 
     Args:
         process: Process to be monitored.
         interval (float): Interval between each sample (s) (default = 1.0).
+        stop_event (threading.Event, optional): Event to signal monitoring to stop.
     """
     step = 0
     system_metrics = []
@@ -199,9 +200,15 @@ def monitor_process(process, interval: float=1.0):
     while True:
         step += 1
 
-        # Stop if process has terminated
-        if process.poll() is not None:
-            break
+        # Stop if process has terminated or stop event is set
+        if type(process) is psutil.Process:
+            if not process.is_running():
+                break
+            if stop_event and stop_event.is_set():
+                break
+        else:
+            if process.poll() is not None:
+                break
 
         # Get related processes
         processes = [process]

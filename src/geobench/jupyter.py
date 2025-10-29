@@ -11,6 +11,7 @@ from typing import Dict, Any, Optional, Callable
 from .monitor import get_system_info, monitor_system
 from .cache import clear_cache
 from .report import calculate_run_summary, generate_html_report
+from .monitor import monitor_process
 
 import logging
 logger = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ class Geobench:
         self.system_wait = system_wait
         self.system_monitor = system_monitor
 
-        self.is_monitoring = False
+        self._stop_event = threading.Event()  # Replace is_monitoring
         
         cwd = os.getcwd()
         
@@ -110,113 +111,10 @@ class Geobench:
             'metrics': [],
         }
 
-    def monitor_process(self, process, interval: float=1.0):
-        """Monitors process and system metrics while process is running.
-
-        Args:
-            process: Process to be monitored.
-            interval (float): Interval between each sample (s) (default = 1.0).
-        """
-        step = 0
-        system_metrics = []
-        process_metrics = {process.pid: self.get_process_info(process)}
-
-        # Initialize metrics
-        psutil.cpu_percent()
-        process.cpu_percent()
-
-        # Monitoring loop
-        while True:
-            step += 1
-
-            # Stop if process has terminated
-            if not process.is_running() or not self.is_monitoring:
-                break
-
-            # Get related processes
-            processes = [process]
-            for child in process.children(recursive=True):
-                try:
-                    if child.pid not in process_metrics:
-                        process_metrics[child.pid] = self.get_process_info(child)
-
-                    processes.append(child)
-                    child.cpu_percent()
-
-                except psutil.NoSuchProcess:
-                    pass
-
-            # Sleep
-            time.sleep(interval)
-
-            # Get system metrics
-            sys_metric = {
-                'step': step,
-                'timestamp': time.time(),
-                'cpu_percent': psutil.cpu_percent(percpu=True),
-                'memory_usage': psutil.virtual_memory()._asdict(),
-            }
-            try:
-                net_io_counters = psutil.net_io_counters()
-                sys_net_bytes_sent = net_io_counters.bytes_sent
-                sys_net_bytes_recv = net_io_counters.bytes_recv
-            except (psutil.AccessDenied, AttributeError):
-                sys_net_bytes_sent = 0
-                sys_net_bytes_recv = 0
-            
-            try:
-                disk_io_counters = psutil.disk_io_counters()
-                sys_disk_bytes_read = disk_io_counters.read_bytes
-                sys_disk_bytes_write = disk_io_counters.write_bytes
-            except (psutil.AccessDenied, AttributeError):
-                sys_disk_bytes_read = 0
-                sys_disk_bytes_write = 0
-
-            # Update metrics
-            sys_metric.update({
-                'net_bytes_sent': sys_net_bytes_sent,
-                'net_bytes_recv': sys_net_bytes_recv,
-                'disk_bytes_read': sys_disk_bytes_read,
-                'disk_bytes_write': sys_disk_bytes_write
-            })
-
-            system_metrics.append(sys_metric)
-
-            # Get process metrics
-            for p in processes:
-                try:
-                    with p.oneshot():
-                        try:
-                            io_counters = p.io_counters()
-                            read_bytes = io_counters.read_bytes
-                            write_bytes = io_counters.write_bytes
-                        except (psutil.AccessDenied, AttributeError):
-                            read_bytes = 0
-                            write_bytes = 0
-                        collected_metric = {
-                            'step': step,
-                            'timestamp': time.time(),
-                            'cpu_percent': p.cpu_percent(),
-                            'memory_percent': p.memory_percent(),
-                            'num_threads': p.num_threads(),
-                            'read_bytes': read_bytes,
-                            'write_bytes': write_bytes,
-                        }
-
-                        process_metrics[p.pid]['metrics'].append(collected_metric)
-
-                except psutil.NoSuchProcess:
-                    pass
-
-        out = {
-            'system': system_metrics,
-            'processes': process_metrics,
-        }
-
-        return out
-
     def _monitor_while_running(self, process):
-        out = self.monitor_process(process)
+        out = monitor_process(
+            process=process, stop_event=self._stop_event  # Pass the threading.Event
+        )
         self._current_run.update(out)
 
     def start(self, run_name: str=None):
@@ -228,7 +126,7 @@ class Geobench:
         Returns:
             self: For method chaining.
         """
-        self.is_monitoring = True
+        self._stop_event.clear()  # Reset the event
         if self._current_run is not None:
             logger.warning("Already in a benchmark run. Call finish() first.")
             return self
@@ -308,7 +206,7 @@ class Geobench:
             logger.warning("No benchmark run in progress. Call start() first.")
             return {}
         
-        self.is_monitoring = False
+        self._stop_event.set()  # Signal to stop
         self._monitoring_thread.join(timeout=2.0)
         print("Process monitoring stopped.")
 
