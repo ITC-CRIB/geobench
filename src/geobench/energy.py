@@ -9,23 +9,23 @@ from typing import Optional, Dict, List
 logger = logging.getLogger(__name__)
 
 
-class RAPLReader:
+class EnergyReader:
     """Reader for RAPL energy metrics."""
     
     def __init__(self):
         """Initialize RAPL reader."""
         self.available = False
         self.domains = {}
-        self._init_rapl()
+        self._init_energy_reading()
     
-    def _init_rapl(self):
+    def _init_energy_reading(self):
         """Initialize RAPL interface based on the operating system."""
         system = platform.system()
         
         if system == 'Linux':
             self._init_linux_rapl()
         elif system == 'Darwin':  # macOS
-            self._init_macos_rapl()
+            self._init_macos_powermetrics()
         else:
             logger.warning(f"RAPL is not supported on {system}")
     
@@ -86,7 +86,7 @@ class RAPLReader:
         else:
             logger.warning("No RAPL domains found")
     
-    def _init_macos_rapl(self):
+    def _init_macos_powermetrics(self):
         """Initialize RAPL for macOS systems.
         
         Note: macOS requires special tools like powermetrics (requires sudo)
@@ -161,16 +161,16 @@ class RAPLReader:
         return energy_consumed
 
 
-def get_rapl_reader() -> RAPLReader:
+def get_rapl_reader() -> EnergyReader:
     """Get a RAPL reader instance.
     
     Returns:
         RAPLReader instance
     """
-    return RAPLReader()
+    return EnergyReader()
 
 
-def collect_energy_metrics(rapl_reader: RAPLReader) -> Optional[Dict]:
+def collect_energy_metrics(rapl_reader: EnergyReader) -> Optional[Dict]:
     """Collect current energy metrics from RAPL.
     
     Args:

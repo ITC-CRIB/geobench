@@ -3,6 +3,6 @@ GeoBench - A benchmarking tool for geospatial operations.
 """
 
 from .jupyter import Geobench, geobench
-from .energy import get_rapl_reader, RAPLReader, collect_energy_metrics
+from .energy import get_rapl_reader, EnergyReader, collect_energy_metrics
 
-__all__ = ['Geobench', 'geobench', 'get_rapl_reader', 'RAPLReader', 'collect_energy_metrics']
+__all__ = ['Geobench', 'geobench', 'get_rapl_reader', 'EnergyReader', 'collect_energy_metrics']
