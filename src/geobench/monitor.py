@@ -3,7 +3,7 @@ import psutil
 import statistics
 import time
 
-from .energy import get_rapl_reader, collect_energy_metrics
+from .energy import get_rapl_reader
 
 import logging
 logger = logging.getLogger(__name__)
@@ -268,18 +268,13 @@ def monitor_process(process, interval: float=1.0, stop_event=None) -> dict:
             'disk_bytes_write': sys_disk_bytes_write
         })
 
-        system_metrics.append(sys_metric)
-
         # Collect RAPL energy metrics
         if rapl_reader.available:
             current_energy = rapl_reader.read_energy()
             if current_energy:
-                energy_metric = {
-                    'step': step,
-                    'timestamp': time.time(),
-                    'domains': current_energy,
-                }
-                energy_metrics.append(energy_metric)
+                sys_metric.update(current_energy)
+        
+        system_metrics.append(sys_metric)
 
         # Get process metrics
         for p in processes:
@@ -307,20 +302,9 @@ def monitor_process(process, interval: float=1.0, stop_event=None) -> dict:
             except psutil.NoSuchProcess:
                 pass
 
-    # Calculate total energy consumption if RAPL was available
-    energy_summary = None
-    if rapl_reader.available and initial_energy and energy_metrics:
-        final_energy = energy_metrics[-1]['domains']
-        energy_summary = rapl_reader.calculate_energy_diff(initial_energy, final_energy)
-
     out = {
         'system': system_metrics,
-        'processes': process_metrics,
-        'energy': {
-            'available': rapl_reader.available,
-            'metrics': energy_metrics,
-            'summary': energy_summary,
-        }
+        'processes': process_metrics
     }
 
     return out

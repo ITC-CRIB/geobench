@@ -7,7 +7,7 @@ import glob
 from typing import Optional, Dict, List
 
 logger = logging.getLogger(__name__)
-
+logger.setLevel(logging.DEBUG)
 
 class EnergyReader:
     """Reader for RAPL energy metrics."""
@@ -37,11 +37,13 @@ class EnergyReader:
             logger.warning("RAPL interface not found at /sys/class/powercap/intel-rapl")
             return
         
-        # Find all RAPL domains
-        for domain_path in glob.glob(f'{rapl_base}/intel-rapl:*'):
-            if ':' not in os.path.basename(domain_path):
-                continue
-                
+        # Find all RAPL domains (including subdomains like DRAM, CPU cores)
+        # Pattern matches both intel-rapl:X and intel-rapl:X:Y
+        all_paths = []
+        all_paths.extend(glob.glob(f'{rapl_base}/intel-rapl:*'))
+        all_paths.extend(glob.glob(f'{rapl_base}/intel-rapl:*/intel-rapl:*'))
+        
+        for domain_path in all_paths:
             try:
                 # Read domain name
                 name_file = os.path.join(domain_path, 'name')
@@ -113,52 +115,13 @@ class EnergyReader:
             try:
                 with open(domain_info['energy_file'], 'r') as f:
                     energy_uj = int(f.read().strip())
-                    energy_readings[domain_id] = {
-                        'name': domain_info['name'],
-                        'energy_uj': energy_uj,
-                        'max_energy_uj': domain_info['max_energy'],
-                    }
+                    rapl_domain_name = domain_info['name']
+                    energy_readings[rapl_domain_name] = energy_uj
             except (IOError, ValueError) as e:
-                logger.debug(f"Failed to read energy from {domain_id}: {e}")
+                print(f"Failed to read energy from {domain_id}: {e}")
                 continue
         
-        return energy_readings if energy_readings else None
-    
-    def calculate_energy_diff(self, 
-                             start_reading: Dict[str, int], 
-                             end_reading: Dict[str, int]) -> Dict[str, float]:
-        """Calculate energy consumption between two readings.
-        
-        Args:
-            start_reading: Initial energy reading
-            end_reading: Final energy reading
-        
-        Returns:
-            Dictionary mapping domain names to energy consumed in Joules,
-            handling counter wraparound if necessary.
-        """
-        energy_consumed = {}
-        
-        for domain_id in start_reading.keys():
-            if domain_id not in end_reading:
-                continue
-            
-            start_uj = start_reading[domain_id]['energy_uj']
-            end_uj = end_reading[domain_id]['energy_uj']
-            max_uj = start_reading[domain_id]['max_energy_uj']
-            name = start_reading[domain_id]['name']
-            
-            # Handle counter wraparound
-            if end_uj < start_uj and max_uj is not None:
-                # Counter wrapped around
-                diff_uj = (max_uj - start_uj) + end_uj
-            else:
-                diff_uj = end_uj - start_uj
-            
-            # Convert microjoules to joules
-            energy_consumed[name] = diff_uj / 1_000_000.0
-        
-        return energy_consumed
+        return {"energy": energy_readings} if energy_readings else None
 
 
 def get_rapl_reader() -> EnergyReader:
@@ -168,29 +131,3 @@ def get_rapl_reader() -> EnergyReader:
         RAPLReader instance
     """
     return EnergyReader()
-
-
-def collect_energy_metrics(rapl_reader: EnergyReader) -> Optional[Dict]:
-    """Collect current energy metrics from RAPL.
-    
-    Args:
-        rapl_reader: Initialized RAPLReader instance
-    
-    Returns:
-        Dictionary containing energy readings, or None if not available
-    """
-    if not rapl_reader or not rapl_reader.available:
-        return None
-    
-    readings = rapl_reader.read_energy()
-    
-    if not readings:
-        return None
-    
-    # Format for storage
-    metrics = {
-        'timestamp': None,  # Will be set by caller
-        'domains': readings,
-    }
-    
-    return metrics
