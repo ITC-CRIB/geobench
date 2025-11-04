@@ -3,7 +3,7 @@ import psutil
 import statistics
 import time
 
-from .energy import get_rapl_reader
+from .energy import get_energy_reader
 
 import logging
 logger = logging.getLogger(__name__)
@@ -194,14 +194,14 @@ def monitor_process(process, interval: float=1.0, stop_event=None) -> dict:
     process_metrics = {process.pid: get_process_info(process)}
     energy_metrics = []
 
-    # Initialize RAPL energy monitoring
-    rapl_reader = get_rapl_reader()
+    # Initialize energy monitoring
+    energy_reader = get_energy_reader()
     initial_energy = None
-    if rapl_reader.available:
-        initial_energy = rapl_reader.read_energy()
-        logger.info("RAPL energy monitoring enabled")
+    if energy_reader.available:
+        initial_energy = energy_reader.read_energy()
+        logger.info("Energy monitoring enabled")
     else:
-        logger.info("RAPL energy monitoring not available")
+        logger.info("Energy monitoring not available")
 
     # Initialize metrics
     psutil.cpu_percent()
@@ -268,9 +268,9 @@ def monitor_process(process, interval: float=1.0, stop_event=None) -> dict:
             'disk_bytes_write': sys_disk_bytes_write
         })
 
-        # Collect RAPL energy metrics
-        if rapl_reader.available:
-            current_energy = rapl_reader.read_energy()
+        # Collect energy metrics
+        if energy_reader.available:
+            current_energy = energy_reader.read_energy()
             if current_energy:
                 sys_metric.update(current_energy)
         
