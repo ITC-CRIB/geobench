@@ -32,7 +32,7 @@ dependencies = [
     "python-dotenv",
     "pyyaml",
     "plotly[express]",
-    "aiohttp>=3.13.2",
+    "aiohttp",
 ]
 keywords = [
     "geospatial analysis",
