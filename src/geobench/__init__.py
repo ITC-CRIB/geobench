@@ -8,6 +8,7 @@ from .energy import (
     EnergyReader,
     RAPLReader,
     PowerMetricsReader,
+    HTTPAPIReader,
     DummyEnergyReader
 )
 
@@ -18,5 +19,6 @@ __all__ = [
     'EnergyReader',
     'RAPLReader',
     'PowerMetricsReader',
+    'HTTPAPIReader',
     'DummyEnergyReader'
 ]

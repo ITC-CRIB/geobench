@@ -1,0 +1,16 @@
+name: Count Primes Python with HTTP API Energy
+type: python
+command: count_primes.py
+arguments:
+    cores:
+    - 4
+    - 8
+    num:
+    - 1000000
+    - 2000000
+repeat: 2
+idle_time: 2
+# Energy monitoring via HTTP API
+# The URL can contain <hostname> which will be replaced with the actual hostname
+energy_api_url: "http://server_ip:port/device/<hostname>"
+energy_api_timeout: 5.0

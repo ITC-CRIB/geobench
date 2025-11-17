@@ -64,7 +64,14 @@ class Executor:
             )
             out['pid'] = process.pid
 
-            metrics = monitor_process(process)
+            # Prepare energy configuration
+            energy_config = {}
+            if self.scenario.energy_api_url:
+                energy_config['energy_api_url'] = self.scenario.energy_api_url
+            if self.scenario.energy_api_timeout:
+                energy_config['energy_api_timeout'] = self.scenario.energy_api_timeout
+
+            metrics = monitor_process(process, energy_config=energy_config)
 
             out.update(metrics)
 

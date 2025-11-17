@@ -181,27 +181,40 @@ def monitor_system(duration: float=10.0, interval: float=1.0):
     }
 
 
-def monitor_process(process, interval: float=1.0, stop_event=None) -> dict:
+def monitor_process(process, interval: float=1.0, stop_event=None, energy_config: dict=None) -> dict:
     """Monitors process and system metrics while process is running.
 
     Args:
         process: Process to be monitored.
         interval (float): Interval between each sample (s) (default = 1.0).
         stop_event (threading.Event, optional): Event to signal monitoring to stop.
+        energy_config (dict, optional): Configuration for energy monitoring.
+            Supported keys:
+            - energy_api_url: URL for HTTP API energy reader
+            - energy_api_timeout: Timeout for HTTP API requests in seconds
     """
     step = 0
     system_metrics = []
     process_metrics = {process.pid: get_process_info(process)}
     energy_metrics = []
 
-    # Initialize energy monitoring
-    energy_reader = get_energy_reader()
-    initial_energy = None
-    if energy_reader.available:
-        initial_energy = energy_reader.read_energy()
-        logger.info("Energy monitoring enabled")
-    else:
-        logger.info("Energy monitoring not available")
+    # Initialize energy monitoring - get list of readers (can be multiple)
+    energy_readers = get_energy_reader(energy_config)
+    initial_energy = {}
+    
+    # Initialize each reader
+    for reader in energy_readers:
+        if reader.available:
+            reader_key = f"{reader.reader_type}_{reader.__class__.__name__}"
+            initial = reader.read_energy()
+            if initial:
+                initial_energy[reader_key] = initial
+            logger.info(f"Energy monitoring enabled for {reader.__class__.__name__} ({reader.reader_type})")
+        else:
+            logger.info(f"Energy monitoring not available for {reader.__class__.__name__}")
+    
+    if not initial_energy:
+        logger.info("No energy monitoring available")
 
     # Initialize metrics
     psutil.cpu_percent()
@@ -268,11 +281,16 @@ def monitor_process(process, interval: float=1.0, stop_event=None) -> dict:
             'disk_bytes_write': sys_disk_bytes_write
         })
 
-        # Collect energy metrics
-        if energy_reader.available:
-            current_energy = energy_reader.read_energy()
-            if current_energy:
-                sys_metric.update(current_energy)
+        # Collect energy metrics from all available readers
+        for reader in energy_readers:
+            if reader.available:
+                current_energy = reader.read_energy()
+                if current_energy:
+                    # Prefix keys with reader type to distinguish between internal/external
+                    reader_key = f"{reader.reader_type}_{reader.__class__.__name__}"
+                    for metric_key, metric_value in current_energy.items():
+                        prefixed_key = f"{reader_key}_{metric_key}"
+                        sys_metric[prefixed_key] = metric_value
         
         system_metrics.append(sys_metric)
 
