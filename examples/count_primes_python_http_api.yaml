@@ -10,7 +10,16 @@ arguments:
     - 2000000
 repeat: 2
 idle_time: 2
-# Energy monitoring via HTTP API
-# The URL can contain <hostname> which will be replaced with the actual hostname
-energy_api_url: "http://server_ip:port/device/<hostname>"
-energy_api_timeout: 5.0
+data_sources:
+    - name: internal
+      interval: 1.0
+      metrics:
+      - type: psutils
+      - type: energy
+    - name: external
+      interval: 2.0
+      metrics:
+      - type: smart_plug
+        config:
+          api_url: "http://192.168.10.1:8181/device/optiplex-02"
+          timeout: 2.0

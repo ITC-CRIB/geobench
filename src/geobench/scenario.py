@@ -40,6 +40,8 @@ class Scenario:
         venv: str=None,
         energy_api_url: str=None,
         energy_api_timeout: float=5.0,
+        data_sources: list=None,
+        idle_time: float=None,
     ):
         """Initializes scenario object.
 
@@ -59,8 +61,10 @@ class Scenario:
             basedir (str): Base directory path (default = current working directory).
             outdir (str): Output directory path (default = generated from name)
             venv (str): Virtual environment path (optional).
-            energy_api_url (str): URL for HTTP API energy reader (optional).
-            energy_api_timeout (float): Timeout for HTTP API requests in seconds (default = 5.0).
+            energy_api_url (str): URL for HTTP API energy reader (optional, legacy).
+            energy_api_timeout (float): Timeout for HTTP API requests in seconds (default = 5.0, legacy).
+            data_sources (list): List of data source configurations for multi-threaded monitoring (optional).
+            idle_time (float): Idle time parameter (optional, for compatibility).
 
         Raises:
             ValueError: if invalid scenario type.
@@ -101,6 +105,8 @@ class Scenario:
         self.system_monitor = system_monitor or 0.0
         self.energy_api_url = energy_api_url
         self.energy_api_timeout = energy_api_timeout or 5.0
+        self.data_sources = data_sources
+        self.idle_time = idle_time
 
         cwd = os.getcwd()
 
