@@ -211,9 +211,9 @@ class RAPLReader(MetricsReader):
         
         result = {}
         if energy_readings:
-            result['energy'] = energy_readings
+            result['rapl_energy'] = energy_readings
         if power_readings:
-            result['power'] = power_readings
+            result['rapl_power'] = power_readings
             
         return result if result else None
 
@@ -427,7 +427,7 @@ class HTTPAPIReader(MetricsReader):
                     
                     # The API returns power in watts
                     if 'power' in data:
-                        return data
+                        return {"smart_plug_power": data}
                     else:
                         logger.warning(f"No 'power' field in API response: {data}")
                         return None

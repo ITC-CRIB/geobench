@@ -425,9 +425,9 @@ def monitor_process(process, interval: float=1.0, stop_event=None, energy_config
         for reader in energy_readers:
             if reader.available:
                 reader_key = f"{reader.reader_type}_{reader.__class__.__name__}"
-                initial = reader.read_energy()
+                initial = reader.read_metrics()
                 if initial:
-                    initial_energy[reader_key] = initial
+                    initial_energy.update(initial)
                 logger.info(f"Energy monitoring enabled for {reader.__class__.__name__} ({reader.reader_type})")
             else:
                 logger.info(f"Energy monitoring not available for {reader.__class__.__name__}")
@@ -503,13 +503,9 @@ def monitor_process(process, interval: float=1.0, stop_event=None, energy_config
             # Collect energy metrics from all available readers
             for reader in energy_readers:
                 if reader.available:
-                    current_energy = reader.read_energy()
+                    current_energy = reader.read_metrics()
                     if current_energy:
-                        # Prefix keys with reader type to distinguish between internal/external
-                        reader_key = f"{reader.reader_type}_{reader.__class__.__name__}"
-                        for metric_key, metric_value in current_energy.items():
-                            prefixed_key = f"{reader_key}_{metric_key}"
-                            sys_metric[prefixed_key] = metric_value
+                        sys_metric.update(current_energy)
             
             system_metrics.append(sys_metric)
 

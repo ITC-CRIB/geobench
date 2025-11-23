@@ -103,11 +103,12 @@ def calculate_run_summary(run_result: dict) -> dict:
 
     process_stats = {}
     # Calculate process statistics
-    if run_result["processes"]:
+    collected_process_data = run_result.get("processes", {})
+    if collected_process_data:
         # Calculate number of processes on a run
-        summary["num_processes"] = len(run_result["processes"])
+        summary["num_processes"] = len(collected_process_data)
         # For each process, calculate its metrics
-        for pid, process_info in run_result.get("processes", {}).items():
+        for pid, process_info in collected_process_data.items():
             if "metrics" in process_info:
                 process_metrics = process_info["metrics"]
 
