@@ -495,20 +495,6 @@ def get_energy_reader(config: Optional[Dict] = None) -> List[MetricsReader]:
     Returns:
         List[MetricsReader]: List of energy reader instances. Can contain multiple
                             readers (e.g., both external HTTP API and internal RAPL).
-    
-    Examples:
-        >>> readers = get_energy_reader()
-        >>> for reader in readers:
-        ...     if reader.available:
-        ...         energy = reader.read_metrics()
-        ...         print(f"Energy ({reader.reader_type}): {energy}")
-        
-        >>> # Using HTTP API with internal reader
-        >>> readers = get_energy_reader({'energy_api_url': 'http://localhost:8080/device/<hostname>'})
-        >>> for reader in readers:
-        ...     if reader.available:
-        ...         power = reader.read_metrics()
-        ...         print(f"Power ({reader.reader_type}): {power}")
     """
     config = config or {}
     system = platform.system()
@@ -517,14 +503,14 @@ def get_energy_reader(config: Optional[Dict] = None) -> List[MetricsReader]:
     readers = []
     
     # Try HTTP API for external power measurement (if configured)
-    # if 'energy_api_url' in config:
-    #     if HTTPAPIReader.is_available():
-    #         api_url = config['energy_api_url']
-    #         timeout = config.get('energy_api_timeout', 5.0)
-    #         logger.info(f"Adding HTTP API energy reader (external) with URL: {api_url}")
-    #         readers.append(HTTPAPIReader(api_url, timeout))
-    #     else:
-    #         logger.warning("HTTP API energy reader requested but aiohttp is not installed")
+    if 'energy_api_url' in config:
+        if HTTPAPIReader.is_available():
+            api_url = config['energy_api_url']
+            timeout = config.get('energy_api_timeout', 5.0)
+            logger.info(f"Adding HTTP API energy reader (external) with URL: {api_url}")
+            readers.append(HTTPAPIReader(api_url, timeout))
+        else:
+            logger.warning("HTTP API energy reader requested but aiohttp is not installed")
     
     # Try internal readers based on platform
     # Try RAPL (Linux)
