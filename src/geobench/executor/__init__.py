@@ -19,14 +19,12 @@ class Executor:
         self.scenario = scenario
         self.config = self.get_config()
 
-        if not self.config['executable']:
+        if not self.config["executable"]:
             raise ValueError("No executable found for the executor.")
-
 
     def get_config(self) -> dict:
         """Returns executor configuration."""
         raise NotImplementedError
-
 
     def get_arguments(self, command: str, args: dict) -> list:
         """Returns execution arguments for the specified command and arguments.
@@ -40,19 +38,18 @@ class Executor:
         """
         raise NotImplementedError
 
-
     def execute(self, args: list):
         """Executes executable with the specified arguments.
 
         Args:
             args (list): Arguments.
         """
-        command = [self.config['executable']] + args
+        command = [self.config["executable"]] + args
 
         out = {
-            'start_time': time.time(),
-            'finished': False,
-            'success': False,
+            "start_time": time.time(),
+            "finished": False,
+            "success": False,
         }
 
         try:
@@ -60,24 +57,26 @@ class Executor:
                 command,
                 shell=False,
                 cwd=self.scenario.workdir,
-                env=self.config.get('environment', {})
+                env=self.config.get("environment", {}),
             )
-            out['pid'] = process.pid
+            out["pid"] = process.pid
 
             metrics = monitor_process(process)
 
             out.update(metrics)
 
-            out['finished'] = True
-            out['success'] = (process.returncode == 0)
+            out["finished"] = True
+            out["success"] = process.returncode == 0
 
             if process.returncode:
-                print(f"Command '{' '.join(command)}' failed with exit code {process.returncode}")
+                print(
+                    f"Command '{' '.join(command)}' failed with exit code {process.returncode}"
+                )
 
         except Exception as err:
             print(f"Command '{' '.join(command)}' failed with error: {err}")
-            out['error'] = str(err)
+            out["error"] = str(err)
 
-        out['end_time'] = time.time()
+        out["end_time"] = time.time()
 
         return out

@@ -15,6 +15,7 @@ from .monitor import get_system_info, monitor_system
 from .report import calculate_run_summary, generate_html_report
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,18 +27,18 @@ class Scenario:
         type: str,
         name: str,
         command: str,
-        inputs: list | dict=None,
-        outputs: list | dict=None,
-        arguments: list | dict=None,
-        repeat: int=1,
-        run_wait: float=5.0,
-        run_monitor: float=5.0,
-        system_wait: float=5.0,
-        system_monitor: float=5.0,
-        workdir: str=None,
-        basedir: str=None,
-        outdir: str=None,
-        venv: str=None,
+        inputs: list | dict = None,
+        outputs: list | dict = None,
+        arguments: list | dict = None,
+        repeat: int = 1,
+        run_wait: float = 5.0,
+        run_monitor: float = 5.0,
+        system_wait: float = 5.0,
+        system_monitor: float = 5.0,
+        workdir: str = None,
+        basedir: str = None,
+        outdir: str = None,
+        venv: str = None,
     ):
         """Initializes scenario object.
 
@@ -66,7 +67,7 @@ class Scenario:
             ValueError: if invalid inputs.
             ValueError: if invalid outputs.
         """
-        if type not in ['qgis-process', 'qgis-python', 'python', 'shell']:
+        if type not in ["qgis-process", "qgis-python", "python", "shell"]:
             raise ValueError("Invalid scenario type.", type)
 
         if not name:
@@ -110,7 +111,9 @@ class Scenario:
             if not os.path.isdir(self.basedir):
                 raise ValueError("Invalid base directory.", basedir)
 
-        self.outdir = outdir or re.sub(r'-+', '-', re.sub(r'[^\w-]', '-', name.lower())).strip('-')
+        self.outdir = outdir or re.sub(
+            r"-+", "-", re.sub(r"[^\w-]", "-", name.lower())
+        ).strip("-")
         if not os.path.isabs(self.outdir):
             self.outdir = os.path.join(self.basedir, self.outdir)
 
@@ -138,8 +141,7 @@ class Scenario:
 
         args = args | (self.inputs if multi_input else {})
         args = {
-            key: val if isinstance(val, list) else [val]
-            for key, val in args.items()
+            key: val if isinstance(val, list) else [val] for key, val in args.items()
         }
 
         if args:
@@ -154,30 +156,29 @@ class Scenario:
             data = {}
 
             if multi_input:
-                data['inputs'] = [args[key] for key in self.inputs.keys()]
+                data["inputs"] = [args[key] for key in self.inputs.keys()]
             else:
-                data['inputs'] = self.inputs if isinstance(self.inputs, list) else [self.inputs]
+                data["inputs"] = (
+                    self.inputs if isinstance(self.inputs, list) else [self.inputs]
+                )
 
-            data['outputs'] = outputs
+            data["outputs"] = outputs
             if isinstance(self.outputs, dict):
                 args.update(self.outputs)
 
-            data['arguments'] = args
+            data["arguments"] = args
 
             self.sets.append(data)
 
-
     def _store(self, filename: str, content: dict):
         path = os.path.join(self.outdir, filename)
-        with open(path, 'w', encoding='utf-8') as file:
+        with open(path, "w", encoding="utf-8") as file:
             json.dump(content, file, ensure_ascii=False, indent=2)
 
-
     def _store_result(self, result: dict):
-        self._store('result.json', result)
+        self._store("result.json", result)
 
-
-    def benchmark(self, clean: bool=False) -> dict:
+    def benchmark(self, clean: bool = False) -> dict:
         """Performs benchmarking of the scenario.
 
         Args:
@@ -193,14 +194,16 @@ class Scenario:
 
             num_sets = len(self.sets)
             num_runs = num_sets * self.repeat
-            print("{} scenario {} with {} {}, {} {} in total.".format(
-                num_sets,
-                "sets" if num_sets > 1 else "set",
-                self.repeat,
-                "repeats" if self.repeat > 1 else "repeat",
-                num_runs,
-                "runs" if num_runs > 1 else "run",
-            ))
+            print(
+                "{} scenario {} with {} {}, {} {} in total.".format(
+                    num_sets,
+                    "sets" if num_sets > 1 else "set",
+                    self.repeat,
+                    "repeats" if self.repeat > 1 else "repeat",
+                    num_runs,
+                    "runs" if num_runs > 1 else "run",
+                )
+            )
 
             # Create executor
             print("Creating {} executor.".format(self.type))
@@ -214,7 +217,9 @@ class Scenario:
                         print("Output directory exists, aborting.")
                         return {}
                     else:
-                        logger.debug(f"Removing existing output directory {self.outdir}.")
+                        logger.debug(
+                            f"Removing existing output directory {self.outdir}."
+                        )
                         shutil.rmtree(self.outdir)
                 else:
                     print("Invalid output directory, aborting.")
@@ -223,7 +228,7 @@ class Scenario:
 
             # Store executor configuration
             print("Storing executor configuration.")
-            result['config'] = executor.config
+            result["config"] = executor.config
             self._store_result(result)
 
             # Perform system cleanup
@@ -238,13 +243,13 @@ class Scenario:
 
             # Store system information
             print("Storing system information.")
-            result['system'] = get_system_info()
+            result["system"] = get_system_info()
             self._store_result(result)
 
             # Perform baseline monitoring before the runs, if required
             if self.system_monitor:
                 print("Baseline monitoring for {} s.".format(self.system_monitor))
-                result['baseline'] = monitor_system(self.system_monitor)
+                result["baseline"] = monitor_system(self.system_monitor)
                 self._store_result(result)
 
             # Start execution loop
@@ -254,7 +259,6 @@ class Scenario:
             len_sets = len(str(num_sets))
             len_runs = len(str(self.repeat))
 
-            
             set_summaries = []
             # For each scenario set
             for i, data in enumerate(self.sets):
@@ -276,12 +280,12 @@ class Scenario:
                     abs_path = os.path.join(self.outdir, path)
                     os.makedirs(abs_path, exist_ok=True)
 
-                    result_path = os.path.join(abs_path, 'result.json')
+                    result_path = os.path.join(abs_path, "result.json")
 
                     out = {
-                        'set': set_id,
-                        'run': run_id,
-                        'arguments': data['arguments'],
+                        "set": set_id,
+                        "run": run_id,
+                        "arguments": data["arguments"],
                     }
 
                     # Perform system cleanup
@@ -296,19 +300,20 @@ class Scenario:
                     # Perform baseline monitoring before the run, if required
                     if self.run_monitor:
                         print("Baseline monitoring for {} s.".format(self.run_monitor))
-                        out['baseline'] = monitor_system(self.run_monitor)
+                        out["baseline"] = monitor_system(self.run_monitor)
                         self._store(result_path, out)
 
                     # Modify run-specific arguments
-                    args = copy.deepcopy(data['arguments'])
+                    args = copy.deepcopy(data["arguments"])
 
                     # Set input file paths
                     if isinstance(self.inputs, dict):
                         logger.debug("Modifying input paths.")
                         for key in self.inputs.keys():
                             args[key] = os.path.normpath(
-                                args[key] if os.path.isabs(args[key]) else
-                                os.path.join(self.workdir, args[key])
+                                args[key]
+                                if os.path.isabs(args[key])
+                                else os.path.join(self.workdir, args[key])
                             )
 
                     # Set output file paths
@@ -316,8 +321,9 @@ class Scenario:
                         logger.debug("Modifying output paths.")
                         for key in self.outputs.keys():
                             args[key] = os.path.normpath(
-                                args[key] if os.path.isabs(args[key]) else
-                                os.path.join(abs_path, args[key])
+                                args[key]
+                                if os.path.isabs(args[key])
+                                else os.path.join(abs_path, args[key])
                             )
 
                     # Get execution arguments
@@ -338,34 +344,44 @@ class Scenario:
                     # Perform endline monitoring after the run, if required
                     if self.run_monitor:
                         print("Endline monitoring for {} s.".format(self.run_monitor))
-                        out['endline'] = monitor_system(self.run_monitor)
+                        out["endline"] = monitor_system(self.run_monitor)
                         self._store(result_path, out)
 
                     # TODO: Store input files in the output directory.
                     for key, value in self.inputs.items():
                         input_path = os.path.normpath(
-                            value if os.path.isabs(value) else
-                            os.path.join(self.workdir, value)
+                            value
+                            if os.path.isabs(value)
+                            else os.path.join(self.workdir, value)
                         )
                         # Copy input file
                         try:
-                            if os.path.exists(input_path) and not os.path.exists(abs_path):
+                            if os.path.exists(input_path) and not os.path.exists(
+                                abs_path
+                            ):
                                 shutil.copy(input_path, abs_path)
                         except Exception as e:
-                            logger.error(f"Error copying input file {input_path} to {abs_path}: {e}")
+                            logger.error(
+                                f"Error copying input file {input_path} to {abs_path}: {e}"
+                            )
 
                     # TODO: Store output files in the output directory, if required.
                     for key, value in self.outputs.items():
                         output_path = os.path.normpath(
-                            value if os.path.isabs(value) else
-                            os.path.join(abs_path, value)
+                            value
+                            if os.path.isabs(value)
+                            else os.path.join(abs_path, value)
                         )
                         # Copy output file
-                        try: 
-                            if os.path.exists(output_path) and not os.path.exists(abs_path):
+                        try:
+                            if os.path.exists(output_path) and not os.path.exists(
+                                abs_path
+                            ):
                                 shutil.copy(output_path, abs_path)
                         except Exception as e:
-                            logger.error(f"Error copying output file {output_path} to {abs_path}: {e}")
+                            logger.error(
+                                f"Error copying output file {output_path} to {abs_path}: {e}"
+                            )
 
                     # Calculate run summary
                     run_summary = calculate_run_summary(out)
@@ -374,13 +390,21 @@ class Scenario:
 
                 # TODO: Generate summary of the set runs.
                 total_runs = len(run_summaries)
-                
-                success_rate = (sum(1 for run in run_summaries if run["success"]) / total_runs) if total_runs > 0 else 0
+
+                success_rate = (
+                    (sum(1 for run in run_summaries if run["success"]) / total_runs)
+                    if total_runs > 0
+                    else 0
+                )
 
                 # Calculate average and standard deviation of execution time for all runs in a set
-                run_time_list = [run["run_time"] for run in run_summaries if "run_time" in run]
+                run_time_list = [
+                    run["run_time"] for run in run_summaries if "run_time" in run
+                ]
                 avg_run_time = statistics.mean(run_time_list) if run_time_list else 0
-                stdev_run_time = statistics.stdev(run_time_list) if len(run_time_list) > 1 else 0
+                stdev_run_time = (
+                    statistics.stdev(run_time_list) if len(run_time_list) > 1 else 0
+                )
 
                 set_summary = {
                     "set": set_id,
@@ -389,13 +413,15 @@ class Scenario:
                     "success": success_rate,
                     "avg_run_time": avg_run_time,
                     "stdev_run_time": stdev_run_time,
-                    "runs": run_summaries
+                    "runs": run_summaries,
                 }
                 # Append set summary to the list for generating report
                 set_summaries.append(set_summary)
 
                 # TODO: Store summary of the set runs.
-                set_summary_path = os.path.join(self.outdir, f"set_{set_id:0{len_sets}d}", 'summary.json')
+                set_summary_path = os.path.join(
+                    self.outdir, f"set_{set_id:0{len_sets}d}", "summary.json"
+                )
                 self._store(set_summary_path, set_summary)
 
             duration = time.time() - start_time
@@ -410,15 +436,17 @@ class Scenario:
             # Perform endline monitoring after the runs, if required
             if self.system_monitor:
                 print("Endline monitoring for {} s.".format(self.system_monitor))
-                result['endline'] = monitor_system(self.system_monitor)
+                result["endline"] = monitor_system(self.system_monitor)
                 self._store_result(result)
 
             # TODO: Generate summary of all runs.
             # TODO: Store summary of all runs.
 
             # Generate report from set summaries
-            report_path = os.path.join(self.outdir, 'report.html')
-            generate_html_report(system_data=result, set_summaries=set_summaries, output_path=report_path)
+            report_path = os.path.join(self.outdir, "report.html")
+            generate_html_report(
+                system_data=result, set_summaries=set_summaries, output_path=report_path
+            )
 
         except KeyboardInterrupt:
             print("Benchmark run interrupted by user.")
@@ -443,24 +471,24 @@ def load_scenario(path, **kwargs):
     """
     # Load scenario from file
     logger.debug(f"Loading scenario from {path}.")
-    with open(path, 'r', encoding='utf-8') as file:
+    with open(path, "r", encoding="utf-8") as file:
         scenario = yaml.safe_load(file)
 
     # Update scenario arguments
     logger.debug(f"Updating scenario with {kwargs}.")
     scenario.update(kwargs)
 
-    if scenario.get('outputs') and not isinstance(scenario['outputs'], (list, dict)):
-        scenario['outputs'] = [scenario['outputs']]
+    if scenario.get("outputs") and not isinstance(scenario["outputs"], (list, dict)):
+        scenario["outputs"] = [scenario["outputs"]]
 
-    if not scenario.get('name'):
-        scenario['name'] = os.path.splitext(os.path.basename(path))[0]
+    if not scenario.get("name"):
+        scenario["name"] = os.path.splitext(os.path.basename(path))[0]
 
     # Sanitize arguments
     args = {}
     for key in inspect.signature(Scenario.__init__).parameters.keys():
         val = scenario.get(key)
-        if key != 'self' and val is not None:
+        if key != "self" and val is not None:
             args[key] = val
 
     # Create scenario

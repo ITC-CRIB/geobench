@@ -11,18 +11,17 @@ class ShellExecutor(Executor):
         """Returns executor configuration."""
         system = platform.system()
 
-        if system == 'Windows':
-            shell = os.environ.get('COMSPEC')
+        if system == "Windows":
+            shell = os.environ.get("COMSPEC")
 
         else:
-            shell = os.environ.get('SHELL')
+            shell = os.environ.get("SHELL")
 
         config = {
-            'executable': shell,
+            "executable": shell,
         }
 
         return config
-
 
     def get_arguments(self, command: str, args: dict) -> list:
         """Returns execution arguments for the specified command and arguments.
@@ -38,8 +37,11 @@ class ShellExecutor(Executor):
 
         system = platform.system()
 
-        if system == 'Windows' and os.path.basename(self.config['executable']).lower() == 'cmd.exe':
-            out.append('/C')
+        if (
+            system == "Windows"
+            and os.path.basename(self.config["executable"]).lower() == "cmd.exe"
+        ):
+            out.append("/C")
 
         out.append(command)
 
@@ -47,7 +49,7 @@ class ShellExecutor(Executor):
             try:
                 int(key)
                 out.append(val)
-            except:
+            except Exception:
                 out.append(f"--{key}={val}")
 
         return out
