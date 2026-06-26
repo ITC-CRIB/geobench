@@ -11,7 +11,7 @@ def _clear_linux_cache():
     """Clears system caches on Linux."""
     logger.info("Flushing all filesystem buffers to disk.")
     try:
-        os.system("sync; echo 3 > /proc/sys/vm/drop_caches")
+        os.system("sync")
 
     except Exception as err:
         logger.info("Failed to flush filesystem buffers to disk (%s).", err)
