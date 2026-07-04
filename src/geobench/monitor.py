@@ -3,7 +3,6 @@ import psutil
 import statistics
 import threading
 import time
-import queue
 
 from .energy import get_energy_reader
 from .metrics import get_metrics_readers_for_source
@@ -12,6 +11,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
 
 def get_system_info() -> dict:
     """Returns system information."""
@@ -199,18 +199,20 @@ def monitor_system(duration: float = 10.0, interval: float = 1.0) -> dict:
     }
 
 
-<<<<<<< HEAD
-def monitor_process(
-    process, interval: float = 1.0, stop_event: threading.Event = None
-) -> dict:
-=======
 class DataCollector(threading.Thread):
     """Thread-based data collector for system metrics from different sources."""
-    
-    def __init__(self, name: str, interval: float, readers: list, 
-                 process, stop_event: threading.Event, source_type: str = 'internal'):
+
+    def __init__(
+        self,
+        name: str,
+        interval: float,
+        readers: list,
+        process,
+        stop_event: threading.Event,
+        source_type: str = "internal",
+    ):
         """Initialize data collector thread.
-        
+
         Args:
             name: Name identifier for this data source
             interval: Collection interval in seconds
@@ -226,41 +228,41 @@ class DataCollector(threading.Thread):
         self.stop_event = stop_event
         self.collected_metrics = []
         self.initial_readings = {}
-        
+
         # Store initial readings from all readers
         self._store_initial_readings()
-        
+
     def _store_initial_readings(self):
         """Store initial readings from all metrics readers."""
         for reader in self.readers:
             initial = reader.read_metrics()
             if initial:
                 self.initial_readings.update(initial)
-    
+
     def _collect_metrics_from_readers(self) -> dict:
         """Collect metrics from all configured readers.
-        
+
         Returns:
             Dictionary containing all metrics from all readers, with prefixed keys.
         """
         metrics = {}
-        
+
         for reader in self.readers:
             current_metrics = reader.read_metrics()
             if current_metrics:
                 metrics.update(current_metrics)
-        
+
         return metrics
-    
+
     def run(self):
         """Run the data collection loop."""
         step = 0
-        
+
         logger.info(f"[{self.name}] Data collector started (interval={self.interval}s)")
-        
+
         while not self.stop_event.is_set():
             step += 1
-            
+
             # Check if process is still running
             if type(self.process) is psutil.Process:
                 if not self.process.is_running():
@@ -268,34 +270,38 @@ class DataCollector(threading.Thread):
             else:
                 if self.process.poll() is not None:
                     break
-            
+
             # Collect timestamp
-            metric = {
-                'step': step,
-                'timestamp': time.time()
-            }
-            
+            metric = {"step": step, "timestamp": time.time()}
+
             # Collect metrics from all readers
             metric.update(self._collect_metrics_from_readers())
-            
+
             self.collected_metrics.append(metric)
-            
+
             # Sleep for the specified interval
             time.sleep(self.interval)
-        
-        logger.info(f"[{self.name}] Data collector stopped ({len(self.collected_metrics)} samples)")
-    
+
+        logger.info(
+            f"[{self.name}] Data collector stopped ({len(self.collected_metrics)} samples)"
+        )
+
     def get_metrics(self) -> list:
         """Get collected metrics.
-        
+
         Returns:
             List of collected metric dictionaries
         """
         return self.collected_metrics
 
 
-def monitor_process(process, interval: float=1.0, stop_event=None, energy_config: dict=None, 
-                    data_sources: list=None) -> dict:
+def monitor_process(
+    process,
+    interval: float = 1.0,
+    stop_event=None,
+    energy_config: dict = None,
+    data_sources: list = None,
+) -> dict:
     """Monitors process and system metrics while process is running.
 
     Args:
@@ -311,7 +317,7 @@ def monitor_process(process, interval: float=1.0, stop_event=None, energy_config
             - name: Source identifier
             - interval: Collection interval in seconds
             - metrics: List of metrics to collect (e.g., ['psutils', 'energy', {'smart_plug': {...}}])
-            
+
     Returns:
         Dictionary containing:
         - system: List of system metrics (legacy mode) or dict of metrics by source (multi-threaded mode)
@@ -319,33 +325,39 @@ def monitor_process(process, interval: float=1.0, stop_event=None, energy_config
         - data_sources: List of source names (only in multi-threaded mode)
     """
     process_metrics = {process.pid: get_process_info(process)}
-    
+
     # Determine if we're using multi-threaded mode
     use_multi_threaded = data_sources is not None and len(data_sources) > 0
-    
+
     if use_multi_threaded:
         # Multi-threaded mode with parallel data collection
-        logger.info(f"Starting multi-threaded monitoring with {len(data_sources)} data sources")
-        
+        logger.info(
+            f"Starting multi-threaded monitoring with {len(data_sources)} data sources"
+        )
+
         # Create stop event if not provided
         if stop_event is None:
             stop_event = threading.Event()
-        
+
         # Create and start data collector threads
         collectors = []
         for source_config in data_sources:
-            source_name = source_config.get('name', f'source_{len(collectors)}')
-            source_interval = source_config.get('interval', interval)
-            
+            source_name = source_config.get("name", f"source_{len(collectors)}")
+            source_interval = source_config.get("interval", interval)
+
             # Get appropriate metrics readers for this source
             readers = get_metrics_readers_for_source(source_config)
-            
+
             if not readers:
-                logger.warning(f"No readers available for source '{source_name}', skipping")
+                logger.warning(
+                    f"No readers available for source '{source_name}', skipping"
+                )
                 continue
             else:
-                logger.info(f"Source '{source_name}' has {len(readers)} readers configured")
-            
+                logger.info(
+                    f"Source '{source_name}' has {len(readers)} readers configured"
+                )
+
             collector = DataCollector(
                 name=source_name,
                 interval=source_interval,
@@ -355,15 +367,15 @@ def monitor_process(process, interval: float=1.0, stop_event=None, energy_config
             )
             collectors.append(collector)
             collector.start()
-        
+
         # Monitor process and collect process-specific metrics
         step = 0
         psutil.cpu_percent()
         process.cpu_percent()
-        
+
         while True:
             step += 1
-            
+
             # Stop if process has terminated or stop event is set
             if type(process) is psutil.Process:
                 if not process.is_running():
@@ -373,7 +385,7 @@ def monitor_process(process, interval: float=1.0, stop_event=None, energy_config
             else:
                 if process.poll() is not None:
                     break
-            
+
             # Get related processes
             processes = [process]
             for child in process.children(recursive=True):
@@ -384,10 +396,10 @@ def monitor_process(process, interval: float=1.0, stop_event=None, energy_config
                     child.cpu_percent()
                 except psutil.NoSuchProcess:
                     pass
-            
+
             # Sleep with the base interval
             time.sleep(interval)
-            
+
             # Collect process metrics
             for p in processes:
                 try:
@@ -399,59 +411,59 @@ def monitor_process(process, interval: float=1.0, stop_event=None, energy_config
                         except (psutil.AccessDenied, AttributeError):
                             read_bytes = 0
                             write_bytes = 0
-                        
+
                         collected_metric = {
-                            'step': step,
-                            'timestamp': time.time(),
-                            'cpu_percent': p.cpu_percent(),
-                            'memory_percent': p.memory_percent(),
-                            'num_threads': p.num_threads(),
-                            'read_bytes': read_bytes,
-                            'write_bytes': write_bytes,
+                            "step": step,
+                            "timestamp": time.time(),
+                            "cpu_percent": p.cpu_percent(),
+                            "memory_percent": p.memory_percent(),
+                            "num_threads": p.num_threads(),
+                            "read_bytes": read_bytes,
+                            "write_bytes": write_bytes,
                         }
-                        process_metrics[p.pid]['metrics'].append(collected_metric)
+                        process_metrics[p.pid]["metrics"].append(collected_metric)
                 except psutil.NoSuchProcess:
                     pass
-        
+
         # Signal all collectors to stop
         stop_event.set()
-        
+
         # Wait for all collector threads to finish
         for collector in collectors:
             collector.join(timeout=5.0)
-        
+
         # Aggregate results from all collectors
         system_metrics_by_source = {}
         for collector in collectors:
             system_metrics_by_source[collector.name] = collector.get_metrics()
-        
-        out = {
-            'system': system_metrics_by_source,
-            'processes': process_metrics
-        }
-        
+
+        out = {"system": system_metrics_by_source, "processes": process_metrics}
+
     else:
         # Legacy single-threaded mode for backward compatibility
         logger.info("Starting single-threaded monitoring (legacy mode)")
-        
+
         step = 0
         system_metrics = []
-        
+
         # Initialize energy monitoring - get list of readers (can be multiple)
         energy_readers = get_energy_reader(energy_config)
         initial_energy = {}
-        
+
         # Initialize each reader
         for reader in energy_readers:
             if reader.available:
-                reader_key = f"{reader.reader_type}_{reader.__class__.__name__}"
                 initial = reader.read_metrics()
                 if initial:
                     initial_energy.update(initial)
-                logger.info(f"Energy monitoring enabled for {reader.__class__.__name__} ({reader.reader_type})")
+                logger.info(
+                    f"Energy monitoring enabled for {reader.__class__.__name__} ({reader.reader_type})"
+                )
             else:
-                logger.info(f"Energy monitoring not available for {reader.__class__.__name__}")
-        
+                logger.info(
+                    f"Energy monitoring not available for {reader.__class__.__name__}"
+                )
+
         if not initial_energy:
             logger.info("No energy monitoring available")
 
@@ -491,10 +503,10 @@ def monitor_process(process, interval: float=1.0, stop_event=None, energy_config
 
             # Get system metrics
             sys_metric = {
-                'step': step,
-                'timestamp': time.time(),
-                'cpu_percent': psutil.cpu_percent(percpu=True),
-                'memory_usage': psutil.virtual_memory()._asdict(),
+                "step": step,
+                "timestamp": time.time(),
+                "cpu_percent": psutil.cpu_percent(percpu=True),
+                "memory_usage": psutil.virtual_memory()._asdict(),
             }
             try:
                 net_io_counters = psutil.net_io_counters()
@@ -503,7 +515,7 @@ def monitor_process(process, interval: float=1.0, stop_event=None, energy_config
             except (psutil.AccessDenied, AttributeError):
                 sys_net_bytes_sent = 0
                 sys_net_bytes_recv = 0
-            
+
             try:
                 disk_io_counters = psutil.disk_io_counters()
                 sys_disk_bytes_read = disk_io_counters.read_bytes
@@ -513,12 +525,14 @@ def monitor_process(process, interval: float=1.0, stop_event=None, energy_config
                 sys_disk_bytes_write = 0
 
             # Update metrics
-            sys_metric.update({
-                'net_bytes_sent': sys_net_bytes_sent,
-                'net_bytes_recv': sys_net_bytes_recv,
-                'disk_bytes_read': sys_disk_bytes_read,
-                'disk_bytes_write': sys_disk_bytes_write
-            })
+            sys_metric.update(
+                {
+                    "net_bytes_sent": sys_net_bytes_sent,
+                    "net_bytes_recv": sys_net_bytes_recv,
+                    "disk_bytes_read": sys_disk_bytes_read,
+                    "disk_bytes_write": sys_disk_bytes_write,
+                }
+            )
 
             # Collect energy metrics from all available readers
             for reader in energy_readers:
@@ -526,7 +540,7 @@ def monitor_process(process, interval: float=1.0, stop_event=None, energy_config
                     current_energy = reader.read_metrics()
                     if current_energy:
                         sys_metric.update(current_energy)
-            
+
             system_metrics.append(sys_metric)
 
             # Get process metrics
@@ -541,23 +555,20 @@ def monitor_process(process, interval: float=1.0, stop_event=None, energy_config
                             read_bytes = 0
                             write_bytes = 0
                         collected_metric = {
-                            'step': step,
-                            'timestamp': time.time(),
-                            'cpu_percent': p.cpu_percent(),
-                            'memory_percent': p.memory_percent(),
-                            'num_threads': p.num_threads(),
-                            'read_bytes': read_bytes,
-                            'write_bytes': write_bytes,
+                            "step": step,
+                            "timestamp": time.time(),
+                            "cpu_percent": p.cpu_percent(),
+                            "memory_percent": p.memory_percent(),
+                            "num_threads": p.num_threads(),
+                            "read_bytes": read_bytes,
+                            "write_bytes": write_bytes,
                         }
 
-                        process_metrics[p.pid]['metrics'].append(collected_metric)
+                        process_metrics[p.pid]["metrics"].append(collected_metric)
 
                 except psutil.NoSuchProcess:
                     pass
 
-        out = {
-            'system': system_metrics,
-            'processes': process_metrics
-        }
+        out = {"system": system_metrics, "processes": process_metrics}
 
     return out

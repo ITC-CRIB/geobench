@@ -91,13 +91,17 @@ def calculate_run_summary(run_result: dict) -> dict:
     system_net_bytes_sent_list = []
     system_net_bytes_recv_list = []
     for system_data in internal_system_data:
-        system_disk_bytes_read_list.append(system_data.get('disk_bytes_read', 0))
-        system_disk_bytes_write_list.append(system_data.get('disk_bytes_write', 0))
-        system_net_bytes_sent_list.append(system_data.get('net_bytes_sent', 0))
-        system_net_bytes_recv_list.append(system_data.get('net_bytes_recv', 0))
-    summary['avg_disk_bytes'] = {
-        'read': system_disk_bytes_read_list[-1] - system_disk_bytes_read_list[0] if len(system_disk_bytes_read_list) > 1 else 0.0,
-        'write': system_disk_bytes_write_list[-1] - system_disk_bytes_write_list[0] if len(system_disk_bytes_write_list) > 1 else 0.0
+        system_disk_bytes_read_list.append(system_data.get("disk_bytes_read", 0))
+        system_disk_bytes_write_list.append(system_data.get("disk_bytes_write", 0))
+        system_net_bytes_sent_list.append(system_data.get("net_bytes_sent", 0))
+        system_net_bytes_recv_list.append(system_data.get("net_bytes_recv", 0))
+    summary["avg_disk_bytes"] = {
+        "read": system_disk_bytes_read_list[-1] - system_disk_bytes_read_list[0]
+        if len(system_disk_bytes_read_list) > 1
+        else 0.0,
+        "write": system_disk_bytes_write_list[-1] - system_disk_bytes_write_list[0]
+        if len(system_disk_bytes_write_list) > 1
+        else 0.0,
     }
     summary["avg_net_bytes"] = {
         "sent": system_net_bytes_sent_list[-1] - system_net_bytes_sent_list[0]
@@ -663,7 +667,7 @@ def generate_html_report(
             ).decode("utf-8")
             env = Environment()
             template = env.from_string(template_content)
-        except:
+        except Exception:
             # Final fallback to file system (for development)
             template_dir = os.path.join(os.path.dirname(__file__), "templates")
             env = Environment(loader=FileSystemLoader(template_dir))

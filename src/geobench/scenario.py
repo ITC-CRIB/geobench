@@ -27,22 +27,22 @@ class Scenario:
         type: str,
         name: str,
         command: str,
-        inputs: list | dict=None,
-        outputs: list | dict=None,
-        arguments: list | dict=None,
-        repeat: int=1,
-        run_wait: float=5.0,
-        run_monitor: float=5.0,
-        system_wait: float=5.0,
-        system_monitor: float=5.0,
-        workdir: str=None,
-        basedir: str=None,
-        outdir: str=None,
-        venv: str=None,
-        energy_api_url: str=None,
-        energy_api_timeout: float=5.0,
-        data_sources: list=None,
-        idle_time: float=None,
+        inputs: list | dict = None,
+        outputs: list | dict = None,
+        arguments: list | dict = None,
+        repeat: int = 1,
+        run_wait: float = 5.0,
+        run_monitor: float = 5.0,
+        system_wait: float = 5.0,
+        system_monitor: float = 5.0,
+        workdir: str = None,
+        basedir: str = None,
+        outdir: str = None,
+        venv: str = None,
+        energy_api_url: str = None,
+        energy_api_timeout: float = 5.0,
+        data_sources: list = None,
+        idle_time: float = None,
     ):
         """Initializes scenario object.
 
@@ -463,7 +463,7 @@ class Scenario:
         except KeyboardInterrupt:
             print("Benchmark run interrupted by user.")
 
-        except Exception as err:
+        except Exception:
             raise
 
         return result

@@ -66,21 +66,23 @@ class Executor:
             # Support both legacy energy_config and new data_sources
             energy_config = {}
             data_sources = None
-            
-            if hasattr(self.scenario, 'data_sources') and self.scenario.data_sources:
+
+            if hasattr(self.scenario, "data_sources") and self.scenario.data_sources:
                 # New multi-threaded mode with data_sources
                 data_sources = self.scenario.data_sources
             else:
                 # Legacy mode with energy_config
                 if self.scenario.energy_api_url:
-                    energy_config['energy_api_url'] = self.scenario.energy_api_url
+                    energy_config["energy_api_url"] = self.scenario.energy_api_url
                 if self.scenario.energy_api_timeout:
-                    energy_config['energy_api_timeout'] = self.scenario.energy_api_timeout
+                    energy_config["energy_api_timeout"] = (
+                        self.scenario.energy_api_timeout
+                    )
 
             metrics = monitor_process(
-                process, 
+                process,
                 energy_config=energy_config if energy_config else None,
-                data_sources=data_sources
+                data_sources=data_sources,
             )
 
             out.update(metrics)
@@ -97,7 +99,7 @@ class Executor:
             print(f"Command '{' '.join(command)}' failed with error: {err}")
             print("Full stack trace:")
             traceback.print_exc()
-            out['error'] = str(err)
+            out["error"] = str(err)
 
         out["end_time"] = time.time()
 

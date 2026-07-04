@@ -1,6 +1,6 @@
+aiohttp
 jinja2
 psutil
 python-dotenv
 pyyaml
 plotly[express]
-aiohttp

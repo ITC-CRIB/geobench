@@ -8,15 +8,15 @@ from .energy import (
     RAPLReader,
     PowerMetricsReader,
     HTTPAPIReader,
-    DummyEnergyReader
+    DummyEnergyReader,
 )
 
 __all__ = [
-    'Geobench', 
-    'geobench', 
-    'get_energy_reader',
-    'RAPLReader',
-    'PowerMetricsReader',
-    'HTTPAPIReader',
-    'DummyEnergyReader'
+    "Geobench",
+    "geobench",
+    "get_energy_reader",
+    "RAPLReader",
+    "PowerMetricsReader",
+    "HTTPAPIReader",
+    "DummyEnergyReader",
 ]

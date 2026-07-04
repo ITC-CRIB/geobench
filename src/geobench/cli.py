@@ -31,7 +31,10 @@ class CLI:
 
         # Configure basic logging (always)
         if args.debug:
-            logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            logging.basicConfig(
+                level=logging.DEBUG,
+                format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            )
 
             for name in logging.root.manager.loggerDict:
                 if name.startswith("geobench"):
@@ -40,7 +43,9 @@ class CLI:
             logger.debug("Debugging enabled.")
         else:
             # Configure logging for INFO level by default
-            logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
+            logging.basicConfig(
+                level=logging.INFO, format="%(levelname)s - %(message)s"
+            )
 
         try:
             kwargs = {key: val for key, val in vars(args).items() if val is not None}
@@ -48,7 +53,7 @@ class CLI:
             scenario = load_scenario(os.path.abspath(args.filename), **kwargs)
             scenario.benchmark(clean=args.clean)
 
-        except Exception as err:
+        except Exception:
             raise
 
 
