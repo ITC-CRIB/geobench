@@ -12,31 +12,17 @@ logger = logging.getLogger(__name__)
 class PsutilsCollector(Collector):
     """Collector for system metrics via psutil."""
 
-    def __init__(self):
+    def __init__(self, config: dict | None = None):
         """Initialize psutil collector."""
-        super().__init__()
-        self._init_collector()
+        super().__init__(config)
 
-    @staticmethod
-    def is_available() -> bool:
-        """Check if psutil is available.
-
-        Returns:
-            True (psutil is always available).
-        """
-        return True
-
-    def _init_collector(self):
-        """Initialize psutil collector."""
         try:
-            # Test if psutil works
             psutil.cpu_percent()
             psutil.virtual_memory()
-            self.available = True
-            logger.debug("Psutil metrics collector initialized")
+
         except Exception as err:
             logger.warning("Failed to initialize psutil collector: %s", err)
-            self.available = False
+            raise RuntimeError("Cannot initialize psutil")
 
     def read_metrics(self) -> dict:
         """Read current system metrics using psutil.
@@ -44,9 +30,6 @@ class PsutilsCollector(Collector):
         Returns:
             Dictionary containing system metrics.
         """
-        if not self.available:
-            return {}
-
         metrics = {}
 
         try:

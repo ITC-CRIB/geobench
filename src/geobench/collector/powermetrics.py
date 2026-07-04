@@ -1,6 +1,5 @@
 """PowerMetrics collector module."""
 
-import platform
 import shutil
 import subprocess
 
@@ -14,63 +13,35 @@ logger = logging.getLogger(__name__)
 class PowerMetricsCollector(Collector):
     """Collector for macOS powermetrics energy metrics."""
 
-    def __init__(self):
+    def __init__(self, config: dict | None = None):
         """Initialize PowerMetrics collector."""
-        super().__init__()
-        self.last_reading = None
-        self._init_energy_reading()
+        super().__init__(config)
 
-    @staticmethod
-    def is_available() -> bool:
-        """Check if powermetrics is available on the current system.
-
-        Returns:
-            True if powermetrics is available, False otherwise.
-        """
-        if platform.system() != "Darwin":
-            return False
-
-        # Check if powermetrics command exists
+        # Raise exception if powermetrics is not available
         if shutil.which("powermetrics") is None:
-            return False
+            raise RuntimeError("powermetrics is not available")
 
-        # Try to run powermetrics to see if we have permissions
+        # Raise exception if cannot run powermetrics
         try:
             result = subprocess.run(
                 ["powermetrics", "--help"], capture_output=True, timeout=5, check=False
             )
-            return result.returncode == 0
+            if result.returncode != 0:
+                raise RuntimeError(
+                    f"powermetrics failed with return code: {result.returncode}"
+                )
+
         except (subprocess.TimeoutExpired, FileNotFoundError):
-            return False
+            raise RuntimeError("Cannot execute powermetrics")
 
-    def _init_energy_reading(self):
-        """Initialize powermetrics interface."""
-        if not shutil.which("powermetrics"):
-            logger.warning("powermetrics command not found")
-            return
-
-        # Test if we can run powermetrics
-        try:
-            result = subprocess.run(
-                ["powermetrics", "--help"], capture_output=True, timeout=5, check=False
-            )
-            if result.returncode == 0:
-                self.available = True
-                logger.debug("PowerMetrics initialized successfully")
-            else:
-                logger.warning("powermetrics is not accessible (may need sudo)")
-        except (subprocess.TimeoutExpired, FileNotFoundError) as err:
-            logger.warning("Failed to initialize powermetrics: %s", err)
+        self.last_reading = None
 
     def read_metrics(self) -> dict:
         """Read current energy metrics using powermetrics.
 
         Returns:
-            Dictionary containing energy readings in microjoules (μJ).
+            Dictionary containing energy metrics in microjoules (μJ).
         """
-        if not self.available:
-            return {}
-
         try:
             # Run powermetrics for a short sample
             # Note: This requires sudo privileges
@@ -87,7 +58,7 @@ class PowerMetricsCollector(Collector):
                 return {}
 
             # Parse the output to extract energy metrics
-            energy_readings = self._parse_powermetrics_output(result.stdout)
+            energy_readings = self._parse_output(result.stdout)
 
             if energy_readings:
                 self.last_reading = energy_readings
@@ -99,7 +70,7 @@ class PowerMetricsCollector(Collector):
             logger.warning("Failed to read energy from powermetrics: %s", err)
             return {}
 
-    def _parse_powermetrics_output(self, output: str) -> dict:
+    def _parse_output(self, output: str) -> dict:
         """Parse powermetrics output to extract energy metrics.
 
         Args:
@@ -108,26 +79,24 @@ class PowerMetricsCollector(Collector):
         Returns:
             Dictionary mapping metric names to energy values in microjoules.
         """
-        energy_readings = {}
+        out = {}
 
-        # Parse CPU energy
         for line in output.split("\n"):
             line = line.strip()
 
-            # Look for energy-related metrics
             if "CPU Power" in line or "GPU Power" in line or "ANE Power" in line:
                 parts = line.split(":")
                 if len(parts) >= 2:
                     name = parts[0].strip()
-                    value_str = parts[1].strip().split()[0]  # Get first token (number)
+                    value = parts[1].strip().split()[0]
                     try:
                         # Convert to microjoules (assuming powermetrics reports in mW)
                         # This is a simplified parsing - real implementation may need more robust parsing
-                        value = float(value_str)
+                        value = float(value)
                         # Convert mW to microjoules (mW * 1000 = μW, for 100ms sample)
-                        energy_uj = int(value * 100)  # 100ms sample period
-                        energy_readings[name] = energy_uj
+                        energy_uj = int(value * 100)
+                        out[name] = energy_uj
                     except (ValueError, IndexError):
                         continue
 
-        return energy_readings
+        return out

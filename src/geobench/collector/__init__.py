@@ -6,9 +6,9 @@ from abc import ABC, abstractmethod
 class Collector(ABC):
     """Abstract base class for metrics collectors."""
 
-    def __init__(self):
+    def __init__(self, config: dict | None = None):
         """Initialize metrics collector."""
-        self.available = False
+        self.config = config or {}
 
     @abstractmethod
     def read_metrics(self) -> dict:
@@ -16,13 +16,4 @@ class Collector(ABC):
 
         Returns:
             Dictionary containing metric readings.
-        """
-
-    @staticmethod
-    @abstractmethod
-    def is_available() -> bool:
-        """Check if this metrics collector is available on the current system.
-
-        Returns:
-            True if the metrics collector can be used, False otherwise.
         """
