@@ -7,8 +7,8 @@ import time
 
 import psutil
 
-from .energy import get_energy_reader
-from .metrics import get_metrics_readers_for_source
+from .energy import get_energy_collector
+from .metrics import get_collectors_for_source
 
 import logging
 
@@ -208,7 +208,7 @@ class DataCollector(threading.Thread):
         self,
         name: str,
         interval: float,
-        readers: list,
+        collectors: list,
         process,
         stop_event: threading.Event,
         source_type: str = "internal",
@@ -218,39 +218,39 @@ class DataCollector(threading.Thread):
         Args:
             name: Name identifier for this data source
             interval: Collection interval in seconds
-            readers: List of MetricsReader instances to collect data from
+            collectors: List of Collector instances to collect data from
             process: Process being monitored
             stop_event: Event to signal thread to stop
         """
         super().__init__(daemon=True)
         self.name = name
         self.interval = interval
-        self.readers = readers
+        self.collectors = collectors
         self.process = process
         self.stop_event = stop_event
         self.collected_metrics = []
         self.initial_readings = {}
 
-        # Store initial readings from all readers
+        # Store initial readings from all collectors
         self._store_initial_readings()
 
     def _store_initial_readings(self):
-        """Store initial readings from all metrics readers."""
-        for reader in self.readers:
-            initial = reader.read_metrics()
+        """Store initial readings from all metrics collectors."""
+        for collector in self.collectors:
+            initial = collector.read_metrics()
             if initial:
                 self.initial_readings.update(initial)
 
-    def _collect_metrics_from_readers(self) -> dict:
-        """Collect metrics from all configured readers.
+    def _collect_metrics_from_collectors(self) -> dict:
+        """Collect metrics from all configured collectors.
 
         Returns:
-            Dictionary containing all metrics from all readers, with prefixed keys.
+            Dictionary containing all metrics from all collectors, with prefixed keys.
         """
         metrics = {}
 
-        for reader in self.readers:
-            current_metrics = reader.read_metrics()
+        for collector in self.collectors:
+            current_metrics = collector.read_metrics()
             if current_metrics:
                 metrics.update(current_metrics)
 
@@ -278,8 +278,8 @@ class DataCollector(threading.Thread):
             # Collect timestamp
             metric = {"step": step, "timestamp": time.time()}
 
-            # Collect metrics from all readers
-            metric.update(self._collect_metrics_from_readers())
+            # Collect metrics from all collectors
+            metric.update(self._collect_metrics_from_collectors())
 
             self.collected_metrics.append(metric)
 
@@ -346,23 +346,23 @@ def monitor_process(
             source_name = source_config.get("name", f"source_{len(collectors)}")
             source_interval = source_config.get("interval", interval)
 
-            # Get appropriate metrics readers for this source
-            readers = get_metrics_readers_for_source(source_config)
+            # Get appropriate metrics collectors for this source
+            collectors = get_collectors_for_source(source_config)
 
-            if not readers:
+            if not collectors:
                 logger.warning(
-                    "No readers available for source '%s', skipping", source_name
+                    "No collectors available for source '%s', skipping", source_name
                 )
                 continue
             else:
                 logger.debug(
-                    "Source '%s' has %d readers configured", source_name, len(readers)
+                    "Source '%s' has %d collectors configured", source_name, len(collectors)
                 )
 
             collector = DataCollector(
                 name=source_name,
                 interval=source_interval,
-                readers=readers,
+                collectors=collectors,
                 process=process,
                 stop_event=stop_event,
             )
@@ -447,22 +447,22 @@ def monitor_process(
         step = 0
         system_metrics = []
 
-        # Initialize energy monitoring - get list of readers (can be multiple)
-        energy_readers = get_energy_reader()
+        # Get list of energy collectors
+        energy_collectors = get_energy_collector()
         initial_energy = {}
 
-        # Initialize each reader
-        for reader in energy_readers:
-            if reader.available:
-                initial = reader.read_metrics()
+        # Initialize each collector
+        for collector in energy_collectors:
+            if collector.available:
+                initial = collector.read_metrics()
                 if initial:
                     initial_energy.update(initial)
                 logger.debug(
-                    "Energy monitoring enabled for %s", reader.__class__.__name__
+                    "Energy monitoring enabled for %s", collector.__class__.__name__
                 )
             else:
                 logger.debug(
-                    "Energy monitoring not available for %s", reader.__class__.__name__
+                    "Energy monitoring not available for %s", collector.__class__.__name__
                 )
 
         if not initial_energy:
@@ -535,10 +535,10 @@ def monitor_process(
                 }
             )
 
-            # Collect energy metrics from all available readers
-            for reader in energy_readers:
-                if reader.available:
-                    current_energy = reader.read_metrics()
+            # Collect energy metrics from all available collectors
+            for collector in energy_collectors:
+                if collector.available:
+                    current_energy = collector.read_metrics()
                     if current_energy:
                         sys_metric.update(current_energy)
 

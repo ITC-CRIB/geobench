@@ -8,18 +8,18 @@ import shutil
 import subprocess
 import time
 
-from .metrics import MetricsReader
+from .metrics import Collector
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class RAPLReader(MetricsReader):
-    """Reader for RAPL energy metrics."""
+class RAPLCollector(Collector):
+    """Collector for RAPL energy metrics."""
 
     def __init__(self):
-        """Initialize RAPL reader."""
+        """Initialize RAPL collector."""
         super().__init__()
         self.domains = {}
         self.previous_readings = {}  # Store previous energy readings with timestamps
@@ -214,11 +214,11 @@ class RAPLReader(MetricsReader):
         return result if result else None
 
 
-class PowerMetricsReader(MetricsReader):
-    """Reader for macOS powermetrics energy metrics."""
+class PowerCollector(Collector):
+    """Collector for macOS powermetrics energy metrics."""
 
     def __init__(self):
-        """Initialize PowerMetrics reader."""
+        """Initialize PowerMetrics collector."""
         super().__init__()
         self.last_reading = None
         self._init_energy_reading()
@@ -337,32 +337,30 @@ class PowerMetricsReader(MetricsReader):
         return energy_readings
 
 
-def get_energy_reader() -> List[MetricsReader]:
-    """Factory function to get the appropriate energy readers for the current system.
+def get_energy_collector() -> List[Collector]:
+    """Factory function to get the appropriate energy collectors for the current system.
 
     This function detects the operating system and available energy monitoring
-    sensors, then returns a list of appropriate energy reader instances.
-    The list can contain both external readers (HTTP API for external power meters)
-    and internal readers (RAPL, PowerMetrics for system-level energy monitoring).
+    sensors, then returns a list of appropriate energy collector instances.
 
-    Priority order for internal readers:
+    Priority order for collectors:
     1. RAPL (Linux with Intel CPUs)
     2. PowerMetrics (macOS)
 
     Returns:
-        List[MetricsReader]: List of energy reader instances.
+        List[Collector]: List of energy collector instances.
     """
     system = platform.system()
-    logger.debug("Detecting energy readers for %s", system)
+    logger.debug("Detecting energy collectors for %s", system)
 
-    readers = []
+    collectors = []
 
-    if RAPLReader.is_available():
-        logger.debug("Adding RAPL energy reader")
-        readers.append(RAPLReader())
+    if RAPLCollector.is_available():
+        logger.debug("Adding RAPL energy collector")
+        collectors.append(RAPLCollector())
 
-    elif PowerMetricsReader.is_available():
-        logger.debug("Adding PowerMetrics energy reader")
-        readers.append(PowerMetricsReader())
+    elif PowerCollector.is_available():
+        logger.debug("Adding PowerMetrics energy collector")
+        collectors.append(PowerCollector())
 
-    return readers
+    return collectors

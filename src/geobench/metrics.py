@@ -10,13 +10,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class MetricsReader(ABC):
-    """Abstract base class for metrics readers."""
+class Collector(ABC):
+    """Abstract base class for metrics collectors."""
 
     def __init__(self):
-        """Initialize metrics reader."""
+        """Initialize metrics collector."""
         self.available = False
-        self.reader_name = self.__class__.__name__
+        self.collector_name = self.__class__.__name__
 
     @abstractmethod
     def read_metrics(self) -> Optional[Dict]:
@@ -30,21 +30,21 @@ class MetricsReader(ABC):
     @staticmethod
     @abstractmethod
     def is_available() -> bool:
-        """Check if this metrics reader is available on the current system.
+        """Check if this metrics collector is available on the current system.
 
         Returns:
-            True if the metrics reader can be used, False otherwise.
+            True if the metrics collector can be used, False otherwise.
         """
         pass
 
 
-class PsutilsReader(MetricsReader):
-    """Reader for system metrics via psutil."""
+class PsutilsCollector(Collector):
+    """Collector for system metrics via psutil."""
 
     def __init__(self):
-        """Initialize psutil reader."""
+        """Initialize psutil collector."""
         super().__init__()
-        self._init_reader()
+        self._init_collector()
 
     @staticmethod
     def is_available() -> bool:
@@ -55,16 +55,16 @@ class PsutilsReader(MetricsReader):
         """
         return True
 
-    def _init_reader(self):
-        """Initialize psutil reader."""
+    def _init_collector(self):
+        """Initialize psutil collector."""
         try:
             # Test if psutil works
             psutil.cpu_percent()
             psutil.virtual_memory()
             self.available = True
-            logger.debug("Psutil metrics reader initialized")
+            logger.debug("Psutil metrics collector initialized")
         except Exception as err:
-            logger.warning("Failed to initialize psutil reader: %s", err)
+            logger.warning("Failed to initialize psutil collector: %s", err)
             self.available = False
 
     def read_metrics(self) -> Optional[Dict]:
@@ -110,8 +110,8 @@ class PsutilsReader(MetricsReader):
             return None
 
 
-def get_metrics_readers_for_source(source_config: dict) -> List[MetricsReader]:
-    """Factory function to get appropriate metrics readers for a data source.
+def get_collectors_for_source(source_config: dict) -> List[Collector]:
+    """Factory function to get appropriate metrics collectors for a data source.
 
     Args:
         source_config: Data source configuration dictionary with:
@@ -122,11 +122,11 @@ def get_metrics_readers_for_source(source_config: dict) -> List[MetricsReader]:
                 * Dict with 'type' and optional 'config': {'type': 'psutils', 'config': {...}}
 
     Returns:
-        List of initialized MetricsReader instances for this source.
+        List of initialized Collector instances for this source.
     """
-    from .energy import get_energy_reader
+    from .energy import get_energy_collector
 
-    readers = []
+    collectors = []
     metrics_config = source_config.get("metrics", [])
 
     for metric in metrics_config:
@@ -148,20 +148,19 @@ def get_metrics_readers_for_source(source_config: dict) -> List[MetricsReader]:
 
         # Process metric based on type
         if metric_type == "psutils":
-            if PsutilsReader.is_available():
-                reader = PsutilsReader()
-                readers.append(reader)
-                logger.debug("[%s] Psutils reader enabled", source_config.get("name"))
+            if PsutilsCollector.is_available():
+                collector = PsutilsCollector()
+                collectors.append(collector)
+                logger.debug("[%s] Psutils collector enabled", source_config.get("name"))
 
         elif metric_type == "energy":
-            # Get internal energy readers only
-            energy_readers = get_energy_reader()
-            readers.extend(energy_readers)
-            if energy_readers:
+            energy_collectors = get_energy_collector()
+            collectors.extend(energy_collectors)
+            if energy_collectors:
                 logger.debug(
-                    "[%s] Energy readers enabled: %d.",
+                    "[%s] Energy collectors enabled: %d.",
                     source_config.get("name"),
-                    len(energy_readers),
+                    len(energy_collectors),
                 )
 
         else:
@@ -169,4 +168,4 @@ def get_metrics_readers_for_source(source_config: dict) -> List[MetricsReader]:
                 "[%s] Unknown metric type: %s", source_config.get("name"), metric_type
             )
 
-    return readers
+    return collectors
