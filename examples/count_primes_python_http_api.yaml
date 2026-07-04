@@ -1,0 +1,25 @@
+name: Count Primes Python with HTTP API Energy
+type: python
+command: count_primes.py
+arguments:
+    cores:
+    - 4
+    - 8
+    num:
+    - 1000000
+    - 2000000
+repeat: 2
+idle_time: 2
+data_sources:
+    - name: internal
+      interval: 1.0
+      metrics:
+      - type: psutils
+      - type: energy
+    - name: external
+      interval: 2.0
+      metrics:
+      - type: smart_plug
+        config:
+          api_url: "http://192.168.10.1:8181/device/optiplex-02"
+          timeout: 2.0

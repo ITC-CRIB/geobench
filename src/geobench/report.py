@@ -34,10 +34,18 @@ def calculate_run_summary(run_result: dict) -> dict:
         "endline": run_result.get("endline", {}),
     }
 
+    internal_system_data = []
+
+    collected_systam_data = run_result.get("system", [])
+    if isinstance(collected_systam_data, list):
+        internal_system_data = collected_systam_data
+    elif isinstance(collected_systam_data, dict):
+        internal_system_data = collected_systam_data.get("internal", [])
+
     # Calculate Average per-core system CPU usage
     system_per_cpu_list = []
-    if run_result["system"]:
-        for system_data in run_result["system"]:
+    if internal_system_data:
+        for system_data in internal_system_data:
             for i, cpu_percent in enumerate(system_data["cpu_percent"]):
                 if i >= len(system_per_cpu_list):
                     system_per_cpu_list.append([])
@@ -56,8 +64,8 @@ def calculate_run_summary(run_result: dict) -> dict:
 
     # Calculate average per-type system memory usage
     system_memory_dict = {}
-    if run_result["system"]:
-        for system_data in run_result["system"]:
+    if internal_system_data:
+        for system_data in internal_system_data:
             for type, mem_usage in system_data["memory_usage"].items():
                 if type not in system_memory_dict:
                     system_memory_dict[type] = []
@@ -82,18 +90,14 @@ def calculate_run_summary(run_result: dict) -> dict:
     system_disk_bytes_write_list = []
     system_net_bytes_sent_list = []
     system_net_bytes_recv_list = []
-    for system_data in run_result.get("system", []):
-        system_disk_bytes_read_list.append(system_data.get("disk_bytes_read", 0))
-        system_disk_bytes_write_list.append(system_data.get("disk_bytes_write", 0))
-        system_net_bytes_sent_list.append(system_data.get("net_bytes_sent", 0))
-        system_net_bytes_recv_list.append(system_data.get("net_bytes_recv", 0))
-    summary["avg_disk_bytes"] = {
-        "read": system_disk_bytes_read_list[-1] - system_disk_bytes_read_list[0]
-        if len(system_disk_bytes_read_list) > 1
-        else 0.0,
-        "write": system_disk_bytes_write_list[-1] - system_disk_bytes_write_list[0]
-        if len(system_disk_bytes_write_list) > 1
-        else 0.0,
+    for system_data in internal_system_data:
+        system_disk_bytes_read_list.append(system_data.get('disk_bytes_read', 0))
+        system_disk_bytes_write_list.append(system_data.get('disk_bytes_write', 0))
+        system_net_bytes_sent_list.append(system_data.get('net_bytes_sent', 0))
+        system_net_bytes_recv_list.append(system_data.get('net_bytes_recv', 0))
+    summary['avg_disk_bytes'] = {
+        'read': system_disk_bytes_read_list[-1] - system_disk_bytes_read_list[0] if len(system_disk_bytes_read_list) > 1 else 0.0,
+        'write': system_disk_bytes_write_list[-1] - system_disk_bytes_write_list[0] if len(system_disk_bytes_write_list) > 1 else 0.0
     }
     summary["avg_net_bytes"] = {
         "sent": system_net_bytes_sent_list[-1] - system_net_bytes_sent_list[0]
@@ -110,11 +114,12 @@ def calculate_run_summary(run_result: dict) -> dict:
 
     process_stats = {}
     # Calculate process statistics
-    if run_result["processes"]:
+    collected_process_data = run_result.get("processes", {})
+    if collected_process_data:
         # Calculate number of processes on a run
-        summary["num_processes"] = len(run_result["processes"])
+        summary["num_processes"] = len(collected_process_data)
         # For each process, calculate its metrics
-        for pid, process_info in run_result.get("processes", {}).items():
+        for pid, process_info in collected_process_data.items():
             if "metrics" in process_info:
                 process_metrics = process_info["metrics"]
 
