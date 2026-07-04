@@ -1,16 +1,16 @@
+from typing import Any, Callable
 import json
 import os
-import psutil
 import statistics
 import threading
 import time
 import traceback
-from typing import Any, Callable
 
-from .monitor import get_system_info, monitor_system
+import psutil
+
 from .cache import clear_cache
+from .monitor import get_system_info, monitor_process, monitor_system
 from .report import calculate_run_summary, generate_html_report
-from .monitor import monitor_process
 
 import logging
 
@@ -62,14 +62,14 @@ class Geobench:
         if os.path.exists(self.outdir):
             if os.path.isdir(self.outdir):
                 if clean:
-                    logger.debug(f"Removing existing output directory {self.outdir}.")
+                    logger.debug("Removing existing output directory: %s", self.outdir)
                     import shutil
 
                     shutil.rmtree(self.outdir)
                     os.makedirs(self.outdir)
                 # If not clean, we'll keep using the existing directory
             else:
-                raise ValueError("Invalid output directory.", self.outdir)
+                raise ValueError(f"Invalid output directory: {self.outdir}")
         else:
             os.makedirs(self.outdir)
 
@@ -130,7 +130,7 @@ class Geobench:
         """
         self._stop_event.clear()  # Reset the event
         if self._current_run is not None:
-            logger.warning("Already in a benchmark run. Call finish() first.")
+            logger.warning("Already in a benchmark run, call finish() first")
             return self
 
         if run_name is None:
@@ -204,7 +204,7 @@ class Geobench:
             dict: Summary of the run results.
         """
         if self._current_run is None:
-            logger.warning("No benchmark run in progress. Call start() first.")
+            logger.warning("No benchmark run in progress, call start() first")
             return {}
 
         self._stop_event.set()  # Signal to stop
@@ -292,8 +292,8 @@ class Geobench:
 
             success = True
 
-        except Exception as e:
-            logger.error(f"Error during benchmark: {e}")
+        except Exception as err:
+            logger.error("Error during benchmark: %s", err)
             traceback.print_exc()
             result = None
             success = False

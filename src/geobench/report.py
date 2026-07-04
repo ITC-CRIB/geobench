@@ -1,21 +1,23 @@
+"""Report module."""
+
+from datetime import datetime
+from typing import Dict, List
 import json
 import os
 import statistics
-from datetime import datetime
-from typing import Dict, List
 
-import plotly.graph_objects as go
 from jinja2 import Environment, FileSystemLoader
+import plotly.graph_objects as go
 
 
 def calculate_run_summary(run_result: dict) -> dict:
-    """Calculate summary statistics from single run result.
+    """Calculate summary statistics from a run result.
 
     Args:
-        run_result (dict): The run result data.
+        run_result: The run result data.
 
     Returns:
-        dict: A dictionary containing the summary statistics.
+        Summary statistics.
     """
     summary = {
         "run": run_result.get("run", 0),
@@ -36,11 +38,11 @@ def calculate_run_summary(run_result: dict) -> dict:
 
     internal_system_data = []
 
-    collected_systam_data = run_result.get("system", [])
-    if isinstance(collected_systam_data, list):
-        internal_system_data = collected_systam_data
-    elif isinstance(collected_systam_data, dict):
-        internal_system_data = collected_systam_data.get("internal", [])
+    collected_system_data = run_result.get("system", [])
+    if isinstance(collected_system_data, list):
+        internal_system_data = collected_system_data
+    elif isinstance(collected_system_data, dict):
+        internal_system_data = collected_system_data.get("internal", [])
 
     # Calculate Average per-core system CPU usage
     system_per_cpu_list = []

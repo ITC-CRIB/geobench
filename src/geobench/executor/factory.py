@@ -1,3 +1,5 @@
+"""Executor factory module."""
+
 from .python import PythonExecutor
 from .qgis_process import QGISProcessExecutor
 from .qgis_python import QGISPythonExecutor
@@ -12,16 +14,19 @@ _classes = {
 
 
 def create_executor(scenario: "Scenario") -> "Executor":
-    """Returns an executor object for the scenario.
+    """Return an executor instance for the scenario.
 
     Args:
-        scenario (Scenario): Scenario object.
+        scenario: Scenario.
 
     Returns:
-        Executor object for the scenario.
+        Executor instance for the scenario.
+
+    Raises:
+        ValueError: If invalid scenario type.
     """
     cls = _classes.get(scenario.type)
     if not cls:
-        raise ValueError("Invalid scenario type.", scenario.type)
+        raise ValueError(f"Invalid scenario type: {scenario.type}")
 
     return cls(scenario)

@@ -1,9 +1,12 @@
+"""QGIS Python executor module."""
+
 import importlib
-import jinja2
 import os
 import platform
 import subprocess
 import tempfile
+
+import jinja2
 
 from .qgis_process import QGISProcessExecutor
 
@@ -13,7 +16,7 @@ class QGISPythonExecutor(QGISProcessExecutor):
 
     @staticmethod
     def get_qgis_python_path() -> str | None:
-        """Returns QGIS Python executable path."""
+        """Return QGIS Python executable path if available."""
         bin_path = QGISProcessExecutor.get_qgis_bin_path()
 
         system = platform.system()
@@ -33,12 +36,12 @@ class QGISPythonExecutor(QGISProcessExecutor):
 
         path = QGISProcessExecutor.find_executable(bin_path, "python3")
         if not path:
-            raise FileNotFoundError("QGIS Python executable not found.")
+            raise FileNotFoundError("QGIS Python executable not found")
 
         return path
 
     def get_config(self) -> dict:
-        """Returns executor configuration."""
+        """Return executor configuration."""
         config = {}
 
         qgis_python_path = __class__.get_qgis_python_path()
@@ -53,23 +56,23 @@ class QGISPythonExecutor(QGISProcessExecutor):
 
             if result.returncode != 0:
                 raise RuntimeError(
-                    "QGIS Python failed with exit code {}.".format(result.returncode)
+                    f"QGIS Python failed with exit code: {result.returncode}"
                 )
 
             config["executable"] = qgis_python_path
             config["environment"] = __class__.get_qgis_environment()
 
         except subprocess.SubprocessError as err:
-            raise RuntimeError("Error running QGIS Python.") from err
+            raise RuntimeError("Error running QGIS Python") from err
 
         return config
 
     def get_arguments(self, command: str, args: dict) -> list:
-        """Returns execution arguments for the specified command and arguments.
+        """Return execution arguments for the specified command and arguments.
 
         Args:
-            command (str): Command.
-            args (dict): Arguments.
+            command: Command.
+            args: Arguments.
 
         Returns:
             List of execution arguments.
@@ -86,6 +89,6 @@ class QGISPythonExecutor(QGISProcessExecutor):
             )
 
         with tempfile.NamedTemporaryFile(mode="w+t", delete=False) as file:
-            temp.write(script)
+            file.write(script)
 
-        return [temp.name]
+        return [file.name]

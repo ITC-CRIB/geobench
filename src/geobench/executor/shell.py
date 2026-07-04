@@ -1,3 +1,5 @@
+"""Shell executor module."""
+
 import os
 import platform
 
@@ -8,7 +10,7 @@ class ShellExecutor(Executor):
     """Shell executor class."""
 
     def get_config(self) -> dict:
-        """Returns executor configuration."""
+        """Return executor configuration."""
         system = platform.system()
 
         if system == "Windows":
@@ -24,11 +26,11 @@ class ShellExecutor(Executor):
         return config
 
     def get_arguments(self, command: str, args: dict) -> list:
-        """Returns execution arguments for the specified command and arguments.
+        """Return execution arguments for the specified command and arguments.
 
         Args:
-            command (str): Command.
-            args (dict): Arguments.
+            command: Command.
+            args: Arguments.
 
         Returns:
             List of execution arguments.
