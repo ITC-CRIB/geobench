@@ -1,49 +1,65 @@
-import psutil
+"""Executor module."""
+
+from abc import ABC, abstractmethod
 import time
 import traceback
+
+import psutil
 
 from ..monitor import monitor_process
 
 
-class Executor:
+class Executor(ABC):
     """Executor class."""
 
-    def __init__(self, scenario):
-        """Initializes executor object.
+    def __init__(self, scenario: "Scenario"):
+        """Initialize the executor.
 
         Args:
-            scenario (Scenario): Scenario object.
+            scenario: Scenario to be executed.
 
         Raises:
-            ValueError: if no executable found.
+            ValueError: if no executable is found.
         """
         self.scenario = scenario
         self.config = self.get_config()
 
         if not self.config["executable"]:
-            raise ValueError("No executable found for the executor.")
+            raise ValueError("No executable found for the executor")
 
+    @abstractmethod
     def get_config(self) -> dict:
-        """Returns executor configuration."""
-        raise NotImplementedError
+        """Return the executor configuration."""
 
+    @abstractmethod
     def get_arguments(self, command: str, args: dict) -> list:
-        """Returns execution arguments for the specified command and arguments.
+        """Return execution arguments for the specified command and arguments.
 
         Args:
-            command (str): Command.
-            args (dict): Arguments.
+            command: Command.
+            args: Arguments.
 
         Returns:
             List of execution arguments.
         """
-        raise NotImplementedError
 
-    def execute(self, args: list):
-        """Executes executable with the specified arguments.
+    def execute(self, args: list) -> dict:
+        """Run the executor with the specified arguments.
 
         Args:
-            args (list): Arguments.
+            args: List of arguments.
+
+        Returns:
+            Dictionary of execution results:
+
+            - start_time (float):  Start time in seconds since the Epoch.
+            - end_time (float): End time in seconds since the Epoch.
+            - finished (bool): True if finished without exceptions, otherwise False.
+            - success (bool): True if finished without returncode, otherwise False.
+            - pid (int): Process id if created successfully (optional).
+            - returncode (int): Return code if not successful (optional).
+            - error (str): Error message if finished with exception (optional).
+            - Attributes provided by the monitor_process() method.
         """
         command = [self.config["executable"]] + args
 
@@ -62,27 +78,9 @@ class Executor:
             )
             out["pid"] = process.pid
 
-            # Prepare monitoring configuration
-            # Support both legacy energy_config and new data_sources
-            energy_config = {}
-            data_sources = None
-
-            if hasattr(self.scenario, "data_sources") and self.scenario.data_sources:
-                # New multi-threaded mode with data_sources
-                data_sources = self.scenario.data_sources
-            else:
-                # Legacy mode with energy_config
-                if self.scenario.energy_api_url:
-                    energy_config["energy_api_url"] = self.scenario.energy_api_url
-                if self.scenario.energy_api_timeout:
-                    energy_config["energy_api_timeout"] = (
-                        self.scenario.energy_api_timeout
-                    )
-
             metrics = monitor_process(
                 process,
-                energy_config=energy_config if energy_config else None,
-                data_sources=data_sources,
+                data_sources=self.scenario.data_sources,
             )
 
             out.update(metrics)
@@ -92,13 +90,14 @@ class Executor:
 
             if process.returncode:
                 print(
-                    f"Command '{' '.join(command)}' failed with exit code {process.returncode}"
+                    f"Command '{' '.join(command)}' failed with exit code: {process.returncode}"
                 )
+                out["returncode"] = process.returncode
 
         except Exception as err:
             print(f"Command '{' '.join(command)}' failed with error: {err}")
             print("Full stack trace:")
-            traceback.print_exc()
+            traceback.print_exception(err)
             out["error"] = str(err)
 
         out["end_time"] = time.time()

@@ -1,8 +1,9 @@
-"""Metrics monitoring module with support for multiple metric readers."""
+"""Metrics monitoring module."""
 
-import psutil
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, List
+
+import psutil
 
 import logging
 
@@ -68,8 +69,8 @@ class PsutilsReader(MetricsReader):
             psutil.virtual_memory()
             self.available = True
             logger.info("Psutil metrics reader initialized")
-        except Exception as e:
-            logger.warning(f"Failed to initialize psutil reader: {e}")
+        except Exception as err:
+            logger.warning("Failed to initialize psutil reader: %s", err)
             self.available = False
 
     def read_metrics(self) -> Optional[Dict]:
@@ -110,8 +111,8 @@ class PsutilsReader(MetricsReader):
 
             return metrics
 
-        except Exception as e:
-            logger.error(f"Error reading psutil metrics: {e}")
+        except Exception as err:
+            logger.error("Error reading psutil metrics: %s", err)
             return None
 
 
@@ -124,13 +125,12 @@ def get_metrics_readers_for_source(source_config: dict) -> List[MetricsReader]:
             - interval: Collection interval
             - metrics: List of metric configurations. Each metric can be:
                 * Simple string: 'psutils' or 'energy'
-                * Dict with 'type' and optional 'config': {'type': 'smart_plug', 'config': {...}}
-                * Legacy dict format: {'smart_plug': {...}} (deprecated, for backward compatibility)
+                * Dict with 'type' and optional 'config': {'type': 'psutils', 'config': {...}}
 
     Returns:
         List of initialized MetricsReader instances for this source.
     """
-    from .energy import get_energy_reader, HTTPAPIReader
+    from .energy import get_energy_reader
 
     readers = []
     metrics_config = source_config.get("metrics", [])
@@ -148,7 +148,7 @@ def get_metrics_readers_for_source(source_config: dict) -> List[MetricsReader]:
                 metric_config = metric.get("config", {})
         else:
             logger.warning(
-                f"[{source_config.get('name')}] Invalid metric format: {metric}"
+                "[%s] Invalid metric format: %s", source_config.get("name"), metric
             )
             continue
 
@@ -157,7 +157,7 @@ def get_metrics_readers_for_source(source_config: dict) -> List[MetricsReader]:
             if PsutilsReader.is_available():
                 reader = PsutilsReader()
                 readers.append(reader)
-                logger.debug(f"[{source_config.get('name')}] Psutils reader enabled")
+                logger.debug("[%s] Psutils reader enabled", source_config.get("name"))
 
         elif metric_type == "energy":
             # Get internal energy readers only
@@ -165,29 +165,14 @@ def get_metrics_readers_for_source(source_config: dict) -> List[MetricsReader]:
             readers.extend(energy_readers)
             if energy_readers:
                 logger.debug(
-                    f"[{source_config.get('name')}] Energy readers enabled: {len(energy_readers)}"
-                )
-
-        elif metric_type == "smart_plug":
-            # External smart plug reader
-            api_url = metric_config.get("api_url", "")
-            timeout = metric_config.get("timeout", 1.0)
-
-            if HTTPAPIReader.is_available() and api_url:
-                reader = HTTPAPIReader(api_url, timeout)
-                if reader.available:
-                    readers.append(reader)
-                    logger.info(
-                        f"[{source_config.get('name')}] Smart plug reader enabled at {api_url}"
-                    )
-            else:
-                logger.warning(
-                    f"[{source_config.get('name')}] Smart plug reader not available or missing api_url"
+                    "[%s] Energy readers enabled: %d.",
+                    source_config.get("name"),
+                    len(energy_readers),
                 )
 
         else:
             logger.warning(
-                f"[{source_config.get('name')}] Unknown metric type: {metric_type}"
+                "[%s] Unknown metric type: %s", source_config.get("name"), metric_type
             )
 
     return readers

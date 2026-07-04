@@ -1,21 +1,12 @@
 """Energy monitoring module with support for multiple energy sensors."""
 
-import asyncio
+from typing import Optional, Dict, List
 import glob
 import os
 import platform
 import shutil
-import socket
 import subprocess
 import time
-from typing import Optional, Dict, List
-
-try:
-    import aiohttp
-
-    AIOHTTP_AVAILABLE = True
-except ImportError:
-    AIOHTTP_AVAILABLE = False
 
 from .metrics import MetricsReader
 
@@ -72,7 +63,7 @@ class RAPLReader(MetricsReader):
         if system == "Linux":
             self._init_linux_rapl()
         else:
-            logger.warning(f"RAPL is not supported on {system}")
+            logger.warning("RAPL is not supported on %s", system)
 
     def _init_linux_rapl(self):
         """Initialize RAPL for Linux systems via sysfs."""
@@ -121,15 +112,15 @@ class RAPLReader(MetricsReader):
                     "max_energy": max_energy,
                 }
 
-                logger.info(f"Found RAPL domain: {domain_name} ({domain_id})")
+                logger.info("Found RAPL domain: %s (%s)", domain_name, domain_id)
 
-            except (IOError, PermissionError) as e:
-                logger.warning(f"Cannot access RAPL domain {domain_path}: {e}")
+            except (IOError, PermissionError) as err:
+                logger.warning("Cannot access RAPL domain %s: %s", domain_path, err)
                 continue
 
         if self.domains:
             self.available = True
-            logger.info(f"RAPL initialized with {len(self.domains)} domains")
+            logger.info("RAPL initialized with %d domains", len(self.domains))
 
             # Store initial energy readings for power calculation
             self._store_initial_readings()
@@ -148,9 +139,10 @@ class RAPLReader(MetricsReader):
 
                     # Store as flat dictionary: {domain_name: (energy_uj, timestamp)}
                     self.previous_readings[domain_name] = (energy_uj, timestamp)
-                    # logger.debug(f"Stored initial reading for {domain_name}: {energy_uj} μJ at {timestamp}")
-            except (IOError, ValueError) as e:
-                logger.warning(f"Failed to read initial energy from {domain_id}: {e}")
+            except (IOError, ValueError) as err:
+                logger.warning(
+                    "Failed to read initial energy from %s: %s", domain_id, err
+                )
                 continue
 
     def read_metrics(self) -> Optional[Dict]:
@@ -193,7 +185,7 @@ class RAPLReader(MetricsReader):
                                     max_energy - prev_energy
                                 ) + current_energy_uj
                                 logger.debug(
-                                    f"Counter wraparound detected for {domain_name}"
+                                    "Counter wraparound detected for %s", domain_name
                                 )
                             else:
                                 energy_delta = current_energy_uj - prev_energy
@@ -203,18 +195,14 @@ class RAPLReader(MetricsReader):
                             power_watts = energy_joules / time_delta
                             power_readings[domain_name] = power_watts
 
-                            # logger.debug(
-                            #     f"{domain_name}: ΔE={energy_delta}μJ, Δt={time_delta:.3f}s, P={power_watts:.3f}W"
-                            # )
-
                     # Update previous reading for next calculation
                     self.previous_readings[domain_name] = (
                         current_energy_uj,
                         current_timestamp,
                     )
 
-            except (IOError, ValueError) as e:
-                logger.warning(f"Failed to read energy from {domain_id}: {e}")
+            except (IOError, ValueError) as err:
+                logger.warning("Failed to read energy from %s: %s", domain_id, err)
                 continue
 
         result = {}
@@ -260,10 +248,6 @@ class PowerMetricsReader(MetricsReader):
 
     def _init_energy_reading(self):
         """Initialize powermetrics interface."""
-        if platform.system() != "Darwin":
-            logger.warning("PowerMetrics is only supported on macOS")
-            return
-
         if not shutil.which("powermetrics"):
             logger.warning("powermetrics command not found")
             return
@@ -278,8 +262,8 @@ class PowerMetricsReader(MetricsReader):
                 logger.info("PowerMetrics initialized successfully")
             else:
                 logger.warning("powermetrics is not accessible (may need sudo)")
-        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
-            logger.warning(f"Failed to initialize powermetrics: {e}")
+        except (subprocess.TimeoutExpired, FileNotFoundError) as err:
+            logger.warning("Failed to initialize powermetrics: %s", err)
 
     def read_metrics(self) -> Optional[Dict]:
         """Read current energy metrics using powermetrics.
@@ -303,7 +287,7 @@ class PowerMetricsReader(MetricsReader):
             )
 
             if result.returncode != 0:
-                logger.warning(f"powermetrics failed: {result.stderr}")
+                logger.warning("powermetrics failed: %s", result.stderr)
                 return None
 
             # Parse the output to extract energy metrics
@@ -315,8 +299,8 @@ class PowerMetricsReader(MetricsReader):
             else:
                 return None
 
-        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
-            logger.warning(f"Failed to read energy from powermetrics: {e}")
+        except (subprocess.TimeoutExpired, FileNotFoundError) as err:
+            logger.warning("Failed to read energy from powermetrics: %s", err)
             return None
 
     def _parse_powermetrics_output(self, output: str) -> Dict[str, int]:
@@ -353,128 +337,7 @@ class PowerMetricsReader(MetricsReader):
         return energy_readings
 
 
-class HTTPAPIReader(MetricsReader):
-    """Reader for energy metrics from HTTP API endpoint."""
-
-    def __init__(self, api_url: str, timeout: float = 5.0):
-        """Initialize HTTP API reader.
-
-        Args:
-            api_url: Full URL to the energy API endpoint (e.g., "http://server_ip:port/device/<hostname>")
-            timeout: Request timeout in seconds (default: 5.0)
-        """
-        super().__init__(reader_type="external")
-        self.api_url = api_url
-        self.timeout = timeout
-        self._init_energy_reading()
-
-    @staticmethod
-    def is_available() -> bool:
-        """Check if aiohttp is available.
-
-        Returns:
-            True if aiohttp is installed, False otherwise.
-        """
-        return AIOHTTP_AVAILABLE
-
-    def _init_energy_reading(self):
-        """Initialize HTTP API reader."""
-        if not AIOHTTP_AVAILABLE:
-            logger.warning(
-                "aiohttp is not installed. Install it with: pip install aiohttp"
-            )
-            return
-
-        # Replace <hostname> placeholder in URL if present
-        if "<hostname>" in self.api_url:
-            hostname = socket.gethostname()
-            self.api_url = self.api_url.replace("<hostname>", hostname)
-            logger.info(f"Resolved hostname in API URL to: {self.api_url}")
-
-        self.available = True
-        logger.info(f"HTTP API energy reader initialized with URL: {self.api_url}")
-
-    def read_metrics(self) -> Optional[Dict]:
-        """Read current energy metrics from HTTP API.
-
-        Returns:
-            Dictionary containing power readings in watts from the API,
-            or None if the API is not available or request fails.
-        """
-        if not self.available:
-            return None
-
-        try:
-            # Run async function in event loop
-            return asyncio.run(self._fetch_energy())
-        except Exception as e:
-            logger.warning(f"Failed to read energy from HTTP API: {e}")
-            return None
-
-    async def _fetch_energy(self) -> Optional[Dict[str, int]]:
-        """Async method to fetch energy data from HTTP API.
-
-        Returns:
-            Dictionary containing power readings, or None if request fails.
-        """
-        try:
-            timeout = aiohttp.ClientTimeout(total=self.timeout)
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.get(self.api_url) as response:
-                    if response.status != 200:
-                        logger.warning(
-                            f"HTTP API returned status {response.status}: {await response.text()}"
-                        )
-                        return None
-
-                    data = await response.json()
-
-                    # The API returns power in watts
-                    if "power" in data:
-                        return {"smart_plug_power": data}
-                    else:
-                        logger.warning(f"No 'power' field in API response: {data}")
-                        return None
-
-        except aiohttp.ClientError as e:
-            logger.warning(f"HTTP API request failed: {e}")
-            return None
-        except asyncio.TimeoutError:
-            logger.warning(f"HTTP API request timed out after {self.timeout}s")
-            return None
-        except Exception as e:
-            logger.warning(f"Unexpected error fetching energy from HTTP API: {e}")
-            return None
-
-
-class DummyEnergyReader(MetricsReader):
-    """Dummy energy reader for systems without energy monitoring support."""
-
-    def __init__(self):
-        """Initialize dummy reader."""
-        super().__init__()
-        self.available = False
-        logger.info("No energy monitoring available on this system")
-
-    @staticmethod
-    def is_available() -> bool:
-        """Always returns True as a fallback option.
-
-        Returns:
-            True (dummy reader is always available as fallback).
-        """
-        return False
-
-    def read_metrics(self) -> Optional[Dict]:
-        """Return None as no energy metrics are available.
-
-        Returns:
-            None
-        """
-        return None
-
-
-def get_energy_reader(config: Optional[Dict] = None) -> List[MetricsReader]:
+def get_energy_reader() -> List[MetricsReader]:
     """Factory function to get the appropriate energy readers for the current system.
 
     This function detects the operating system and available energy monitoring
@@ -485,53 +348,21 @@ def get_energy_reader(config: Optional[Dict] = None) -> List[MetricsReader]:
     Priority order for internal readers:
     1. RAPL (Linux with Intel CPUs)
     2. PowerMetrics (macOS)
-    3. DummyEnergyReader (fallback for unsupported systems)
-
-    External readers (if configured):
-    - HTTP API (for external power measurement devices)
-
-    Args:
-        config: Optional configuration dictionary. Supported keys:
-            - energy_api_url: URL for HTTP API energy reader
-              (e.g., "http://server_ip:port/device/<hostname>")
-            - energy_api_timeout: Request timeout in seconds (default: 5.0)
 
     Returns:
-        List[MetricsReader]: List of energy reader instances. Can contain multiple
-                            readers (e.g., both external HTTP API and internal RAPL).
+        List[MetricsReader]: List of energy reader instances.
     """
-    config = config or {}
     system = platform.system()
-    logger.info(f"Detecting energy readers for {system}")
+    logger.info("Detecting energy readers for %s", system)
 
     readers = []
 
-    # Try HTTP API for external power measurement (if configured)
-    if "energy_api_url" in config:
-        if HTTPAPIReader.is_available():
-            api_url = config["energy_api_url"]
-            timeout = config.get("energy_api_timeout", 5.0)
-            logger.info(f"Adding HTTP API energy reader (external) with URL: {api_url}")
-            readers.append(HTTPAPIReader(api_url, timeout))
-        else:
-            logger.warning(
-                "HTTP API energy reader requested but aiohttp is not installed"
-            )
-
-    # Try internal readers based on platform
-    # Try RAPL (Linux)
     if RAPLReader.is_available():
-        logger.info("Adding RAPL energy reader (internal)")
+        logger.info("Adding RAPL energy reader")
         readers.append(RAPLReader())
-    # Try PowerMetrics (macOS)
+
     elif PowerMetricsReader.is_available():
-        logger.info("Adding PowerMetrics energy reader (internal)")
+        logger.info("Adding PowerMetrics energy reader")
         readers.append(PowerMetricsReader())
-    else:
-        # Fallback to dummy reader for internal monitoring
-        logger.warning(
-            f"No internal energy monitoring available for {system}, using dummy reader"
-        )
-        readers.append(DummyEnergyReader())
 
     return readers

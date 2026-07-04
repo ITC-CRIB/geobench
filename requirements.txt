@@ -1,4 +1,3 @@
-aiohttp
 jinja2
 psutil
 python-dotenv

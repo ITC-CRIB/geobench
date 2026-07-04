@@ -1,8 +1,11 @@
+"""Monitoring module."""
+
 import platform
-import psutil
 import statistics
 import threading
 import time
+
+import psutil
 
 from .energy import get_energy_reader
 from .metrics import get_metrics_readers_for_source
@@ -257,7 +260,9 @@ class DataCollector(threading.Thread):
         """Run the data collection loop."""
         step = 0
 
-        logger.info(f"[{self.name}] Data collector started (interval={self.interval}s)")
+        logger.info(
+            "[%s] Data collector started (interval = %f s)", self.name, self.interval
+        )
 
         while not self.stop_event.is_set():
             step += 1
@@ -282,7 +287,9 @@ class DataCollector(threading.Thread):
             time.sleep(self.interval)
 
         logger.info(
-            f"[{self.name}] Data collector stopped ({len(self.collected_metrics)} samples)"
+            "[%s] Data collector stopped (%d samples)",
+            self.name,
+            len(self.collected_metrics),
         )
 
     def get_metrics(self) -> list:
@@ -297,25 +304,20 @@ class DataCollector(threading.Thread):
 def monitor_process(
     process,
     interval: float = 1.0,
-    stop_event=None,
-    energy_config: dict = None,
     data_sources: list = None,
+    stop_event=None,
 ) -> dict:
-    """Monitors process and system metrics while process is running.
+    """Monitor process and system metrics while process is running.
 
     Args:
         process: Process to be monitored.
         interval: Interval between each sample in seconds (default = 1.0).
-        stop_event: Optional event to signal monitoring to stop.
-        energy_config (dict, optional): Configuration for energy monitoring (legacy).
-            Supported keys:
-            - energy_api_url: URL for HTTP API energy reader
-            - energy_api_timeout: Timeout for HTTP API requests in seconds
         data_sources (list, optional): List of data source configurations for multi-threaded collection.
             Each source should have:
             - name: Source identifier
             - interval: Collection interval in seconds
-            - metrics: List of metrics to collect (e.g., ['psutils', 'energy', {'smart_plug': {...}}])
+            - metrics: List of metrics to collect (e.g., ['psutils', 'energy', {'psutils': {...}}])
+        stop_event: Optional event to signal monitoring to stop.
 
     Returns:
         Dictionary containing:
@@ -331,7 +333,7 @@ def monitor_process(
     if use_multi_threaded:
         # Multi-threaded mode with parallel data collection
         logger.info(
-            f"Starting multi-threaded monitoring with {len(data_sources)} data sources"
+            "Starting multi-threaded monitoring with %d data sources", len(data_sources)
         )
 
         # Create stop event if not provided
@@ -349,12 +351,12 @@ def monitor_process(
 
             if not readers:
                 logger.warning(
-                    f"No readers available for source '{source_name}', skipping"
+                    "No readers available for source '%s', skipping", source_name
                 )
                 continue
             else:
                 logger.info(
-                    f"Source '{source_name}' has {len(readers)} readers configured"
+                    "Source '%s' has %d readers configured", source_name, len(readers)
                 )
 
             collector = DataCollector(
@@ -446,7 +448,7 @@ def monitor_process(
         system_metrics = []
 
         # Initialize energy monitoring - get list of readers (can be multiple)
-        energy_readers = get_energy_reader(energy_config)
+        energy_readers = get_energy_reader()
         initial_energy = {}
 
         # Initialize each reader
@@ -456,11 +458,14 @@ def monitor_process(
                 if initial:
                     initial_energy.update(initial)
                 logger.info(
-                    f"Energy monitoring enabled for {reader.__class__.__name__} ({reader.reader_type})"
+                    "Energy monitoring enabled for %s (%s)",
+                    reader.__class__.__name__,
+                    reader.reader_type
                 )
             else:
                 logger.info(
-                    f"Energy monitoring not available for {reader.__class__.__name__}"
+                    "Energy monitoring not available for %s",
+                    reader.__class__.__name__
                 )
 
         if not initial_energy:
