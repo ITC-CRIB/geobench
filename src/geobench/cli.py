@@ -1,3 +1,5 @@
+"""Command line interface module."""
+
 import argparse
 import os
 
@@ -12,7 +14,7 @@ class CLI:
     """Command line interface class."""
 
     def __init__(self):
-        """Initializes command line interface object."""
+        """Initialize command line interface object."""
 
         self.parser = argparse.ArgumentParser(
             description="Benchmarking toolkit for geospatial processing workflows."
@@ -21,15 +23,18 @@ class CLI:
         self.parser.add_argument("-n", "--name", type=str, help="Scenario name.")
         self.parser.add_argument("-r", "--repeat", type=int, help="Number of repeats.")
         self.parser.add_argument("-o", "--outdir", type=str, help="Output directory.")
-        self.parser.add_argument("-c", "--clean", action="store_true")
-        self.parser.add_argument("-d", "--debug", action="store_true")
+        self.parser.add_argument(
+            "-c", "--clean", action="store_true", help="Clean the output directory."
+        )
+        self.parser.add_argument(
+            "-d", "--debug", action="store_true", help="Enable debug mode."
+        )
         # TODO: Add more scenario arguments for further customization.
 
     def run(self):
-        """Runs command line interface."""
+        """Run command line interface."""
         args = self.parser.parse_args()
 
-        # Configure basic logging (always)
         if args.debug:
             logging.basicConfig(
                 level=logging.DEBUG,
@@ -42,7 +47,6 @@ class CLI:
 
             logger.debug("Debugging enabled.")
         else:
-            # Configure logging for INFO level by default
             logging.basicConfig(
                 level=logging.INFO, format="%(levelname)s - %(message)s"
             )
@@ -58,6 +62,6 @@ class CLI:
 
 
 def main():
-    """Runs command line interface."""
+    """Run command line interface."""
     cli = CLI()
     cli.run()
