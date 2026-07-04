@@ -9,6 +9,7 @@ from .energy import get_energy_reader
 from .metrics import get_metrics_readers_for_source
 
 import logging
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -17,35 +18,35 @@ def get_system_info() -> dict:
     out = {}
 
     # OS information
-    out['os'] = {
-        'system': platform.system(),
-        'node': platform.node(),
-        'release': platform.release(),
-        'version': platform.version(),
-        'machine': platform.machine(),
-        'processor': platform.processor(),
+    out["os"] = {
+        "system": platform.system(),
+        "node": platform.node(),
+        "release": platform.release(),
+        "version": platform.version(),
+        "machine": platform.machine(),
+        "processor": platform.processor(),
     }
 
     # CPU information
-    out['cpu'] = {
-        'physical_count': psutil.cpu_count(logical=False),
-        'logical_count': psutil.cpu_count(logical=True),
-        'max_frequency': psutil.cpu_freq().max,
-        'min_frequency': psutil.cpu_freq().min,
-        'frequency': psutil.cpu_freq().current,
-        'percent': psutil.cpu_percent(interval=0.1, percpu=True),
+    out["cpu"] = {
+        "physical_count": psutil.cpu_count(logical=False),
+        "logical_count": psutil.cpu_count(logical=True),
+        "max_frequency": psutil.cpu_freq().max,
+        "min_frequency": psutil.cpu_freq().min,
+        "frequency": psutil.cpu_freq().current,
+        "percent": psutil.cpu_percent(interval=0.1, percpu=True),
     }
 
     # Memory information
-    out['memory'] = psutil.virtual_memory()._asdict()
+    out["memory"] = psutil.virtual_memory()._asdict()
 
     # Disk information
-    out['disk'] = []
+    out["disk"] = []
     for partition in psutil.disk_partitions():
         info = {
-            'device': partition.device,
-            'mountpoint': partition.mountpoint,
-            'fstype': partition.fstype,
+            "device": partition.device,
+            "mountpoint": partition.mountpoint,
+            "fstype": partition.fstype,
         }
         try:
             info.update(psutil.disk_usage(partition.mountpoint)._asdict())
@@ -53,7 +54,7 @@ def get_system_info() -> dict:
         except PermissionError:
             pass
 
-        out['disk'].append(info)
+        out["disk"].append(info)
 
     return out
 
@@ -68,18 +69,18 @@ def get_process_info(process) -> dict:
         Dictionary of process information.
     """
     return {
-        'pid': process.pid,
-        'parent_pid': process.ppid(),
-        'name': process.name(),
-        'executable': process.exe(),
-        'command': process.cmdline(),
-        'environment': process.environ(),
-        'create_time': process.create_time(),
-        'metrics': [],
+        "pid": process.pid,
+        "parent_pid": process.ppid(),
+        "name": process.name(),
+        "executable": process.exe(),
+        "command": process.cmdline(),
+        "environment": process.environ(),
+        "create_time": process.create_time(),
+        "metrics": [],
     }
 
 
-def monitor_system(duration: float=10.0, interval: float=1.0):
+def monitor_system(duration: float = 10.0, interval: float = 1.0):
     """Performs system monitoring for a specific duration.
 
     Args:
@@ -106,7 +107,9 @@ def monitor_system(duration: float=10.0, interval: float=1.0):
         memory_percents.append(psutil.virtual_memory().percent)
 
         data = []
-        for proc in psutil.process_iter(['pid', 'name', 'username', 'cpu_percent', 'memory_percent', 'status']):
+        for proc in psutil.process_iter(
+            ["pid", "name", "username", "cpu_percent", "memory_percent", "status"]
+        ):
             try:
                 info = proc.info
 
@@ -119,26 +122,30 @@ def monitor_system(duration: float=10.0, interval: float=1.0):
                     read_bytes = None
                     write_bytes = None
 
-                pid = info['pid']
+                pid = info["pid"]
 
                 if pid not in summary:
                     summary[pid] = {
-                        'pid': pid,
-                        'name': info['name'],
-                        'username': info.get('username'),
-                        'data': [],
+                        "pid": pid,
+                        "name": info["name"],
+                        "username": info.get("username"),
+                        "data": [],
                     }
 
                 item = {
-                    'pid': pid,
-                    'cpu_percent': info['cpu_percent'] if info['cpu_percent'] is not None else 0.0,
-                    'memory_percent': info['memory_percent'] if info['memory_percent'] is not None else 0.0,
-                    'read_bytes': read_bytes if read_bytes is not None else 0,
-                    'write_bytes': write_bytes if write_bytes is not None else 0,
+                    "pid": pid,
+                    "cpu_percent": info["cpu_percent"]
+                    if info["cpu_percent"] is not None
+                    else 0.0,
+                    "memory_percent": info["memory_percent"]
+                    if info["memory_percent"] is not None
+                    else 0.0,
+                    "read_bytes": read_bytes if read_bytes is not None else 0,
+                    "write_bytes": write_bytes if write_bytes is not None else 0,
                 }
 
                 data.append(item)
-                summary[pid]['data'].append(item)
+                summary[pid]["data"].append(item)
 
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
@@ -148,39 +155,47 @@ def monitor_system(duration: float=10.0, interval: float=1.0):
         time.sleep(interval)
 
     for item in summary.values():
-        data = item['data']
-        # Only include non-None values for calculating average CPU and memory 
-        cpu_percent_list = [item['cpu_percent'] for item in data if item['cpu_percent'] is not None]
+        data = item["data"]
+        # Only include non-None values for calculating average CPU and memory
+        cpu_percent_list = [
+            item["cpu_percent"] for item in data if item["cpu_percent"] is not None
+        ]
         if cpu_percent_list:
-            item['avg_cpu_percent'] = statistics.mean(cpu_percent_list)
-        memory_percent_list = [item['memory_percent'] for item in data if item['memory_percent'] is not None]
+            item["avg_cpu_percent"] = statistics.mean(cpu_percent_list)
+        memory_percent_list = [
+            item["memory_percent"]
+            for item in data
+            if item["memory_percent"] is not None
+        ]
         if memory_percent_list:
-            item['avg_memory_percent'] = statistics.mean(memory_percent_list)
+            item["avg_memory_percent"] = statistics.mean(memory_percent_list)
         # Check if read/write bytes are available at the first and last data points
         if len(data) > 0:
             # Calculate read/write bytes if the values are not None
-            if data[-1]['read_bytes'] and data[0]['read_bytes']:
-                item['read_bytes'] = data[-1]['read_bytes'] - data[0]['read_bytes']
+            if data[-1]["read_bytes"] and data[0]["read_bytes"]:
+                item["read_bytes"] = data[-1]["read_bytes"] - data[0]["read_bytes"]
             # Calculate read/write bytes if the values are not None
-            if data[-1]['write_bytes'] and data[0]['write_bytes']:
-                item['write_bytes'] = data[-1]['write_bytes'] - data[0]['write_bytes']
-        del item['data']
+            if data[-1]["write_bytes"] and data[0]["write_bytes"]:
+                item["write_bytes"] = data[-1]["write_bytes"] - data[0]["write_bytes"]
+        del item["data"]
 
     summary = list(summary.values())
-    summary.sort(key=lambda item: item['avg_cpu_percent'], reverse=True)
+    summary.sort(key=lambda item: item["avg_cpu_percent"], reverse=True)
 
     return {
-        'duration': duration,
-        'interval': interval,
-        'start_time': timestamps[0],
-        'end_time': timestamps[-1],
-        'avg_cpu_percent': statistics.mean(cpu_percents) if cpu_percents else None,
-        'avg_memory_percent': statistics.mean(memory_percents) if memory_percents else None,
-        'process_summary': summary,
-        'timestamps': timestamps,
-        'cpu_percents': cpu_percents,
-        'memory_percents': memory_percents,
-        'processes': processes,
+        "duration": duration,
+        "interval": interval,
+        "start_time": timestamps[0],
+        "end_time": timestamps[-1],
+        "avg_cpu_percent": statistics.mean(cpu_percents) if cpu_percents else None,
+        "avg_memory_percent": statistics.mean(memory_percents)
+        if memory_percents
+        else None,
+        "process_summary": summary,
+        "timestamps": timestamps,
+        "cpu_percents": cpu_percents,
+        "memory_percents": memory_percents,
+        "processes": processes,
     }
 
 

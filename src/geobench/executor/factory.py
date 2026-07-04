@@ -1,18 +1,17 @@
-from .shell import ShellExecutor
 from .python import PythonExecutor
 from .qgis_process import QGISProcessExecutor
 from .qgis_python import QGISPythonExecutor
-
+from .shell import ShellExecutor
 
 _classes = {
-    'shell': ShellExecutor,
-    'python': PythonExecutor,
-    'qgis-process': QGISProcessExecutor,
-    'qgis-python': QGISPythonExecutor,
+    "python": PythonExecutor,
+    "qgis-process": QGISProcessExecutor,
+    "qgis-python": QGISPythonExecutor,
+    "shell": ShellExecutor,
 }
 
 
-def create_executor(scenario: 'Scenario') -> 'Executor':
+def create_executor(scenario: "Scenario") -> "Executor":
     """Returns an executor object for the scenario.
 
     Args:

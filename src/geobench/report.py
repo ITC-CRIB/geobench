@@ -1,13 +1,12 @@
-#%%
 import json
-import statistics
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
-from jinja2 import Environment, FileSystemLoader
 import os
+import statistics
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Dict, List
+
+import plotly.graph_objects as go
+from jinja2 import Environment, FileSystemLoader
+
 
 def calculate_run_summary(run_result: dict) -> dict:
     """Calculate summary statistics from single run result.
@@ -32,7 +31,7 @@ def calculate_run_summary(run_result: dict) -> dict:
         "num_processes": 0,
         "processes": {},
         "baseline": run_result.get("baseline", {}),
-        "endline": run_result.get("endline", {})
+        "endline": run_result.get("endline", {}),
     }
 
     internal_system_data = []
@@ -55,9 +54,13 @@ def calculate_run_summary(run_result: dict) -> dict:
         for cpu_usage in system_per_cpu_list:
             avg_cpu = statistics.mean(cpu_usage) if cpu_usage else 0.0
             summary["avg_system_cpu"].append(avg_cpu)
-        
+
         # Then, calculate the overall average
-        summary["avg_system_cpu_overall"] = statistics.mean(summary["avg_system_cpu"]) if summary["avg_system_cpu"] else 0.0
+        summary["avg_system_cpu_overall"] = (
+            statistics.mean(summary["avg_system_cpu"])
+            if summary["avg_system_cpu"]
+            else 0.0
+        )
 
     # Calculate average per-type system memory usage
     system_memory_dict = {}
@@ -71,11 +74,15 @@ def calculate_run_summary(run_result: dict) -> dict:
         for type, mem_usage in system_memory_dict.items():
             avg_mem = statistics.mean(mem_usage) if mem_usage else 0.0
             summary["avg_system_memory"][type] = avg_mem
-        
+
         # Then, calculate the overall memory usage
         total_memory_usage = summary["avg_system_memory"].get("total", 0.0)
         used_memory_usage = summary["avg_system_memory"].get("used", 0.0)
-        overall_memory_usage = used_memory_usage / total_memory_usage * 100 if total_memory_usage > 0 else 0.0
+        overall_memory_usage = (
+            used_memory_usage / total_memory_usage * 100
+            if total_memory_usage > 0
+            else 0.0
+        )
         summary["avg_system_memory_overall"] = overall_memory_usage
 
     # Calculate average system disk and net
@@ -92,9 +99,13 @@ def calculate_run_summary(run_result: dict) -> dict:
         'read': system_disk_bytes_read_list[-1] - system_disk_bytes_read_list[0] if len(system_disk_bytes_read_list) > 1 else 0.0,
         'write': system_disk_bytes_write_list[-1] - system_disk_bytes_write_list[0] if len(system_disk_bytes_write_list) > 1 else 0.0
     }
-    summary['avg_net_bytes'] = {
-        'sent': system_net_bytes_sent_list[-1] - system_net_bytes_sent_list[0] if len(system_net_bytes_sent_list) > 1 else 0.0,
-        'recv': system_net_bytes_recv_list[-1] - system_net_bytes_recv_list[0] if len(system_net_bytes_recv_list) > 1 else 0.0
+    summary["avg_net_bytes"] = {
+        "sent": system_net_bytes_sent_list[-1] - system_net_bytes_sent_list[0]
+        if len(system_net_bytes_sent_list) > 1
+        else 0.0,
+        "recv": system_net_bytes_recv_list[-1] - system_net_bytes_recv_list[0]
+        if len(system_net_bytes_recv_list) > 1
+        else 0.0,
     }
 
     # Calculate running time of a single run
@@ -138,43 +149,40 @@ def calculate_run_summary(run_result: dict) -> dict:
                 running_time = 0
                 if len(process_metrics) >= 2:
                     # Get start and end timestamps
-                    running_time = process_metrics[-1]["timestamp"] - process_metrics[0]["timestamp"]
+                    running_time = (
+                        process_metrics[-1]["timestamp"]
+                        - process_metrics[0]["timestamp"]
+                    )
 
                 # Calculate CPU, memory, and I/O statistics
                 calculated_stats = {
                     "running_time": running_time,
-                    "avg_cpu_percent": statistics.mean(
-                        cpu_timeline
-                    )
+                    "avg_cpu_percent": statistics.mean(cpu_timeline)
                     if cpu_timeline
                     else 0.0,
-                    "stdev_cpu_percent": statistics.stdev(
-                        cpu_timeline
-                    )
+                    "stdev_cpu_percent": statistics.stdev(cpu_timeline)
                     if len(cpu_timeline) > 1
                     else 0.0,
-                    "avg_memory_percent": statistics.mean(
-                        memory_timeline
-                    )
+                    "avg_memory_percent": statistics.mean(memory_timeline)
                     if memory_timeline
                     else 0.0,
-                    "stdev_memory_percent": statistics.stdev(
-                        memory_timeline
-                    )
+                    "stdev_memory_percent": statistics.stdev(memory_timeline)
                     if len(memory_timeline) > 1
                     else 0.0,
-                    "avg_read_bytes": io_read_bytes_timeline[-1] - io_read_bytes_timeline[0] if len(io_read_bytes_timeline) > 1 else 0.0,
-                    "avg_write_bytes": io_write_bytes_timeline[-1] - io_write_bytes_timeline[0] if len(io_write_bytes_timeline) > 1 else 0.0,
-                    "max_num_threads": max(
-                        thread_timeline
-                    )
-                    if thread_timeline
-                    else 0,
+                    "avg_read_bytes": io_read_bytes_timeline[-1]
+                    - io_read_bytes_timeline[0]
+                    if len(io_read_bytes_timeline) > 1
+                    else 0.0,
+                    "avg_write_bytes": io_write_bytes_timeline[-1]
+                    - io_write_bytes_timeline[0]
+                    if len(io_write_bytes_timeline) > 1
+                    else 0.0,
+                    "max_num_threads": max(thread_timeline) if thread_timeline else 0,
                 }
-                
+
                 # Update process info with calculated stats
                 process_info.update(calculated_stats)
-                
+
                 # Store updated process info
                 process_stats[pid] = process_info
 
@@ -183,12 +191,20 @@ def calculate_run_summary(run_result: dict) -> dict:
 
     return summary
 
+
 # Generalized Chart Creation Functions
 
-def create_line_chart(data: Dict[str, List], title: str, x_title: str, y_title: str, 
-                     div_id: str, colors: List[str] = None) -> str:
+
+def create_line_chart(
+    data: Dict[str, List],
+    title: str,
+    x_title: str,
+    y_title: str,
+    div_id: str,
+    colors: List[str] = None,
+) -> str:
     """Create a generalized line chart.
-    
+
     Args:
         data: Dictionary where keys are series names and values are data points
         title: Chart title
@@ -196,44 +212,55 @@ def create_line_chart(data: Dict[str, List], title: str, x_title: str, y_title: 
         y_title: Y-axis title
         div_id: HTML div ID for the chart
         colors: Optional list of colors for the lines
-        
+
     Returns:
         str: HTML div containing the Plotly chart
     """
     if not data:
         return f"<div>No data available for {title}</div>"
-    
+
     if colors is None:
-        colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
-    
+        colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]
+
     fig = go.Figure()
-    
+
     for i, (series_name, values) in enumerate(data.items()):
         if values:  # Only add non-empty series
             x_values = list(range(len(values)))
-            fig.add_trace(go.Scatter(
-                x=x_values,
-                y=values,
-                mode='lines+markers',
-                name=series_name,
-                line=dict(color=colors[i % len(colors)], width=2)
-            ))
-    
+            fig.add_trace(
+                go.Scatter(
+                    x=x_values,
+                    y=values,
+                    mode="lines+markers",
+                    name=series_name,
+                    line=dict(color=colors[i % len(colors)], width=2),
+                )
+            )
+
     fig.update_layout(
         title=title,
         xaxis_title=x_title,
         yaxis_title=y_title,
-        hovermode='x',
-        template='plotly_white'
+        hovermode="x",
+        template="plotly_white",
     )
-    
+
     return fig.to_html(include_plotlyjs=False, div_id=div_id)
 
-def create_bar_chart(labels=None, values=None, data=None, title: str = '', 
-                    x_title: str = '', y_title: str = '', div_id: str = '', 
-                    color: str = '#1f77b4', orientation: str = 'v') -> str:
+
+def create_bar_chart(
+    labels=None,
+    values=None,
+    data=None,
+    title: str = "",
+    x_title: str = "",
+    y_title: str = "",
+    div_id: str = "",
+    color: str = "#1f77b4",
+    orientation: str = "v",
+) -> str:
     """Create a generalized bar chart.
-    
+
     Args:
         labels: List of labels for bars (optional if data dict is provided)
         values: List of values for bars (optional if data dict is provided)
@@ -244,7 +271,7 @@ def create_bar_chart(labels=None, values=None, data=None, title: str = '',
         div_id: HTML div ID for the chart
         color: Bar color
         orientation: 'v' for vertical, 'h' for horizontal bars
-        
+
     Returns:
         str: HTML div containing the Plotly chart
     """
@@ -255,33 +282,39 @@ def create_bar_chart(labels=None, values=None, data=None, title: str = '',
             values = list(data.values())
         else:
             return f"<div>Invalid data format for {title}. Expected dictionary.</div>"
-    
+
     # Validate input
     if not labels or not values:
         return f"<div>No data available for {title}</div>"
-    
+
     if len(labels) != len(values):
         return f"<div>Labels and values length mismatch for {title}</div>"
-    
-    if orientation == 'v':
+
+    if orientation == "v":
         fig = go.Figure(data=[go.Bar(x=labels, y=values, marker_color=color)])
         fig.update_layout(xaxis_tickangle=-45)
     else:
-        fig = go.Figure(data=[go.Bar(x=values, y=labels, orientation='h', marker_color=color)])
-    
+        fig = go.Figure(
+            data=[go.Bar(x=values, y=labels, orientation="h", marker_color=color)]
+        )
+
     fig.update_layout(
-        title=title,
-        xaxis_title=x_title,
-        yaxis_title=y_title,
-        template='plotly_white'
+        title=title, xaxis_title=x_title, yaxis_title=y_title, template="plotly_white"
     )
-    
+
     return fig.to_html(include_plotlyjs=False, div_id=div_id)
 
-def create_pie_chart(labels=None, values=None, data=None, title: str = '', 
-                    div_id: str = '', colors: List[str] = None) -> str:
+
+def create_pie_chart(
+    labels=None,
+    values=None,
+    data=None,
+    title: str = "",
+    div_id: str = "",
+    colors: List[str] = None,
+) -> str:
     """Create a generalized pie chart.
-    
+
     Args:
         labels: List of labels for pie slices (optional if data dict is provided)
         values: List of values for pie slices (optional if data dict is provided)
@@ -289,7 +322,7 @@ def create_pie_chart(labels=None, values=None, data=None, title: str = '',
         title: Chart title
         div_id: HTML div ID for the chart
         colors: Optional list of colors for the slices
-        
+
     Returns:
         str: HTML div containing the Plotly chart
     """
@@ -300,42 +333,47 @@ def create_pie_chart(labels=None, values=None, data=None, title: str = '',
             values = list(data.values())
         else:
             return f"<div>Invalid data format for {title}. Expected dictionary.</div>"
-    
+
     # Validate input
     if not labels or not values:
         return f"<div>No data available for {title}</div>"
-    
+
     if len(labels) != len(values):
         return f"<div>Labels and values length mismatch for {title}</div>"
-    
+
     # Filter out zero values
-    filtered_data = [(label, value) for label, value in zip(labels, values) if value > 0]
+    filtered_data = [
+        (label, value) for label, value in zip(labels, values) if value > 0
+    ]
     if not filtered_data:
         return f"<div>No non-zero data available for {title}</div>"
-    
+
     filtered_labels, filtered_values = zip(*filtered_data)
-    
-    fig = go.Figure(data=[go.Pie(
-        labels=filtered_labels, 
-        values=filtered_values,
-        marker_colors=colors
-    )])
-    
-    fig.update_layout(
-        title=title,
-        template='plotly_white'
+
+    fig = go.Figure(
+        data=[
+            go.Pie(labels=filtered_labels, values=filtered_values, marker_colors=colors)
+        ]
     )
-    
+
+    fig.update_layout(title=title, template="plotly_white")
+
     return fig.to_html(include_plotlyjs=False, div_id=div_id)
 
-def create_multi_series_line_chart(series_data: Dict[str, Dict[str, List]], 
-                                  title: str, x_title: str, y_title: str, 
-                                  div_id: str, colors: List[str] = None) -> str:
+
+def create_multi_series_line_chart(
+    series_data: Dict[str, Dict[str, List]],
+    title: str,
+    x_title: str,
+    y_title: str,
+    div_id: str,
+    colors: List[str] = None,
+) -> str:
     """Create a line chart with multiple series, each with their own x and y values.
-    
+
     Each series can have different x-axis values and different lengths, allowing
     for data points that start or end at arbitrary timepoints.
-    
+
     Args:
         series_data: Dictionary where keys are series names and values are dictionaries
                     containing 'x' and 'y' keys with their respective data lists.
@@ -347,18 +385,18 @@ def create_multi_series_line_chart(series_data: Dict[str, Dict[str, List]],
         y_title: Y-axis title
         div_id: HTML div ID for the chart
         colors: Optional list of colors for the lines
-        
+
     Returns:
         str: HTML div containing the Plotly chart
     """
     if not series_data:
         return f"<div>No data available for {title}</div>"
-    
+
     if colors is None:
-        colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
-    
+        colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]
+
     fig = go.Figure()
-    
+
     for i, (series_name, data) in enumerate(series_data.items()):
         if data:
             # Handle backward compatibility: if data is a list, treat as y-values
@@ -366,13 +404,13 @@ def create_multi_series_line_chart(series_data: Dict[str, Dict[str, List]],
                 series_x = list(range(len(data)))
                 series_y = data
             # Handle new format: data is a dict with 'x' and 'y' keys
-            elif isinstance(data, dict) and 'x' in data and 'y' in data:
-                x_values = data['x']
-                y_values = data['y']
-                
+            elif isinstance(data, dict) and "x" in data and "y" in data:
+                x_values = data["x"]
+                y_values = data["y"]
+
                 if not x_values or not y_values:
                     continue
-                    
+
                 # Take minimum length to ensure x and y have same number of points
                 min_length = min(len(x_values), len(y_values))
                 if min_length > 0:
@@ -383,44 +421,48 @@ def create_multi_series_line_chart(series_data: Dict[str, Dict[str, List]],
             else:
                 # Skip invalid data format
                 continue
-            
+
             if series_x and series_y:
-                fig.add_trace(go.Scatter(
-                    x=series_x,
-                    y=series_y,
-                    mode='lines+markers',
-                    name=series_name,
-                    line=dict(color=colors[i % len(colors)], width=2)
-                ))
-    
+                fig.add_trace(
+                    go.Scatter(
+                        x=series_x,
+                        y=series_y,
+                        mode="lines+markers",
+                        name=series_name,
+                        line=dict(color=colors[i % len(colors)], width=2),
+                    )
+                )
+
     fig.update_layout(
         title=title,
         xaxis_title=x_title,
         yaxis_title=y_title,
-        hovermode='x unified',
-        template='plotly_white'
+        hovermode="x unified",
+        template="plotly_white",
     )
-    
+
     return fig.to_html(include_plotlyjs=False, div_id=div_id)
 
-def generate_html_report(system_data: Dict, set_summaries: List[Dict], output_path: str = "report.html") -> str:
+
+def generate_html_report(
+    system_data: Dict, set_summaries: List[Dict], output_path: str = "report.html"
+) -> str:
     """Generate a comprehensive HTML report with all charts.
-    
+
     Args:
         run_data: Run-level monitoring data
         system_data: System-level monitoring data
         output_path: Path to save the HTML report
-        
+
     Returns:
         str: Path to the generated HTML report
     """
     div_id_counter = 1
     # For each set summary
     for set_summary in set_summaries:
-
         # Get run summaries
         run_summaries = set_summary.get("runs", [])
-        
+
         # For each run summary in a set
         for run_summary in run_summaries:
             # Init data structure
@@ -440,7 +482,11 @@ def generate_html_report(system_data: Dict, set_summaries: List[Dict], output_pa
 
             # Select only available, free, used, active, inactive, wired
             memory_keys = ["available", "free", "used", "active", "inactive", "wired"]
-            filtered_avg_system_memory = {key: avg_system_memory[key] for key in memory_keys if key in avg_system_memory}
+            filtered_avg_system_memory = {
+                key: avg_system_memory[key]
+                for key in memory_keys
+                if key in avg_system_memory
+            }
 
             # Convert processes summary statistics into chart data
             # For each process info in run summary
@@ -448,8 +494,12 @@ def generate_html_report(system_data: Dict, set_summaries: List[Dict], output_pa
                 process_names.append(f"{process_info.get('name', None)} {pid}")
                 average_cpu_data.append(process_info.get("avg_cpu_percent", 0.0))
                 average_memory_data.append(process_info.get("avg_memory_percent", 0.0))
-                average_write_bytes_data.append(process_info.get("avg_write_bytes", 0.0)/1024)
-                average_read_bytes_data.append(process_info.get("avg_read_bytes", 0.0)/1024)
+                average_write_bytes_data.append(
+                    process_info.get("avg_write_bytes", 0.0) / 1024
+                )
+                average_read_bytes_data.append(
+                    process_info.get("avg_read_bytes", 0.0) / 1024
+                )
 
                 # Transform process CPU usage over time into time series data for visualization
                 process_step_timeline = []
@@ -464,123 +514,142 @@ def generate_html_report(system_data: Dict, set_summaries: List[Dict], output_pa
                         process_memory_timeline.append(mem)
                 cpu_series_data[pid] = {
                     "x": process_step_timeline,
-                    "y": process_cpu_timeline
+                    "y": process_cpu_timeline,
                 }
                 memory_series_data[pid] = {
                     "x": process_step_timeline,
-                    "y": process_memory_timeline
+                    "y": process_memory_timeline,
                 }
 
                 # Create charts
-                run_summary.update({"charts": {
-                    'system_cpu_chart': create_bar_chart(
-                        labels=[f"{i}" for i in range(1, len(avg_system_cpu) + 1)],
-                        values=avg_system_cpu,
-                        title='Average System CPU Usage (per-core)',
-                        x_title='CPU Core',
-                        y_title='CPU Usage (%)',
-                        div_id=f'system-cpu-chart-{div_id_counter}',
-                        color='#1f77b4'
-                    ),
-                    'system_memory_chart': create_bar_chart(
-                        labels=[f"{key}" for key in filtered_avg_system_memory.keys()],
-                        values=[val for key,val in filtered_avg_system_memory.items()],
-                        title='Average System Memory Usage',
-                        x_title='Memory Block',
-                        y_title='Memory Usage (%)',
-                        div_id=f'system-memory-chart-{div_id_counter}',
-                        color='#ff7f0e'
-                    ),
-                    'system_disk_activity_chart': create_bar_chart(
-                        labels=[f"{key}" for key in avg_system_disk.keys()],
-                        values=[val/1024 for key, val in avg_system_disk.items()],
-                        title='Average System Disk Activity',
-                        x_title='Disk Activity',
-                        y_title='Disk Usage (MB)',
-                        div_id=f'system-disk-chart-{div_id_counter}',
-                        color='#1f77b4'
-                    ),
-                    'system_net_activity_chart': create_bar_chart(
-                        labels=[f"{key}" for key in avg_system_net.keys()],
-                        values=[val/1024 for key, val in avg_system_net.items()],
-                        title='Average System Network Activity',
-                        x_title='Net Activity',
-                        y_title='Net Traffic (MB)',
-                        div_id=f'system-net-chart-{div_id_counter}',
-                        color='#1f77b4'
-                    ),
-                    'process_cpu_chart': create_bar_chart(
-                        labels=process_names,
-                        values=average_cpu_data,
-                        title='Average CPU Usage by Process',
-                        x_title='Process (PID)',
-                        y_title='CPU Usage (%)',
-                        div_id=f'process-cpu-chart-{div_id_counter}',
-                        color='#ff7f0e'
-                    ),
-                    'process_memory_chart': create_bar_chart(
-                        labels=process_names,
-                        values=average_memory_data,
-                        title='Average Memory Usage by Process',
-                        x_title='Process (PID)',
-                        y_title='Memory Usage (%)',
-                        div_id=f'process-memory-chart-{div_id_counter}',
-                        color='#2ca02c'
-                    ),
-                    'process_write_bytes_chart': create_bar_chart(
-                        labels=process_names,
-                        values=average_write_bytes_data,
-                        title='Average I/O Write Bytes by Process',
-                        x_title='Process (PID)',
-                        y_title='Write (MB)',
-                        div_id=f'process-write-bytes-chart-{div_id_counter}',
-                        color='#2ca02c'
-                    ),
-                    'process_read_bytes_chart': create_bar_chart(
-                        labels=process_names,
-                        values=average_read_bytes_data,
-                        title='Average I/O Read Bytes by Process',
-                        x_title='Process (PID)',
-                        y_title='Read (MB)',
-                        div_id=f'process-read-bytes-chart-{div_id_counter}',
-                        color='#2ca02c'
-                    ),
-                    'process_timeline_chart': create_multi_series_line_chart(
-                        series_data=cpu_series_data,
-                        title='Process CPU Usage Timeline',
-                        x_title='Timestamp',
-                        y_title='CPU Usage (%)',
-                        div_id=f'process-timeline-chart-{div_id_counter}'
-                    ),
-                    'process_memory_timeline_chart': create_multi_series_line_chart(
-                        series_data=memory_series_data,
-                        title='Process Memory Usage Timeline',
-                        x_title='Timestamp',
-                        y_title='Memory Usage (%)',
-                        div_id=f'process-memory-timeline-chart-{div_id_counter}'
-                    )}
-                })
+                run_summary.update(
+                    {
+                        "charts": {
+                            "system_cpu_chart": create_bar_chart(
+                                labels=[
+                                    f"{i}" for i in range(1, len(avg_system_cpu) + 1)
+                                ],
+                                values=avg_system_cpu,
+                                title="Average System CPU Usage (per-core)",
+                                x_title="CPU Core",
+                                y_title="CPU Usage (%)",
+                                div_id=f"system-cpu-chart-{div_id_counter}",
+                                color="#1f77b4",
+                            ),
+                            "system_memory_chart": create_bar_chart(
+                                labels=[
+                                    f"{key}"
+                                    for key in filtered_avg_system_memory.keys()
+                                ],
+                                values=[
+                                    val
+                                    for key, val in filtered_avg_system_memory.items()
+                                ],
+                                title="Average System Memory Usage",
+                                x_title="Memory Block",
+                                y_title="Memory Usage (%)",
+                                div_id=f"system-memory-chart-{div_id_counter}",
+                                color="#ff7f0e",
+                            ),
+                            "system_disk_activity_chart": create_bar_chart(
+                                labels=[f"{key}" for key in avg_system_disk.keys()],
+                                values=[
+                                    val / 1024 for key, val in avg_system_disk.items()
+                                ],
+                                title="Average System Disk Activity",
+                                x_title="Disk Activity",
+                                y_title="Disk Usage (MB)",
+                                div_id=f"system-disk-chart-{div_id_counter}",
+                                color="#1f77b4",
+                            ),
+                            "system_net_activity_chart": create_bar_chart(
+                                labels=[f"{key}" for key in avg_system_net.keys()],
+                                values=[
+                                    val / 1024 for key, val in avg_system_net.items()
+                                ],
+                                title="Average System Network Activity",
+                                x_title="Net Activity",
+                                y_title="Net Traffic (MB)",
+                                div_id=f"system-net-chart-{div_id_counter}",
+                                color="#1f77b4",
+                            ),
+                            "process_cpu_chart": create_bar_chart(
+                                labels=process_names,
+                                values=average_cpu_data,
+                                title="Average CPU Usage by Process",
+                                x_title="Process (PID)",
+                                y_title="CPU Usage (%)",
+                                div_id=f"process-cpu-chart-{div_id_counter}",
+                                color="#ff7f0e",
+                            ),
+                            "process_memory_chart": create_bar_chart(
+                                labels=process_names,
+                                values=average_memory_data,
+                                title="Average Memory Usage by Process",
+                                x_title="Process (PID)",
+                                y_title="Memory Usage (%)",
+                                div_id=f"process-memory-chart-{div_id_counter}",
+                                color="#2ca02c",
+                            ),
+                            "process_write_bytes_chart": create_bar_chart(
+                                labels=process_names,
+                                values=average_write_bytes_data,
+                                title="Average I/O Write Bytes by Process",
+                                x_title="Process (PID)",
+                                y_title="Write (MB)",
+                                div_id=f"process-write-bytes-chart-{div_id_counter}",
+                                color="#2ca02c",
+                            ),
+                            "process_read_bytes_chart": create_bar_chart(
+                                labels=process_names,
+                                values=average_read_bytes_data,
+                                title="Average I/O Read Bytes by Process",
+                                x_title="Process (PID)",
+                                y_title="Read (MB)",
+                                div_id=f"process-read-bytes-chart-{div_id_counter}",
+                                color="#2ca02c",
+                            ),
+                            "process_timeline_chart": create_multi_series_line_chart(
+                                series_data=cpu_series_data,
+                                title="Process CPU Usage Timeline",
+                                x_title="Timestamp",
+                                y_title="CPU Usage (%)",
+                                div_id=f"process-timeline-chart-{div_id_counter}",
+                            ),
+                            "process_memory_timeline_chart": create_multi_series_line_chart(
+                                series_data=memory_series_data,
+                                title="Process Memory Usage Timeline",
+                                x_title="Timestamp",
+                                y_title="Memory Usage (%)",
+                                div_id=f"process-memory-timeline-chart-{div_id_counter}",
+                            ),
+                        }
+                    }
+                )
 
                 div_id_counter += 1
-    
+
     # Prepare template context
     context = {
-        'title': 'GeoBench Performance Report',
-        'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        'system_data': system_data,
-        'set_summaries': set_summaries,
+        "title": "GeoBench Performance Report",
+        "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "system_data": system_data,
+        "set_summaries": set_summaries,
     }
-    
+
     # Load and render template
     try:
         # For Python 3.9+, use importlib.resources
         from importlib import resources
+
         try:
-            template_files = resources.files('geobench.templates')
-            template_content = (template_files / 'report_template.html').read_text(encoding='utf-8')
+            template_files = resources.files("geobench.templates")
+            template_content = (template_files / "report_template.html").read_text(
+                encoding="utf-8"
+            )
         except AttributeError:
             # For Python 3.7-3.8, use importlib_resources backport approach
-            with resources.open_text('geobench.templates', 'report_template.html') as f:
+            with resources.open_text("geobench.templates", "report_template.html") as f:
                 template_content = f.read()
         env = Environment()
         template = env.from_string(template_content)
@@ -588,33 +657,39 @@ def generate_html_report(system_data: Dict, set_summaries: List[Dict], output_pa
         # Fallback for environments where importlib.resources might not work
         try:
             import pkg_resources
-            template_content = pkg_resources.resource_string('geobench', 'templates/report_template.html').decode('utf-8')
+
+            template_content = pkg_resources.resource_string(
+                "geobench", "templates/report_template.html"
+            ).decode("utf-8")
             env = Environment()
             template = env.from_string(template_content)
         except:
             # Final fallback to file system (for development)
-            template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+            template_dir = os.path.join(os.path.dirname(__file__), "templates")
             env = Environment(loader=FileSystemLoader(template_dir))
-            template = env.get_template('report_template.html')
-    
+            template = env.get_template("report_template.html")
+
     html_content = template.render(context)
-    
+
     # Write to file
-    with open(output_path, 'w', encoding='utf-8') as f:
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write(html_content)
-    
+
     return output_path
 
-#%%
 
 if __name__ == "__main__":
     import sys
-    
+
     if len(sys.argv) < 2:
-        print("Usage: python report.py <step_result_path> [system_result_path] [output_path]")
-        print("Example: python report.py test/short-result/step-result.json test/short-result/system-result.json report.html")
+        print(
+            "Usage: python report.py <step_result_path> [system_result_path] [output_path]"
+        )
+        print(
+            "Example: python report.py test/short-result/step-result.json test/short-result/system-result.json report.html"
+        )
         sys.exit(1)
-    
+
     report_dir_path = sys.argv[1]
     output_path = sys.argv[2]
 
@@ -630,42 +705,48 @@ if __name__ == "__main__":
                 else:
                     run_report_path.append(os.path.join(root, filename))
 
-    if (system_report_path := os.path.join(report_dir_path, "result.json")):
-        with open(system_report_path, 'r') as f:
+    if system_report_path := os.path.join(report_dir_path, "result.json"):
+        with open(system_report_path, "r") as f:
             system_data = json.load(f)
 
     # Iterate for directory inside report_dir_path (one-level)
     set_summaries = []
     for set_items in os.listdir(report_dir_path):
         if os.path.isdir(os.path.join(report_dir_path, set_items)):
-            set_summary = {
-                "set": 0,
-                "arguments": {},
-                "runs": []
-            }
+            set_summary = {"set": 0, "arguments": {}, "runs": []}
 
-            sorted_listdir = sorted(os.listdir(os.path.join(report_dir_path, set_items)))
+            sorted_listdir = sorted(
+                os.listdir(os.path.join(report_dir_path, set_items))
+            )
             for run_items in sorted_listdir:
                 if os.path.isdir(os.path.join(report_dir_path, set_items, run_items)):
-                    if (run_path := os.path.join(report_dir_path, set_items, run_items, "result.json")):
-                        with open(run_path, 'r') as f:
+                    if run_path := os.path.join(
+                        report_dir_path, set_items, run_items, "result.json"
+                    ):
+                        with open(run_path, "r") as f:
                             run_data = json.load(f)
                             set_summary["set"] = run_data.get("set", 0)
                             set_summary["arguments"] = run_data.get("arguments", {})
                             summary = calculate_run_summary(run_data)
                             set_summary["runs"].append(summary)
-                            
+
             runs_len = len(set_summary["runs"])
             set_summary["total"] = runs_len
-            set_summary["success"] = (sum(1 for run in set_summary["runs"] if run["success"]) / runs_len) if runs_len > 0 else 0
+            set_summary["success"] = (
+                (sum(1 for run in set_summary["runs"] if run["success"]) / runs_len)
+                if runs_len > 0
+                else 0
+            )
 
-            run_time_list = [run["run_time"] for run in set_summary["runs"] if "run_time" in run]
+            run_time_list = [
+                run["run_time"] for run in set_summary["runs"] if "run_time" in run
+            ]
             avg_run_time = statistics.mean(run_time_list) if run_time_list else 0
-            stdev_run_time = statistics.stdev(run_time_list) if len(run_time_list) > 1 else 0
+            stdev_run_time = (
+                statistics.stdev(run_time_list) if len(run_time_list) > 1 else 0
+            )
             set_summary["avg_run_time"] = avg_run_time
             set_summary["stdev_run_time"] = stdev_run_time
             set_summaries.append(set_summary)
 
     generate_html_report(system_data, set_summaries, output_path)
-
-#%%

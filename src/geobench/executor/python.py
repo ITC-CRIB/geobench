@@ -17,11 +17,11 @@ class PythonExecutor(Executor):
         if venv:
             system = platform.system()
 
-            if system == 'Windows':
-                names = ['Scripts/python.exe', 'Scripts/python3.exe']
+            if system == "Windows":
+                names = ["Scripts/python.exe", "Scripts/python3.exe"]
 
             else:
-                names = ['bin/python', 'bin/python3']
+                names = ["bin/python", "bin/python3"]
 
             found = False
             for name in names:
@@ -31,17 +31,18 @@ class PythonExecutor(Executor):
                     break
 
             if not found:
-                raise FileNotFoundError("Python executable not found in {}.".format(venv))
+                raise FileNotFoundError(
+                    "Python executable not found in {}.".format(venv)
+                )
 
         else:
-            path = shutil.which('python') or shutil.which('python3')
+            path = shutil.which("python") or shutil.which("python3")
             if not path:
                 raise FileNotFoundError("Python executable not found.")
 
-        config['executable'] = path
+        config["executable"] = path
 
         return config
-
 
     def get_arguments(self, command: str, args: dict) -> list:
         """Returns execution arguments for the specified command and arguments.
@@ -49,7 +50,7 @@ class PythonExecutor(Executor):
         Args:
             command (str): Command.
             args (dict): Arguments.
-        
+
         Returns:
             List of execution arguments.
         """
