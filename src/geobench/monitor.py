@@ -7,7 +7,6 @@ import time
 
 import psutil
 
-from .energy import get_energy_collector
 from .metrics import get_collectors_for_source
 
 import logging
@@ -316,7 +315,7 @@ def monitor_process(
             Each source should have:
             - name: Source identifier
             - interval: Collection interval in seconds
-            - metrics: List of metrics to collect (e.g., ['psutils', 'energy', {'psutils': {...}}])
+            - metrics: List of metrics to collect (e.g., ['psutil', 'energy', {'psutil': {...}}])
         stop_event: Optional event to signal monitoring to stop.
 
     Returns:
@@ -447,27 +446,6 @@ def monitor_process(
         step = 0
         system_metrics = []
 
-        # Get list of energy collectors
-        energy_collectors = get_energy_collector()
-        initial_energy = {}
-
-        # Initialize each collector
-        for collector in energy_collectors:
-            if collector.available:
-                initial = collector.read_metrics()
-                if initial:
-                    initial_energy.update(initial)
-                logger.debug(
-                    "Energy monitoring enabled for %s", collector.__class__.__name__
-                )
-            else:
-                logger.debug(
-                    "Energy monitoring not available for %s", collector.__class__.__name__
-                )
-
-        if not initial_energy:
-            logger.debug("No energy monitoring available")
-
         # Initialize metrics
         psutil.cpu_percent()
         process.cpu_percent()
@@ -534,13 +512,6 @@ def monitor_process(
                     "disk_bytes_write": sys_disk_bytes_write,
                 }
             )
-
-            # Collect energy metrics from all available collectors
-            for collector in energy_collectors:
-                if collector.available:
-                    current_energy = collector.read_metrics()
-                    if current_energy:
-                        sys_metric.update(current_energy)
 
             system_metrics.append(sys_metric)
 
