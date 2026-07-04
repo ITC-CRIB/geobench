@@ -1,9 +1,10 @@
 """Metrics monitoring module with support for multiple metric readers."""
 
-import logging
 import psutil
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, List
+
+import logging
 
 logger = logging.getLogger(__name__)
 

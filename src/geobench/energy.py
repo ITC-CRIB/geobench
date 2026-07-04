@@ -1,13 +1,12 @@
 """Energy monitoring module with support for multiple energy sensors."""
 
-import logging
-import platform
-import os
-import glob
-import subprocess
-import shutil
 import asyncio
+import glob
+import os
+import platform
+import shutil
 import socket
+import subprocess
 import time
 from typing import Optional, Dict, List
 
@@ -20,9 +19,9 @@ except ImportError:
 
 from .metrics import MetricsReader
 
+import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class RAPLReader(MetricsReader):

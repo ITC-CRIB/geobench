@@ -10,7 +10,6 @@ from .metrics import get_metrics_readers_for_source
 import logging
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def get_system_info() -> dict:
