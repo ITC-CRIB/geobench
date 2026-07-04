@@ -458,14 +458,11 @@ def monitor_process(
                 if initial:
                     initial_energy.update(initial)
                 logger.debug(
-                    "Energy monitoring enabled for %s (%s)",
-                    reader.__class__.__name__,
-                    reader.reader_type
+                    "Energy monitoring enabled for %s", reader.__class__.__name__
                 )
             else:
                 logger.debug(
-                    "Energy monitoring not available for %s",
-                    reader.__class__.__name__
+                    "Energy monitoring not available for %s", reader.__class__.__name__
                 )
 
         if not initial_energy:

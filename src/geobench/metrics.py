@@ -13,15 +13,9 @@ logger = logging.getLogger(__name__)
 class MetricsReader(ABC):
     """Abstract base class for metrics readers."""
 
-    def __init__(self, reader_type: str = "internal"):
-        """Initialize metrics reader.
-
-        Args:
-            reader_type: Type of metrics reader - 'internal' for local system sensors
-                        or 'external' for remote API readers
-        """
+    def __init__(self):
+        """Initialize metrics reader."""
         self.available = False
-        self.reader_type = reader_type
         self.reader_name = self.__class__.__name__
 
     @abstractmethod
@@ -49,7 +43,7 @@ class PsutilsReader(MetricsReader):
 
     def __init__(self):
         """Initialize psutil reader."""
-        super().__init__(reader_type="internal")
+        super().__init__()
         self._init_reader()
 
     @staticmethod
