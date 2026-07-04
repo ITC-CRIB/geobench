@@ -57,3 +57,10 @@ include = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/geobench"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 88
