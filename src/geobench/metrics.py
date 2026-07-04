@@ -68,7 +68,7 @@ class PsutilsReader(MetricsReader):
             psutil.cpu_percent()
             psutil.virtual_memory()
             self.available = True
-            logger.info("Psutil metrics reader initialized")
+            logger.debug("Psutil metrics reader initialized")
         except Exception as err:
             logger.warning("Failed to initialize psutil reader: %s", err)
             self.available = False

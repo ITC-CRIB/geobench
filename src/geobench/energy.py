@@ -112,7 +112,7 @@ class RAPLReader(MetricsReader):
                     "max_energy": max_energy,
                 }
 
-                logger.info("Found RAPL domain: %s (%s)", domain_name, domain_id)
+                logger.debug("Found RAPL domain: %s (%s)", domain_name, domain_id)
 
             except (IOError, PermissionError) as err:
                 logger.warning("Cannot access RAPL domain %s: %s", domain_path, err)
@@ -120,7 +120,7 @@ class RAPLReader(MetricsReader):
 
         if self.domains:
             self.available = True
-            logger.info("RAPL initialized with %d domains", len(self.domains))
+            logger.debug("RAPL initialized with %d domains", len(self.domains))
 
             # Store initial energy readings for power calculation
             self._store_initial_readings()
@@ -259,7 +259,7 @@ class PowerMetricsReader(MetricsReader):
             )
             if result.returncode == 0:
                 self.available = True
-                logger.info("PowerMetrics initialized successfully")
+                logger.debug("PowerMetrics initialized successfully")
             else:
                 logger.warning("powermetrics is not accessible (may need sudo)")
         except (subprocess.TimeoutExpired, FileNotFoundError) as err:
@@ -353,16 +353,16 @@ def get_energy_reader() -> List[MetricsReader]:
         List[MetricsReader]: List of energy reader instances.
     """
     system = platform.system()
-    logger.info("Detecting energy readers for %s", system)
+    logger.debug("Detecting energy readers for %s", system)
 
     readers = []
 
     if RAPLReader.is_available():
-        logger.info("Adding RAPL energy reader")
+        logger.debug("Adding RAPL energy reader")
         readers.append(RAPLReader())
 
     elif PowerMetricsReader.is_available():
-        logger.info("Adding PowerMetrics energy reader")
+        logger.debug("Adding PowerMetrics energy reader")
         readers.append(PowerMetricsReader())
 
     return readers

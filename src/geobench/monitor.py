@@ -260,7 +260,7 @@ class DataCollector(threading.Thread):
         """Run the data collection loop."""
         step = 0
 
-        logger.info(
+        logger.debug(
             "[%s] Data collector started (interval = %f s)", self.name, self.interval
         )
 
@@ -286,7 +286,7 @@ class DataCollector(threading.Thread):
             # Sleep for the specified interval
             time.sleep(self.interval)
 
-        logger.info(
+        logger.debug(
             "[%s] Data collector stopped (%d samples)",
             self.name,
             len(self.collected_metrics),
@@ -332,7 +332,7 @@ def monitor_process(
 
     if use_multi_threaded:
         # Multi-threaded mode with parallel data collection
-        logger.info(
+        logger.debug(
             "Starting multi-threaded monitoring with %d data sources", len(data_sources)
         )
 
@@ -355,7 +355,7 @@ def monitor_process(
                 )
                 continue
             else:
-                logger.info(
+                logger.debug(
                     "Source '%s' has %d readers configured", source_name, len(readers)
                 )
 
@@ -442,7 +442,7 @@ def monitor_process(
 
     else:
         # Legacy single-threaded mode for backward compatibility
-        logger.info("Starting single-threaded monitoring (legacy mode)")
+        logger.debug("Starting single-threaded monitoring (legacy mode)")
 
         step = 0
         system_metrics = []
@@ -457,19 +457,19 @@ def monitor_process(
                 initial = reader.read_metrics()
                 if initial:
                     initial_energy.update(initial)
-                logger.info(
+                logger.debug(
                     "Energy monitoring enabled for %s (%s)",
                     reader.__class__.__name__,
                     reader.reader_type
                 )
             else:
-                logger.info(
+                logger.debug(
                     "Energy monitoring not available for %s",
                     reader.__class__.__name__
                 )
 
         if not initial_energy:
-            logger.info("No energy monitoring available")
+            logger.debug("No energy monitoring available")
 
         # Initialize metrics
         psutil.cpu_percent()
