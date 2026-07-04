@@ -15,14 +15,18 @@ def count_primes(n):
 def main():
     parser = argparse.ArgumentParser(description="Count primes in parallel.")
     parser.add_argument(
-        '-c', '--cores', type=int,
+        "-c",
+        "--cores",
+        type=int,
         default=multiprocessing.cpu_count() // 2,
-        help="Number of CPU cores to use (default: half of available cores)"
+        help="Number of CPU cores to use (default: half of available cores)",
     )
     parser.add_argument(
-        '--n', '--num', type=int,
+        "--n",
+        "--num",
+        type=int,
         default=1_000_000,
-        help="Number to check primes up to (default: 1_000_000)"
+        help="Number to check primes up to (default: 1_000_000)",
     )
     args = parser.parse_args()
 
