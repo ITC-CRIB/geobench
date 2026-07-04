@@ -1,6 +1,9 @@
 # Environment
 .venv/
 
+# IDE
+.vscode/
+
 # Jupyter Notebook
 .ipynb_checkpoints/
 
@@ -12,8 +15,6 @@ __pycache__/
 build/
 dist/
 *.egg
-
-uv.lock
 
 # OS-specific
 .DS_Store
