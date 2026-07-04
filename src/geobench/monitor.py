@@ -2,6 +2,7 @@ import platform
 import psutil
 import statistics
 import time
+import threading
 
 import logging
 
@@ -75,12 +76,12 @@ def get_process_info(process) -> dict:
     }
 
 
-def monitor_system(duration: float = 10.0, interval: float = 1.0):
+def monitor_system(duration: float = 10.0, interval: float = 1.0) -> dict:
     """Performs system monitoring for a specific duration.
 
     Args:
-        duration (int): Monitoring duration (s) (default = 10).
-        interval (int): Interval between each sample (s) (default = 1)
+        duration: Monitoring duration in seconds (default = 10.0).
+        interval: Interval between each sample in seconds (default = 1.0)
 
     Returns:
         Dictionary of system monitoring results.
@@ -194,13 +195,15 @@ def monitor_system(duration: float = 10.0, interval: float = 1.0):
     }
 
 
-def monitor_process(process, interval: float = 1.0, stop_event=None) -> dict:
+def monitor_process(
+    process, interval: float = 1.0, stop_event: threading.Event = None
+) -> dict:
     """Monitors process and system metrics while process is running.
 
     Args:
         process: Process to be monitored.
-        interval (float): Interval between each sample (s) (default = 1.0).
-        stop_event (threading.Event, optional): Event to signal monitoring to stop.
+        interval: Interval between each sample in seconds (default = 1.0).
+        stop_event: Optional event to signal monitoring to stop.
     """
     step = 0
     system_metrics = []
