@@ -44,7 +44,6 @@ class Scenario:
         energy_api_url: str = None,
         energy_api_timeout: float = 5.0,
         data_sources: list = None,
-        idle_time: float = None,
     ):
         """Initialize scenario object.
 
@@ -67,7 +66,6 @@ class Scenario:
             energy_api_url: Optional URL address for HTTP-based energy reader (legacy).
             energy_api_timeout: Timeout for HTTP-based energy reader in seconds.
             data_sources: Optional list of data source configurations for multi-threaded monitoring.
-            idle_time: Optional idle time in seconds (for compatibility).
 
         Raises:
             ValueError: if invalid scenario type.
@@ -109,7 +107,6 @@ class Scenario:
         self.energy_api_url = energy_api_url
         self.energy_api_timeout = energy_api_timeout or 5.0
         self.data_sources = data_sources
-        self.idle_time = idle_time
 
         cwd = os.getcwd()
 
