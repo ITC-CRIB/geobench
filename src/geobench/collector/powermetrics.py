@@ -62,15 +62,14 @@ class PowerMetricsCollector(Collector):
         except (subprocess.TimeoutExpired, FileNotFoundError) as err:
             logger.warning("Failed to initialize powermetrics: %s", err)
 
-    def read_metrics(self) -> dict | None:
+    def read_metrics(self) -> dict:
         """Read current energy metrics using powermetrics.
 
         Returns:
-            Dictionary containing energy readings in microjoules (μJ),
-            or None if powermetrics is not available.
+            Dictionary containing energy readings in microjoules (μJ).
         """
         if not self.available:
-            return None
+            return {}
 
         try:
             # Run powermetrics for a short sample
@@ -85,7 +84,7 @@ class PowerMetricsCollector(Collector):
 
             if result.returncode != 0:
                 logger.warning("powermetrics failed: %s", result.stderr)
-                return None
+                return {}
 
             # Parse the output to extract energy metrics
             energy_readings = self._parse_powermetrics_output(result.stdout)
@@ -94,11 +93,11 @@ class PowerMetricsCollector(Collector):
                 self.last_reading = energy_readings
                 return {"energy": energy_readings}
             else:
-                return None
+                return {}
 
         except (subprocess.TimeoutExpired, FileNotFoundError) as err:
             logger.warning("Failed to read energy from powermetrics: %s", err)
-            return None
+            return {}
 
     def _parse_powermetrics_output(self, output: str) -> dict:
         """Parse powermetrics output to extract energy metrics.

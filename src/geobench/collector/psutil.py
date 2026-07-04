@@ -38,14 +38,14 @@ class PsutilsCollector(Collector):
             logger.warning("Failed to initialize psutil collector: %s", err)
             self.available = False
 
-    def read_metrics(self) -> dict | None:
+    def read_metrics(self) -> dict:
         """Read current system metrics using psutil.
 
         Returns:
-            Dictionary containing system metrics, or None if not available.
+            Dictionary containing system metrics.
         """
         if not self.available:
-            return None
+            return {}
 
         metrics = {}
 
@@ -78,4 +78,4 @@ class PsutilsCollector(Collector):
 
         except Exception as err:
             logger.error("Error reading psutil metrics: %s", err)
-            return None
+            return {}

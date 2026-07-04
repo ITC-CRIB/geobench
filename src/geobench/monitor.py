@@ -210,7 +210,6 @@ class DataCollector(threading.Thread):
         collectors: list,
         process,
         stop_event: threading.Event,
-        source_type: str = "internal",
     ):
         """Initialize data collector thread.
 
@@ -250,8 +249,7 @@ class DataCollector(threading.Thread):
 
         for collector in self.collectors:
             current_metrics = collector.read_metrics()
-            if current_metrics:
-                metrics.update(current_metrics)
+            metrics.update(current_metrics)
 
         return metrics
 

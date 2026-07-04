@@ -11,11 +11,11 @@ class Collector(ABC):
         self.available = False
 
     @abstractmethod
-    def read_metrics(self) -> dict | None:
+    def read_metrics(self) -> dict:
         """Read current metrics.
 
         Returns:
-            Dictionary containing metric readings, or None if not available.
+            Dictionary containing metric readings.
         """
 
     @staticmethod

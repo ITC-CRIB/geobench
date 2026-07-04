@@ -142,17 +142,16 @@ class RAPLCollector(Collector):
                 )
                 continue
 
-    def read_metrics(self) -> dict | None:
+    def read_metrics(self) -> dict:
         """Read current energy counters from all RAPL domains and calculate power.
 
         Returns:
             Dictionary containing:
             - 'energy': mapping domain names to energy values in microjoules (μJ)
             - 'power': mapping domain names to power values in watts (W)
-            or None if RAPL is not available.
         """
         if not self.available:
-            return None
+            return {}
 
         current_timestamp = time.time()
         energy_readings = {}
@@ -208,4 +207,4 @@ class RAPLCollector(Collector):
         if power_readings:
             result["rapl_power"] = power_readings
 
-        return result if result else None
+        return result
