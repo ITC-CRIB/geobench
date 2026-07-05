@@ -26,7 +26,6 @@ class Geobench:
         outdir: str = None,
         run_wait: float = 2.0,
         run_monitor: float = 2.0,
-        system_wait: float = 2.0,
         system_monitor: float = 2.0,
         clean: bool = False,
     ):
@@ -37,14 +36,12 @@ class Geobench:
             outdir (str): Output directory path (default = generated from name).
             run_wait (float): Idle wait time before and after each run (s) (default = 2.0)
             run_monitor (float): Monitoring time before and after each run (s) (default = 2.0).
-            system_wait (float): Wait time before and after all runs (s) (default = 2.0)
             system_monitor (float): Monitoring time before and after all runs (s) (default = 2.0)
             clean (bool): Set True to clean the output directory, if exists.
         """
         self.name = name
         self.run_wait = run_wait
         self.run_monitor = run_monitor
-        self.system_wait = system_wait
         self.system_monitor = system_monitor
 
         self._stop_event = threading.Event()  # Replace is_monitoring
@@ -91,26 +88,6 @@ class Geobench:
         result_path = os.path.join(self.outdir, "result.json")
         with open(result_path, "w", encoding="utf-8") as f:
             json.dump(self.result, f, ensure_ascii=False, indent=2)
-
-    def get_process_info(self, process) -> dict:
-        """Returns process information.
-
-        Args:
-            process: Process.
-
-        Returns:
-            Dictionary of process information.
-        """
-        return {
-            "pid": process.pid,
-            "parent_pid": process.ppid(),
-            "name": process.name(),
-            "executable": process.exe(),
-            "command": process.cmdline(),
-            "environment": process.environ(),
-            "create_time": process.create_time(),
-            "metrics": [],
-        }
 
     def _monitor_while_running(self, process):
         out = monitor_process(
