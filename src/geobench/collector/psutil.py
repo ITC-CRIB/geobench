@@ -2,7 +2,7 @@
 
 import psutil
 
-from . import Collector
+from . import Collector, CollectorInfo
 
 import logging
 
@@ -12,8 +12,22 @@ logger = logging.getLogger(__name__)
 class PsutilsCollector(Collector):
     """Collector for system metrics via psutil."""
 
+    @classmethod
+    def get_info(cls) -> CollectorInfo:
+        """Return collector information."""
+        return CollectorInfo(
+            code="psutil",
+            name="psutil Collector",
+            description="CPU, memory, IO, and network metrics using psutil.",
+            category="resource",
+        )
+
     def __init__(self, config: dict | None = None):
-        """Initialize psutil collector."""
+        """Initialize psutil collector.
+
+        Raises:
+            RuntimeError: If cannot initialize the collector.
+        """
         super().__init__(config)
 
         try:
@@ -25,39 +39,39 @@ class PsutilsCollector(Collector):
             raise RuntimeError("Cannot initialize psutil")
 
     def read_metrics(self) -> dict:
-        """Read current system metrics using psutil.
+        """Read system metrics using psutil.
 
         Returns:
             Dictionary containing system metrics.
         """
-        metrics = {}
+        out = {}
 
         try:
             # CPU metrics
-            metrics["cpu_percent"] = psutil.cpu_percent(percpu=True)
+            out["cpu_percent"] = psutil.cpu_percent(percpu=True)
 
             # Memory metrics
-            metrics["memory_usage"] = psutil.virtual_memory()._asdict()
+            out["memory_usage"] = psutil.virtual_memory()._asdict()
 
             # Network I/O
             try:
                 net_io = psutil.net_io_counters()
-                metrics["net_bytes_sent"] = net_io.bytes_sent
-                metrics["net_bytes_recv"] = net_io.bytes_recv
+                out["net_bytes_sent"] = net_io.bytes_sent
+                out["net_bytes_recv"] = net_io.bytes_recv
             except (psutil.AccessDenied, AttributeError):
-                metrics["net_bytes_sent"] = 0
-                metrics["net_bytes_recv"] = 0
+                out["net_bytes_sent"] = 0
+                out["net_bytes_recv"] = 0
 
             # Disk I/O
             try:
                 disk_io = psutil.disk_io_counters()
-                metrics["disk_bytes_read"] = disk_io.read_bytes
-                metrics["disk_bytes_write"] = disk_io.write_bytes
+                out["disk_bytes_read"] = disk_io.read_bytes
+                out["disk_bytes_write"] = disk_io.write_bytes
             except (psutil.AccessDenied, AttributeError):
-                metrics["disk_bytes_read"] = 0
-                metrics["disk_bytes_write"] = 0
+                out["disk_bytes_read"] = 0
+                out["disk_bytes_write"] = 0
 
-            return metrics
+            return out
 
         except Exception as err:
             logger.error("Error reading psutil metrics: %s", err)

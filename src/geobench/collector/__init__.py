@@ -1,6 +1,17 @@
 """Metrics collector module."""
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class CollectorInfo:
+    """Metadata describing a collector."""
+
+    code: str
+    name: str
+    description: str
+    category: str
 
 
 class Collector(ABC):
@@ -9,6 +20,11 @@ class Collector(ABC):
     def __init__(self, config: dict | None = None):
         """Initialize metrics collector."""
         self.config = config or {}
+
+    @abstractmethod
+    @classmethod
+    def get_info(cls) -> CollectorInfo:
+        """Return collector information."""
 
     @abstractmethod
     def read_metrics(self) -> dict:

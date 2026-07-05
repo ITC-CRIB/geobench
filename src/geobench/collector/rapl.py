@@ -4,7 +4,7 @@ import glob
 import os
 import time
 
-from . import Collector
+from . import Collector, CollectorInfo
 
 import logging
 
@@ -13,6 +13,16 @@ logger = logging.getLogger(__name__)
 
 class RAPLCollector(Collector):
     """Collector for RAPL energy metrics."""
+
+    @classmethod
+    def get_info(cls) -> CollectorInfo:
+        """Return collector information."""
+        return CollectorInfo(
+            code="rapl",
+            name="RAPL Energy Metrics Collector",
+            description="Energy metrics using RAPL.",
+            category="energy",
+        )
 
     def __init__(self, config: dict | None = None):
         """Initialize RAPL collector."""

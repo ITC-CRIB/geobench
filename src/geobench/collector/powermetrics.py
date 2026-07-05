@@ -3,7 +3,7 @@
 import shutil
 import subprocess
 
-from . import Collector
+from . import Collector, CollectorInfo
 
 import logging
 
@@ -13,6 +13,16 @@ logger = logging.getLogger(__name__)
 class PowerMetricsCollector(Collector):
     """Collector for macOS powermetrics energy metrics."""
 
+    @classmethod
+    def get_info(cls) -> CollectorInfo:
+        """Return collector information."""
+        return CollectorInfo(
+            code="powermetrics",
+            name="PowerMetrics Energy Collector",
+            description="Energy metrics using PowerMetrics on macOS.",
+            category="energy",
+        )
+    
     def __init__(self, config: dict | None = None):
         """Initialize PowerMetrics collector."""
         super().__init__(config)
