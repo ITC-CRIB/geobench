@@ -13,7 +13,7 @@ import time
 import yaml
 
 from .cache import clear_cache
-from .executor.factory import create_executor
+from .executor import get_executors
 from .monitor import get_system_info, monitor_system
 from .report import calculate_run_summary, generate_html_report
 
@@ -217,7 +217,11 @@ class Scenario:
 
             # Create executor
             print(f"Creating {self.type} executor.")
-            executor = create_executor(self)
+            executor_cls = get_executors().get(self.type)
+            if not executor_cls:
+                raise ValueError(f"Invalid executor type: {self.type}")
+            
+            executor = executor_cls(self)
 
             # Set up output directory
             print(f"Setting up output directory {self.outdir}.")

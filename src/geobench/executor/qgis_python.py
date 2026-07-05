@@ -8,11 +8,20 @@ import tempfile
 
 import jinja2
 
+from . import ExecutorInfo
 from .qgis_process import QGISProcessExecutor
 
 
 class QGISPythonExecutor(QGISProcessExecutor):
     """QGIS Python executor class."""
+
+    @classmethod
+    def get_info(cls) -> ExecutorInfo:
+        return ExecutorInfo(
+            type="qgis-python",
+            name="QGIS Python Script Executor",
+            description="Executes a QGIS Python script.",
+        )
 
     @staticmethod
     def get_qgis_python_path() -> str | None:

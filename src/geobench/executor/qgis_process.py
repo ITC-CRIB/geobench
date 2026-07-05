@@ -14,12 +14,20 @@ except Exception:
 
 import dotenv
 
-from . import Executor
+from . import Executor, ExecutorInfo
 
 
 class QGISProcessExecutor(Executor):
     """QGIS process executor class."""
 
+    @classmethod
+    def get_info(cls) -> ExecutorInfo:
+        return ExecutorInfo(
+            type="qgis-process",
+            name="QGIS Process Executor",
+            description="Executes a qgis_process command with arguments.",
+        )
+    
     @staticmethod
     def get_qgis_bin_path():
         """Return QGIS executable directory path.

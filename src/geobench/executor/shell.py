@@ -3,11 +3,19 @@
 import os
 import platform
 
-from . import Executor
+from . import Executor, ExecutorInfo
 
 
 class ShellExecutor(Executor):
     """Shell executor class."""
+
+    @classmethod
+    def get_info(cls) -> ExecutorInfo:
+        return ExecutorInfo(
+            type="shell",
+            name="Shell Script Executor",
+            description="Executes a shell script.",
+        )
 
     def get_config(self) -> dict:
         """Return executor configuration."""

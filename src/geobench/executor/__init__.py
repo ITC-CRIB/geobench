@@ -1,6 +1,11 @@
 """Executor module."""
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from functools import cache
+import importlib
+import inspect
+import pkgutil
 import time
 import traceback
 
@@ -8,9 +13,27 @@ import psutil
 
 from ..monitor import monitor_process
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class ExecutorInfo:
+    """Metadata describing a collector."""
+
+    type: str
+    name: str
+    description: str
+
 
 class Executor(ABC):
     """Executor class."""
+
+    @classmethod
+    @abstractmethod
+    def get_info(cls) -> ExecutorInfo:
+        """Return executor information."""
 
     def __init__(self, scenario: "Scenario"):
         """Initialize the executor.
@@ -103,3 +126,21 @@ class Executor(ABC):
         out["end_time"] = time.time()
 
         return out
+
+
+@cache
+def get_executors() -> dict[str, Executor]:
+    """Return dictionary of available collectors."""
+    executors = {}
+
+    for _, name, _ in pkgutil.iter_modules([__path__[0]]):
+        module = importlib.import_module(f".{name}", f"{Executor.__module__}")
+        for name, cls in inspect.getmembers(module, inspect.isclass):
+            if issubclass(cls, Executor) and cls is not Executor:
+                if not cls.__abstractmethods__:
+                    type = cls.get_info().type
+                    executors[type] = cls
+                else:
+                    logger.debug(f"{cls} has abstract methods, skipping")
+
+    return executors

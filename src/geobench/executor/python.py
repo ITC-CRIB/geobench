@@ -4,11 +4,19 @@ import os
 import platform
 import shutil
 
-from . import Executor
+from . import Executor, ExecutorInfo
 
 
 class PythonExecutor(Executor):
     """Python executor class."""
+
+    @classmethod
+    def get_info(cls) -> ExecutorInfo:
+        return ExecutorInfo(
+            type="python",
+            name="Python Script Executor",
+            description="Executes a Python script with arguments.",
+        )
 
     def get_config(self) -> dict:
         """Return executor configuration.
