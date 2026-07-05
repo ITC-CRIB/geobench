@@ -353,9 +353,10 @@ def geobench(name: str | None = None, **kwargs) -> callable:
     """
 
     def decorator(func):
-        def wrapper(*args, **kwargs_call):
-            bench = Geobench(name or func.__name__, **kwargs)
-            return bench.benchmark(func, *args, **kwargs_call)
+        bench = Geobench(name or func.__name__, **kwargs)
+
+        def wrapper(*args, **kwargs):
+            return bench.benchmark(func, *args, **kwargs)
 
         return wrapper
 
