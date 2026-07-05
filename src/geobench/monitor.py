@@ -214,7 +214,7 @@ class DataCollector(threading.Thread):
         """Initialize data collector thread.
 
         Args:
-            name: Name identifier for this data source
+            name: Name identifier for this collector
             interval: Collection interval in seconds
             collectors: List of Collector instances to collect data from
             process: Process being monitored
@@ -301,7 +301,7 @@ class DataCollector(threading.Thread):
 def monitor_process(
     process,
     interval: float = 1.0,
-    data_sources: list = None,
+    telemetry: list = None,
     stop_event=None,
 ) -> dict:
     """Monitor process and system metrics while process is running.
@@ -309,7 +309,7 @@ def monitor_process(
     Args:
         process: Process to be monitored.
         interval: Interval between each sample in seconds (default = 1.0).
-        data_sources (list, optional): List of data source configurations for multi-threaded collection.
+        telemetry (list, optional): List of telemetry sources for multi-threaded collection.
             Each source should have:
             - name: Source identifier
             - interval: Collection interval in seconds
@@ -320,17 +320,17 @@ def monitor_process(
         Dictionary containing:
         - system: List of system metrics (legacy mode) or dict of metrics by source (multi-threaded mode)
         - processes: Process metrics
-        - data_sources: List of source names (only in multi-threaded mode)
+        - telemetry: List of source names (only in multi-threaded mode)
     """
     process_metrics = {process.pid: get_process_info(process)}
 
     # Determine if we're using multi-threaded mode
-    use_multi_threaded = data_sources is not None and len(data_sources) > 0
+    use_multi_threaded = telemetry is not None and len(telemetry) > 0
 
     if use_multi_threaded:
         # Multi-threaded mode with parallel data collection
         logger.debug(
-            "Starting multi-threaded monitoring with %d data sources", len(data_sources)
+            "Starting multi-threaded monitoring with %d data sources", len(telemetry)
         )
 
         # Create stop event if not provided
@@ -339,7 +339,7 @@ def monitor_process(
 
         # Create and start data collector threads
         collectors = []
-        for source_config in data_sources:
+        for source_config in telemetry:
             source_name = source_config.get("name", f"source_{len(collectors)}")
             source_interval = source_config.get("interval", interval)
 

@@ -80,7 +80,7 @@ class Executor(ABC):
 
             metrics = monitor_process(
                 process,
-                data_sources=self.scenario.data_sources,
+                telemetry=self.scenario.telemetry,
             )
 
             out.update(metrics)
