@@ -7,7 +7,7 @@ import time
 
 import psutil
 
-from .metrics import get_collectors_for_source
+from .collector import get_collector
 
 import logging
 
@@ -338,33 +338,42 @@ def monitor_process(
             stop_event = threading.Event()
 
         # Create and start data collector threads
-        collectors = []
+        data_collectors = []
         for source_config in telemetry:
-            source_name = source_config.get("name", f"source_{len(collectors)}")
+            source_name = source_config.get("name", f"source_{len(data_collectors)}")
             source_interval = source_config.get("interval", interval)
 
             # Get appropriate metrics collectors for this source
-            collectors = get_collectors_for_source(source_config)
+            collectors = []
+            for item in source_config.get("metrics", []):
+                if isinstance(item, str):                
+                    collector_type = item
+                    collector_config = {}
+                
+                elif isinstance(item, dict):
+                    collector_type = item.get("type")
+                    if not collector_type:
+                        raise ValueError(f"No collector type: {source_name}")
+                    collector_config = item.get("config", {})
+            
+                else:
+                    raise ValueError(f"Invalid collector definition: {source_name}")
+
+                collector = get_collector(collector_type, collector_config)
+                collectors.append(collector)
 
             if not collectors:
-                logger.warning(
-                    "No collectors available for source '%s', skipping", source_name
-                )
-                continue
-            else:
-                logger.debug(
-                    "Source '%s' has %d collectors configured", source_name, len(collectors)
-                )
+                raise ValueError("No collectors available for source: %s", source_name)
 
-            collector = DataCollector(
+            data_collector = DataCollector(
                 name=source_name,
                 interval=source_interval,
                 collectors=collectors,
                 process=process,
                 stop_event=stop_event,
             )
-            collectors.append(collector)
-            collector.start()
+            data_collectors.append(data_collector)
+            data_collector.start()
 
         # Monitor process and collect process-specific metrics
         step = 0
@@ -427,13 +436,13 @@ def monitor_process(
         stop_event.set()
 
         # Wait for all collector threads to finish
-        for collector in collectors:
-            collector.join(timeout=5.0)
+        for data_collector in data_collectors:
+            data_collector.join(timeout=5.0)
 
         # Aggregate results from all collectors
         system_metrics_by_source = {}
-        for collector in collectors:
-            system_metrics_by_source[collector.name] = collector.get_metrics()
+        for data_collector in data_collectors:
+            system_metrics_by_source[data_collector.name] = data_collector.get_metrics()
 
         out = {"system": system_metrics_by_source, "processes": process_metrics}
 
