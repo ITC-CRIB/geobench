@@ -1,4 +1,4 @@
-name: Count Primes Python with HTTP API Energy
+name: Count Primes Python with energy monitoring
 type: python
 command: count_primes.py
 arguments:
@@ -10,7 +10,7 @@ arguments:
     - 2000000
 repeat: 2
 telemetry:
-    - name: internal
+    - name: main
       interval: 1.0
       metrics:
       - type: psutil
