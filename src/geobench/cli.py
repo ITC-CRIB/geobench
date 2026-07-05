@@ -68,14 +68,10 @@ class CLI:
                 level=logging.INFO, format="%(levelname)s - %(message)s"
             )
 
-        try:
-            kwargs = {key: val for key, val in vars(args).items() if val is not None}
+        kwargs = {key: val for key, val in vars(args).items() if val is not None}
 
-            scenario = load_scenario(os.path.abspath(args.filename), **kwargs)
-            scenario.benchmark(clean=args.clean)
-
-        except Exception:
-            raise
+        scenario = load_scenario(os.path.abspath(args.filename), **kwargs)
+        scenario.benchmark(clean=args.clean)
 
 
 def main():
