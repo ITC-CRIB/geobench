@@ -364,22 +364,20 @@ class Geobench:
         return report_path
 
 
-# Create convenient decorator for benchmarking
-def geobench(name: str = None, **kwargs):
-    """Decorator for benchmarking a function.
+def geobench(name: str | None = None, **kwargs) -> callable:
+    """Create a decorator that benchmarks the execution of a function.
 
     Args:
-        name (str, optional): Name for the benchmark. If not provided, the function name is used.
-        **kwargs: Additional arguments to pass to JupyterBenchmark.
+        name: Optional name of the benchmark. If None, the name of the decorated function is used.
+        **kwargs: Additional keyword arguments passed to the Geobench constructor.
 
     Returns:
-        callable: Decorator function.
+        A decorator that wraps the function and benchmarks its execution.
     """
 
     def decorator(func):
         def wrapper(*args, **kwargs_call):
-            benchmark_name = name or func.__name__
-            bench = Geobench(benchmark_name, **kwargs)
+            bench = Geobench(name or func.__name__, **kwargs)
             return bench.benchmark(func, *args, **kwargs_call)
 
         return wrapper
