@@ -1,4 +1,4 @@
-"""PowerMetrics collector module."""
+"""powermetrics collector module."""
 
 import shutil
 import subprocess
@@ -10,7 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class PowerMetricsCollector(Collector):
+class PowermetricsCollector(Collector):
     """Collector for macOS powermetrics energy metrics."""
 
     @classmethod
@@ -18,12 +18,12 @@ class PowerMetricsCollector(Collector):
         """Return collector information."""
         return CollectorInfo(
             type="powermetrics",
-            name="PowerMetrics Energy Collector",
-            description="Energy metrics using PowerMetrics on macOS.",
+            name="powermetrics Energy Metrics Collector",
+            description="Energy metrics using powermetrics.",
         )
     
     def __init__(self, config: dict | None = None):
-        """Initialize PowerMetrics collector."""
+        """Initialize powermetrics collector."""
         super().__init__(config)
 
         # Raise exception if powermetrics is not available

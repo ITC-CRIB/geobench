@@ -1,7 +1,7 @@
 """Energy collector module."""
 
 from . import Collector, CollectorInfo
-from .powermetrics import PowerMetricsCollector
+from .powermetrics import PowermetricsCollector
 from .rapl import RAPLCollector
 
 import logging
@@ -18,7 +18,7 @@ class EnergyCollector(Collector):
         return CollectorInfo(
             type="energy",
             name="Energy Metrics Collector",
-            description="Energy consumption metrics using RAPL or PowerMetrics.",
+            description="Energy consumption metrics using RAPL or powermetrics.",
         )
 
     def __init__(self, config: dict | None = None):
@@ -37,9 +37,9 @@ class EnergyCollector(Collector):
         except Exception:
             pass
 
-        # Check if PowerMetrics collector is available
+        # Check if powermetrics collector is available
         try:
-            self.collector = PowerMetricsCollector(config)
+            self.collector = PowermetricsCollector(config)
             return
 
         except Exception:
