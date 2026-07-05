@@ -11,7 +11,6 @@ class CollectorInfo:
     code: str
     name: str
     description: str
-    category: str
 
 
 class Collector(ABC):
@@ -21,8 +20,8 @@ class Collector(ABC):
         """Initialize metrics collector."""
         self.config = config or {}
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def get_info(cls) -> CollectorInfo:
         """Return collector information."""
 

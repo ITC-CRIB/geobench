@@ -19,7 +19,6 @@ class PsutilsCollector(Collector):
             code="psutil",
             name="psutil Collector",
             description="CPU, memory, IO, and network metrics using psutil.",
-            category="resource",
         )
 
     def __init__(self, config: dict | None = None):

@@ -21,7 +21,6 @@ class RAPLCollector(Collector):
             code="rapl",
             name="RAPL Energy Metrics Collector",
             description="Energy metrics using RAPL.",
-            category="energy",
         )
 
     def __init__(self, config: dict | None = None):

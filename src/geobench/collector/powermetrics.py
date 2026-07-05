@@ -20,7 +20,6 @@ class PowerMetricsCollector(Collector):
             code="powermetrics",
             name="PowerMetrics Energy Collector",
             description="Energy metrics using PowerMetrics on macOS.",
-            category="energy",
         )
     
     def __init__(self, config: dict | None = None):
