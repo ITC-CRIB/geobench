@@ -17,7 +17,7 @@ class PowerMetricsCollector(Collector):
     def get_info(cls) -> CollectorInfo:
         """Return collector information."""
         return CollectorInfo(
-            code="powermetrics",
+            type="powermetrics",
             name="PowerMetrics Energy Collector",
             description="Energy metrics using PowerMetrics on macOS.",
         )

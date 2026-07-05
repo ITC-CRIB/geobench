@@ -18,7 +18,7 @@ class RAPLCollector(Collector):
     def get_info(cls) -> CollectorInfo:
         """Return collector information."""
         return CollectorInfo(
-            code="rapl",
+            type="rapl",
             name="RAPL Energy Metrics Collector",
             description="Energy metrics using RAPL.",
         )

@@ -16,7 +16,7 @@ class PsutilsCollector(Collector):
     def get_info(cls) -> CollectorInfo:
         """Return collector information."""
         return CollectorInfo(
-            code="psutil",
+            type="psutil",
             name="psutil Collector",
             description="CPU, memory, IO, and network metrics using psutil.",
         )
