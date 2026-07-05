@@ -9,12 +9,13 @@ import re
 import shutil
 import statistics
 import time
+import traceback
 
 import yaml
 
 from .cache import clear_cache
 from .executor import get_executors
-from .monitor import get_system_info, monitor_system
+from .monitor import get_system_info, monitor_system, monitor_process
 from .report import calculate_run_summary, generate_html_report
 
 import logging
@@ -198,6 +199,10 @@ class Scenario:
             Benchmarking results.
         """
         result = {}
+        config = {
+            "workdir": self.workdir,
+            "venv": self.venv,
+        }
 
         try:
             print(f"Running scenario {self.name}.")
@@ -220,8 +225,8 @@ class Scenario:
             executor_cls = get_executors().get(self.type)
             if not executor_cls:
                 raise ValueError(f"Invalid executor type: {self.type}")
-            
-            executor = executor_cls(self)
+
+            executor = executor_cls(config)
 
             # Set up output directory
             print(f"Setting up output directory {self.outdir}.")
@@ -340,13 +345,40 @@ class Scenario:
                                 else os.path.join(abs_path, args[key])
                             )
 
-                    # Get execution arguments
-                    args = executor.get_arguments(self.command, args)
-
                     # Perform the run
                     print("Executing the run.")
 
-                    out.update(executor.execute(args))
+                    out["start_time"] = time.time()
+                    out["finished"] = False
+                    out["success"] = False
+
+                    try:
+                        process = executor.execute(self.command, args)
+                        out["pid"] = process.pid
+
+                        metrics = monitor_process(
+                            process,
+                            telemetry=self.telemetry,
+                        )
+
+                        out.update(metrics)
+
+                        out["finished"] = True
+                        out["success"] = process.returncode == 0
+
+                        if process.returncode:
+                            print(
+                                f"Command '{' '.join(self.command)}' failed with exit code: {process.returncode}"
+                            )
+                            out["returncode"] = process.returncode
+
+                    except Exception as err:
+                        print(f"Command '{' '.join(self.command)}' failed with error: {err}")
+                        print("Full stack trace:")
+                        traceback.print_exception(err)
+                        out["error"] = str(err)
+
+                    out["end_time"] = time.time()
 
                     self._store(result_path, out)
 

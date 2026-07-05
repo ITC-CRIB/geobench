@@ -3,10 +3,11 @@
 import os
 import platform
 
-from . import Executor, ExecutorInfo
+from . import ExecutorInfo
+from .program import ProgramExecutor
 
 
-class ShellExecutor(Executor):
+class ShellExecutor(ProgramExecutor):
     """Shell executor class."""
 
     @classmethod
@@ -17,8 +18,14 @@ class ShellExecutor(Executor):
             description="Executes a shell script.",
         )
 
-    def get_config(self) -> dict:
-        """Return executor configuration."""
+    def get_config(self, args: dict) -> dict:
+        """Return executor configuration considering the arguments.
+
+        Args:
+            args: Configuration arguments.
+        """
+        config = super().get_config(args)
+
         system = platform.system()
 
         if system == "Windows":
@@ -27,9 +34,7 @@ class ShellExecutor(Executor):
         else:
             shell = os.environ.get("SHELL")
 
-        config = {
-            "executable": shell,
-        }
+        config["executable"] = shell
 
         return config
 

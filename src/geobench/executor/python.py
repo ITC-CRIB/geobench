@@ -4,10 +4,11 @@ import os
 import platform
 import shutil
 
-from . import Executor, ExecutorInfo
+from . import ExecutorInfo
+from .program import ProgramExecutor
 
 
-class PythonExecutor(Executor):
+class PythonExecutor(ProgramExecutor):
     """Python executor class."""
 
     @classmethod
@@ -18,15 +19,18 @@ class PythonExecutor(Executor):
             description="Executes a Python script with arguments.",
         )
 
-    def get_config(self) -> dict:
-        """Return executor configuration.
+    def get_config(self, args: dict) -> dict:
+        """Return executor configuration considering the arguments.
+
+        Args:
+            args: Configuration arguments.
 
         Raises:
             FileNotFoundError: If Python executable not found.
         """
-        config = {}
+        config = super().get_config(args)
 
-        venv = self.scenario.venv
+        venv = args.get("venv")
 
         if venv:
             system = platform.system()
@@ -70,7 +74,7 @@ class PythonExecutor(Executor):
             FileNotFoundError: If Python script not found.
         """
         if not os.path.isabs(command):
-            command = os.path.join(self.scenario.workdir, command)
+            command = os.path.join(self.config["workdir"], command)
 
         if not os.path.isfile(command):
             raise FileNotFoundError(f"Python script not found: {command}")

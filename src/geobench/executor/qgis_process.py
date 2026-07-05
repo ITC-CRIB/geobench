@@ -14,10 +14,11 @@ except Exception:
 
 import dotenv
 
-from . import Executor, ExecutorInfo
+from . import ExecutorInfo
+from .program import ProgramExecutor
 
 
-class QGISProcessExecutor(Executor):
+class QGISProcessExecutor(ProgramExecutor):
     """QGIS process executor class."""
 
     @classmethod
@@ -159,13 +160,16 @@ class QGISProcessExecutor(Executor):
 
         return env
 
-    def get_config(self) -> dict:
-        """Return executor configuration.
+    def get_config(self, args: dict) -> dict:
+        """Return executor configuration considering the arguments.
+
+        Args:
+            args: Configuration arguments.
 
         Raises:
             RuntimeError: If qgis_process fails.
         """
-        config = {}
+        config = super().get_config(args)
 
         qgis_process_path = __class__.get_qgis_process_path()
 
