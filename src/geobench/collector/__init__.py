@@ -41,6 +41,14 @@ class Collector(ABC):
             Dictionary containing metric readings.
         """
 
+    def postprocess(self, data: list[dict]):
+        """Postprocess collected metrics data.
+
+        Args:
+            metrics: Collected metrics data.
+        """
+        pass
+
 
 @cache
 def get_collectors() -> dict[str, Collector]:

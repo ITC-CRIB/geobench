@@ -6,6 +6,7 @@ from functools import cache
 import importlib
 import inspect
 import pkgutil
+import subprocess
 
 import logging
 
@@ -41,6 +42,9 @@ class Executor(ABC):
     def get_config(self, args: dict) -> dict:
         """Return executor configuration considering the arguments."""
 
+    @abstractmethod
+    def execute(self, command, args: dict | None = None) -> subprocess.Popen:
+        """Execute command with the specified arguments."""
 
 @cache
 def get_executors() -> dict[str, Executor]:

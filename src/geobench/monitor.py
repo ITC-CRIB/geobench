@@ -226,32 +226,7 @@ class DataCollector(threading.Thread):
         self.collectors = collectors
         self.process = process
         self.stop_event = stop_event
-        self.collected_metrics = []
-        self.initial_readings = {}
-
-        # Store initial readings from all collectors
-        self._store_initial_readings()
-
-    def _store_initial_readings(self):
-        """Store initial readings from all metrics collectors."""
-        for collector in self.collectors:
-            initial = collector.read_metrics()
-            if initial:
-                self.initial_readings.update(initial)
-
-    def _collect_metrics_from_collectors(self) -> dict:
-        """Collect metrics from all configured collectors.
-
-        Returns:
-            Dictionary containing all metrics from all collectors, with prefixed keys.
-        """
-        metrics = {}
-
-        for collector in self.collectors:
-            current_metrics = collector.read_metrics()
-            metrics.update(current_metrics)
-
-        return metrics
+        self.data = []
 
     def run(self):
         """Run the data collection loop."""
@@ -276,9 +251,10 @@ class DataCollector(threading.Thread):
             metric = {"step": step, "timestamp": time.time()}
 
             # Collect metrics from all collectors
-            metric.update(self._collect_metrics_from_collectors())
+            for collector in self.collectors:
+                metric.update(collector.read_metrics())
 
-            self.collected_metrics.append(metric)
+            self.data.append(metric)
 
             # Sleep for the specified interval
             time.sleep(self.interval)
@@ -286,7 +262,7 @@ class DataCollector(threading.Thread):
         logger.debug(
             "[%s] Data collector stopped (%d samples)",
             self.name,
-            len(self.collected_metrics),
+            len(self.data),
         )
 
     def get_metrics(self) -> list:
@@ -295,7 +271,10 @@ class DataCollector(threading.Thread):
         Returns:
             List of collected metric dictionaries
         """
-        return self.collected_metrics
+        for collector in self.collectors:
+            collector.postprocess(self.data)
+       
+        return self.data
 
 
 def monitor_process(
@@ -346,16 +325,16 @@ def monitor_process(
             # Get appropriate metrics collectors for this source
             collectors = []
             for item in source_config.get("metrics", []):
-                if isinstance(item, str):                
+                if isinstance(item, str):
                     collector_type = item
                     collector_config = {}
-                
+
                 elif isinstance(item, dict):
                     collector_type = item.get("type")
                     if not collector_type:
                         raise ValueError(f"No collector type: {source_name}")
                     collector_config = item.get("config", {})
-            
+
                 else:
                     raise ValueError(f"Invalid collector definition: {source_name}")
 

@@ -2,7 +2,6 @@
 
 import glob
 import os
-import time
 
 from . import Collector, CollectorInfo
 
@@ -28,7 +27,6 @@ class RAPLCollector(Collector):
         super().__init__(config)
 
         self.domains = {}
-        self.previous_readings = None
 
         rapl_base = "/sys/class/powercap/intel-rapl"
         if not os.path.exists(rapl_base):
@@ -71,70 +69,52 @@ class RAPLCollector(Collector):
             raise RuntimeError("No RAPL domain found")
 
     def read_metrics(self) -> dict:
-        """Read current energy counters from all RAPL domains and calculate power.
+        """Read current energy counters from all RAPL domains.
 
         Returns:
-            Dictionary containing:
-            - 'energy': mapping domain names to energy values in microjoules (μJ)
-            - 'power': mapping domain names to power values in watts (W)
+            Dictionary containing `energy` with mapping domain names to energy
+            values in microjoules (μJ).
         """
-        if not self.previous_readings:
-            timestamp = time.time()
-            for id, domain in self.domains.items():
-                try:
-                    with open(domain["energy_file"], "r") as file:
-                        self.previous_readings[id] = (
-                            int(file.read().strip()),
-                            timestamp,
-                        )
-
-                except (IOError, ValueError) as err:
-                    logger.warning("Failed to read initial energy from %s: %s", id, err)
-                    continue
-
-        timestamp = time.time()
-        energy_data = {}
-        power_data = {}
+        out = {
+            "energy": {},
+        }
 
         for id, domain in self.domains.items():
             try:
                 with open(domain["energy_file"], "r") as file:
                     energy_uj = int(file.read().strip())
-                    energy_data[id] = energy_uj
-
-                    # Calculate power if we have a previous reading
-                    if id in self.previous_readings:
-                        prev_energy_uj, prev_timestamp = self.previous_readings[id]
-
-                        time_delta = timestamp - prev_timestamp
-                        if time_delta > 0:
-                            # Handle counter wraparound
-                            max_energy = domain.get("max_energy")
-                            if max_energy and energy_uj < prev_energy_uj:
-                                # Counter wrapped around
-                                d_energy = max_energy - prev_energy_uj + energy_uj
-                                logger.debug("Counter wraparound detected for %s", id)
-                            else:
-                                d_energy = energy_uj - prev_energy_uj
-
-                            # Convert from μJ to J and calculate power in watts
-                            power_watts = d_energy / 1_000_000 / time_delta
-                            power_data[id] = power_watts
-
-                    # Update previous reading for next calculation
-                    self.previous_readings[id] = (
-                        energy_uj,
-                        timestamp,
-                    )
+                    out["energy"][id] = energy_uj
 
             except (IOError, ValueError) as err:
                 logger.warning("Failed to read energy from %s: %s", id, err)
                 continue
 
-        out = {}
-        if energy_data:
-            out["rapl_energy"] = energy_data
-        if power_data:
-            out["rapl_power"] = power_data
-
         return out
+
+    def postprocess(self, data: list[dict]):
+        """Postprocess collected metrics data.
+
+        Args:
+            metrics: Collected metrics data.
+        """
+        super().postprocess(data)
+
+        prev_item = None
+
+        for item in data:
+            if prev_item:
+                item["power"] = {}
+                d_time = item["timestamp"] - prev_item["timestamp"]
+                if d_time < 0:
+                    continue
+                for id, domain in self.domains.items():
+                    d_energy = item["energy"][id] - prev_item["energy"][id]
+                    max_energy = domain.get("max_energy")
+                    if max_energy and d_energy < 0:
+                        d_energy += max_energy
+                        logger.debug("Counter wraparound detected for %s", id)
+
+                    power_watts = d_energy / 1_000_000 / d_time
+                    item["power"][id] = power_watts
+
+            prev_item = item

@@ -53,5 +53,4 @@ class EnergyCollector(Collector):
         Returns:
             Dictionary containing energy consumption metrics.
         """
-        out = self.collector.read_metrics()
-        return out
+        return self.collector.read_metrics()
