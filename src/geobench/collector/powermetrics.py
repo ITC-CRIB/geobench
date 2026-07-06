@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 class PowermetricsCollector(Collector):
     """Collector for macOS powermetrics energy metrics."""
 
+    SAMPLE_RATE = 100
+
     @classmethod
     def get_info(cls) -> CollectorInfo:
         """Return collector information."""
@@ -21,7 +23,7 @@ class PowermetricsCollector(Collector):
             name="powermetrics Energy Metrics Collector",
             description="Energy metrics using powermetrics.",
         )
-    
+
     def __init__(self, config: dict | None = None):
         """Initialize powermetrics collector."""
         super().__init__(config)
@@ -43,8 +45,6 @@ class PowermetricsCollector(Collector):
         except (subprocess.TimeoutExpired, FileNotFoundError):
             raise RuntimeError("Cannot execute powermetrics")
 
-        self.last_reading = None
-
     def read_metrics(self) -> dict:
         """Read current energy metrics using powermetrics.
 
@@ -52,10 +52,9 @@ class PowermetricsCollector(Collector):
             Dictionary containing energy metrics in microjoules (μJ).
         """
         try:
-            # Run powermetrics for a short sample
-            # Note: This requires sudo privileges
+            # Run powermetrics for a short sample (requires sudo privileges)
             result = subprocess.run(
-                ["powermetrics", "-n", "1", "-i", "100", "--samplers", "tasks"],
+                ["powermetrics", "-n", "1", "-i", str(self.SAMPLE_RATE), "--samplers", "tasks"],
                 capture_output=True,
                 timeout=5,
                 text=True,
@@ -64,13 +63,12 @@ class PowermetricsCollector(Collector):
 
             if result.returncode != 0:
                 logger.warning("powermetrics failed: %s", result.stderr)
-                return {}
+                return {"error"}
 
             # Parse the output to extract energy metrics
             energy_readings = self._parse_output(result.stdout)
 
             if energy_readings:
-                self.last_reading = energy_readings
                 return {"energy": energy_readings}
             else:
                 return {}
@@ -103,7 +101,7 @@ class PowermetricsCollector(Collector):
                         # This is a simplified parsing - real implementation may need more robust parsing
                         value = float(value)
                         # Convert mW to microjoules (mW * 1000 = μW, for 100ms sample)
-                        energy_uj = int(value * 100)
+                        energy_uj = int(value * self.SAMPLE_RATE)
                         out[name] = energy_uj
                     except (ValueError, IndexError):
                         continue
