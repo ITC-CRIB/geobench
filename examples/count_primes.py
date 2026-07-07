@@ -22,7 +22,7 @@ def main():
         help="Number of CPU cores to use (default: half of available cores)",
     )
     parser.add_argument(
-        "--n",
+        "-n",
         "--num",
         type=int,
         default=1_000_000,
