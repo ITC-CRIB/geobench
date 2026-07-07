@@ -228,15 +228,16 @@ class CLI:
         }
 
         arguments = kwargs.get("arguments", {})
-        for arg in args.arg or []:
-            key, val = arg
+        for key, val in (args.arg or []) + list(enumerate(args.args or [])):
             if key not in arguments:
                 arguments[key] = set()
             if isinstance(val, tuple):
                 arguments[key].update(val)
             else:
                 arguments[key].add(val)
-        kwargs["arguments"] = {key: list(val) for key, val in arguments.items()}
+        kwargs["arguments"] = {
+            key: list(val) for key, val in arguments.items() if isinstance(val, set)
+        }
 
         if args.command.endswith(".yaml"):
             logger.debug("Loading scenario from %s", args.command)
@@ -249,12 +250,6 @@ class CLI:
                 kwargs["type"] = "python"
                 kwargs["name"] = os.path.basename(args.command)
             kwargs["command"] = args.command
-            kwargs["arguments"] = arguments = kwargs.get("arguments", {})
-            for arg in args.args or []:
-                for key in count():
-                    if key not in arguments:
-                        arguments[key] = arg
-                        break
             scenario = Scenario(**kwargs)
 
         scenario.benchmark(clean=args.clean)
