@@ -182,3 +182,19 @@ class QGISProcessExecutor(ProgramExecutor):
             out.append(f"--{key}={val}")
 
         return out
+
+    def get_help(self, command: str) -> str:
+        """Return help content for the qgis_process algorithm.
+        
+        Args:
+            command: qgis_process algorithm.
+        """
+        result = subprocess.run(
+            [self.config["executable"], "help", command],
+            env=self.get_environment(),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+
+        return result.stdout

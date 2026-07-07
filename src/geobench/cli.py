@@ -239,7 +239,17 @@ class CLI:
             key: list(val) for key, val in arguments.items() if isinstance(val, set)
         }
 
-        if args.command.endswith(".yaml"):
+        if args.command == "help":
+            try:
+                args.command = args.args.pop()
+            except IndexError:
+                self.parser.error("a command is required for help")
+            executor = get_executors()[args.type]()
+            help = executor.get_help(args.command)
+            print(help)
+            exit()
+
+        elif args.command.endswith(".yaml"):
             logger.debug("Loading scenario from %s", args.command)
             scenario = load_scenario(os.path.abspath(args.command), **kwargs)
 

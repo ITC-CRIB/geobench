@@ -46,6 +46,11 @@ class Executor(ABC):
     def execute(self, command, args: dict | None = None) -> subprocess.Popen:
         """Execute command with the specified arguments."""
 
+    def get_help(self, command) -> str:
+        """Return help content for the command."""
+        return f"Help not found for: {command}"
+
+
 @cache
 def get_executors() -> dict[str, Executor]:
     """Return dictionary of available collectors."""
