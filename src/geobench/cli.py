@@ -1,6 +1,7 @@
 """Command line interface module."""
 
 from itertools import count
+from typing import Any
 import argparse
 import ast
 import json
@@ -24,7 +25,7 @@ class ArgumentDefaultsHelpFormatterNoNone(argparse.ArgumentDefaultsHelpFormatter
         return super()._get_help_string(action)
 
 
-def parse_arg_dict(val: str) -> dict:
+def parse_dict(val: str) -> dict:
     """Parse a dictionary argument from a JSON or Python literal string.
 
     Attempts to parse the input as JSON first. If JSON parsing fails,
@@ -35,6 +36,27 @@ def parse_arg_dict(val: str) -> dict:
 
     except json.JSONDecodeError:
         return ast.literal_eval(val)
+
+
+def parse_key_value(val: str) -> tuple[str, Any]:
+    """Parse a key=value argument from a string."""
+    try:
+        key, val = val.split("=", 1)
+
+    except ValueError:
+        raise argparse.ArgumentTypeError("Argument must be in key=value format")
+
+    try:
+        val = ast.literal_eval(val)
+    except (ValueError, SyntaxError):
+        raise argparse.ArgumentTypeError("Value must be a literal")
+
+    try:
+        key = int(key)
+    except ValueError:
+        pass
+
+    return key, val
 
 
 class CLI:
@@ -85,8 +107,15 @@ class CLI:
             help="List of output files",
         )
         self.parser.add_argument(
+            "-a",
+            "--arg",
+            type=parse_key_value,
+            action="append",
+            help="Argument as key=value (can be repeated)",
+        )
+        self.parser.add_argument(
             "--arguments",
-            type=parse_arg_dict,
+            type=parse_dict,
             help="Dictionary of arguments",
         )
         self.parser.add_argument(
@@ -187,8 +216,21 @@ class CLI:
         kwargs = {
             key: val
             for key, val in vars(args).items()
-            if val is not None and key not in ["command", "args", "clean", "debug"]
+            if val is not None
+            and key not in ["command", "arg", "args", "clean", "debug"]
         }
+
+        arguments = kwargs.get("arguments", {})
+        for arg in args.arg or []:
+            key, val = arg
+            if key not in arguments:
+                arguments[key] = set(val)
+            else:
+                if isinstance(val, list):
+                    arguments[key].update(val)
+                else:
+                    arguments[key].add(val)
+        kwargs["arguments"] = {key: list(val) for key, val in arguments.items()}
 
         if args.command.endswith(".yaml"):
             logger.debug("Loading scenario from %s", args.command)
