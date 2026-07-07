@@ -30,12 +30,12 @@ def main():
     )
     args = parser.parse_args()
 
-    print(f"Using {args.cores} cores, checking numbers up to {args.n}.")
+    print(f"Using {args.cores} cores, checking numbers up to {args.num}.")
 
     start_time = time.time()
 
     with multiprocessing.Pool(args.cores) as pool:
-        results = pool.map(count_primes, [args.n] * args.cores)
+        results = pool.map(count_primes, [args.num] * args.cores)
 
     total_primes = sum(results)
     end_time = time.time()
