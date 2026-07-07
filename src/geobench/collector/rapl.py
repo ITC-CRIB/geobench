@@ -37,7 +37,7 @@ class RAPLCollector(Collector):
         paths.extend(glob.glob(f"{rapl_base}/intel-rapl:*"))
         paths.extend(glob.glob(f"{rapl_base}/intel-rapl:*/intel-rapl:*"))
 
-        for path in paths:
+        for path in sorted(paths):
             try:
                 id = os.path.basename(path)
                 domain = {}
@@ -46,7 +46,11 @@ class RAPLCollector(Collector):
                 if not os.path.exists(filename):
                     continue
                 with open(filename, "r") as file:
-                    domain["name"] = file.read().strip()
+                    name = file.read().strip()
+                    parent_id = id.rsplit(":", 1)[0]
+                    if parent_id in self.domains:
+                        name = self.domains[parent_id]["name"] + "_" + name
+                    domain["name"] = name.replace("-", "_")
 
                 filename = os.path.join(path, "max_energy_range_uj")
                 if os.path.exists(filename):
@@ -80,10 +84,11 @@ class RAPLCollector(Collector):
         }
 
         for id, domain in self.domains.items():
+            name = domain["name"]
             try:
                 with open(domain["energy_file"], "r") as file:
                     energy_uj = int(file.read().strip())
-                    out["energy"][id] = energy_uj
+                    out["energy"][name] = energy_uj
 
             except (IOError, ValueError) as err:
                 logger.warning("Failed to read energy from %s: %s", id, err)
@@ -108,13 +113,16 @@ class RAPLCollector(Collector):
                 if d_time < 0:
                     continue
                 for id, domain in self.domains.items():
-                    d_energy = item["energy"][id] - prev_item["energy"][id]
+                    name = domain["name"]
+                    if name not in item["energy"]:
+                        continue
+                    d_energy = item["energy"][name] - prev_item["energy"][name]
                     max_energy = domain.get("max_energy")
                     if max_energy and d_energy < 0:
                         d_energy += max_energy
                         logger.debug("Counter wraparound detected for %s", id)
 
                     power_watts = d_energy / 1_000_000 / d_time
-                    item["power"][id] = power_watts
+                    item["power"][name] = power_watts
 
             prev_item = item
