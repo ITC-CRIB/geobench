@@ -73,7 +73,6 @@ class QGISPythonExecutor(QGISProcessExecutor):
 
             config["executable"] = qgis_python_path
             config["environment"] = __class__.get_qgis_environment()
-            config["version"] = result.stdout
 
         except subprocess.SubprocessError as err:
             raise RuntimeError("Error running QGIS Python") from err
