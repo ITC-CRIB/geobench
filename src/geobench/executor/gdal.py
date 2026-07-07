@@ -79,7 +79,7 @@ class GDALExecutor(ProgramExecutor):
                 path = path[:-2]
             path = os.sep.join(path + ["bin"])
             if os.path.isdir(path):
-                return path 
+                return path
 
         raise RuntimeError("Cannot find GDAL path")
 
@@ -102,7 +102,7 @@ class GDALExecutor(ProgramExecutor):
     def get_gdal_environment() -> dict:
         """Return GDAL environment variables."""
         bin_path = __class__.get_gdal_bin_path()
-        
+
         env = {}
 
         for file in os.listdir(bin_path):
@@ -134,9 +134,7 @@ class GDALExecutor(ProgramExecutor):
             )
 
             if result.returncode != 0:
-                raise RuntimeError(
-                    f"GDAL failed with exit code: {result.returncode}"
-                )
+                raise RuntimeError(f"GDAL failed with exit code: {result.returncode}")
 
             config["executable"] = gdal_path
             config["environment"] = __class__.get_gdal_environment()
@@ -162,13 +160,16 @@ class GDALExecutor(ProgramExecutor):
         out = [command]
 
         for key, val in args.items():
-            out.append(f"--{key}={val}")
+            if val is True:
+                out.append(f"--{key}")
+            else:
+                out.append(f"--{key}={val}")
 
         return out
 
     def get_help(self, command: str) -> str:
         """Return help content for the GDAL command.
-        
+
         Args:
             command: GDAL command.
         """
