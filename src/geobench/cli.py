@@ -227,16 +227,17 @@ class CLI:
             and key not in ["command", "arg", "args", "clean", "debug"]
         }
 
+        print(args)
+
         arguments = kwargs.get("arguments", {})
         for arg in args.arg or []:
             key, val = arg
             if key not in arguments:
-                arguments[key] = set(val)
+                arguments[key] = set()
+            if isinstance(val, list):
+                arguments[key].update(val)
             else:
-                if isinstance(val, list):
-                    arguments[key].update(val)
-                else:
-                    arguments[key].add(val)
+                arguments[key].add(val)
         kwargs["arguments"] = {key: list(val) for key, val in arguments.items()}
 
         if args.command.endswith(".yaml"):
