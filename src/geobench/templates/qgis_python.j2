@@ -3,7 +3,7 @@ import platform
 import sys
 
 
-qgis_path = '{{ qgis_path }}'
+qgis_path = {{ qgis_path | tojson }}
 
 system = platform.system()
 
