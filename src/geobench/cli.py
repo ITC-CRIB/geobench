@@ -227,14 +227,12 @@ class CLI:
             and key not in ["command", "arg", "args", "clean", "debug"]
         }
 
-        print(args)
-
         arguments = kwargs.get("arguments", {})
         for arg in args.arg or []:
             key, val = arg
             if key not in arguments:
                 arguments[key] = set()
-            if isinstance(val, list):
+            if isinstance(val, tuple):
                 arguments[key].update(val)
             else:
                 arguments[key].add(val)
