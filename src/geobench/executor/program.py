@@ -1,6 +1,8 @@
 """Program executor module."""
 
 from abc import abstractmethod
+import os
+import platform
 import subprocess
 
 import psutil
@@ -10,6 +12,37 @@ from . import Executor
 
 class ProgramExecutor(Executor):
     """Program executor class."""
+
+    @staticmethod
+    def find_executable(path: str, name: str) -> str | None:
+        """Find executable with the specified path and name.
+
+        Args:
+            path: Path of the executable.
+            name: Name of the executable.
+
+        Returns:
+            Path of the executable, or None if not found.
+        """
+        if not os.path.isdir(path):
+            return None
+
+        system = platform.system()
+
+        for filename in os.listdir(path):
+            if not filename.startswith(name):
+                continue
+
+            if system == "Windows":
+                if filename.lower().endswith((".exe", ".bat", ".cmd")):
+                    return os.path.join(path, filename)
+
+            else:
+                path = os.path.join(path, filename)
+                if os.access(path, os.X_OK):
+                    return path
+
+        return None
 
     def __init__(self, config: dict | None = None):
         """Initialize the program executor.
@@ -56,7 +89,7 @@ class ProgramExecutor(Executor):
             [self.config["executable"]] + self.get_arguments(command, args or {}),
             shell=False,
             cwd=self.config.get("workdir"),
-            env=self.config.get("environment", {}),
+            env=self.config.get("environment") or None,
         )
 
         return process

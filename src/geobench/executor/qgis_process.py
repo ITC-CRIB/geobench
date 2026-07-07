@@ -28,7 +28,7 @@ class QGISProcessExecutor(ProgramExecutor):
             name="QGIS Process Executor",
             description="Executes a qgis_process command with arguments.",
         )
-    
+
     @staticmethod
     def get_qgis_bin_path():
         """Return QGIS executable directory path.
@@ -99,37 +99,6 @@ class QGISProcessExecutor(ProgramExecutor):
             raise RuntimeError("Unsupported operating system")
 
         raise RuntimeError("Cannot find QGIS installation path")
-
-    @staticmethod
-    def find_executable(path: str, name: str) -> str | None:
-        """Find executable with the specified path and name.
-
-        Args:
-            path: Path of the executable.
-            name: Name of the executable.
-
-        Returns:
-            Path of the executable, or None if not found.
-        """
-        if not os.path.isdir(path):
-            return None
-
-        system = platform.system()
-
-        for filename in os.listdir(path):
-            if not filename.startswith(name):
-                continue
-
-            if system == "Windows":
-                if filename.lower().endswith((".exe", ".bat", ".cmd")):
-                    return os.path.join(path, filename)
-
-            else:
-                path = os.path.join(path, filename)
-                if os.access(path, os.X_OK):
-                    return path
-
-        return None
 
     @staticmethod
     def get_qgis_process_path() -> str:
