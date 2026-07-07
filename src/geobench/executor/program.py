@@ -85,7 +85,9 @@ class ProgramExecutor(Executor):
 
     def get_environment(self) -> dict:
         """Return environment considering the process environment."""
-        return os.environ.copy().update(self.config.get("environment", {}))
+        env = os.environ.copy()
+        env.update(self.config.get("environment", {}))
+        return env
 
     def execute(self, command: str, args: dict | None = None) -> subprocess.Popen:
         """Execute program command with the specified arguments."""
