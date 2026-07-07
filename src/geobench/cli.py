@@ -199,6 +199,7 @@ class CLI:
             if args.command.endswith(".py"):
                 logger.debug("Changing scenario type to Python")
                 kwargs["type"] = "python"
+                kwargs["name"] = os.path.basename(args.command)
             kwargs["command"] = args.command
             kwargs["arguments"] = arguments = kwargs.get("arguments", {})
             for arg in args.args or []:
