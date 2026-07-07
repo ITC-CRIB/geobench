@@ -30,7 +30,7 @@ class Scenario:
         self,
         type: str,
         command: str,
-        name: str,
+        name: str | None = None,
         inputs: list | dict = None,
         outputs: list | dict = None,
         arguments: list | dict = None,
@@ -119,7 +119,7 @@ class Scenario:
                 raise ValueError(f"Invalid base directory: {basedir}")
 
         self.outdir = outdir or re.sub(
-            r"-+", "-", re.sub(r"[^\w-]", "-", name.lower())
+            r"-+", "-", re.sub(r"[^\w-]", "-", self.name.lower())
         ).strip("-")
         if not os.path.isabs(self.outdir):
             self.outdir = os.path.join(self.basedir, self.outdir)
