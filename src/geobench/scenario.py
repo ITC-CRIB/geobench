@@ -35,10 +35,12 @@ class Scenario:
         outputs: list | dict = None,
         arguments: list | dict = None,
         repeat: int = 1,
-        run_wait: float = 5.0,
-        run_monitor: float = 5.0,
-        system_wait: float = 5.0,
-        system_monitor: float = 5.0,
+        wait: float = 2.0,
+        monitor: float = 2.0,
+        run_wait: float | None = None,
+        run_monitor: float | None = None,
+        system_wait: float | None = None,
+        system_monitor: float | None = None,
         workdir: str = None,
         basedir: str = None,
         outdir: str = None,
@@ -55,10 +57,12 @@ class Scenario:
             outputs: Optional list or dictionary of output files.
             arguments: Optional list or dictionary of arguments.
             repeat: Number of repeats.
-            run_wait: Wait time before and after each run in seconds.
-            run_monitor: Monitoring time before and after each run in seconds.
-            system_wait: Wait time before and after all runs in seconds.
-            system_monitor: Monitoring time before and after all runs in seconds.
+            wait: Wait time before and after in seconds.
+            monitor: Monitoring time before and after in seconds.
+            run_wait: Wait time before and after each run in seconds. Defaults to wait time.
+            run_monitor: Monitoring time before and after each run in seconds. Defaults to monitor time.
+            system_wait: Wait time before and after all runs in seconds. Defaults to wait time.
+            system_monitor: Monitoring time before and after all runs in seconds. Defaults to monitor time.
             workdir: Working directory path. It is also used as the root path of the input files.
                 Defaults to the current working directory.
             basedir: Base directory path. It is used as the root path of the output directory, if is it not an absolute path.
@@ -96,10 +100,12 @@ class Scenario:
         self.outputs = outputs or {}
         self.arguments = arguments or {}
         self.repeat = repeat or 1
-        self.run_wait = run_wait or 0.0
-        self.run_monitor = run_monitor or 0.0
-        self.system_wait = system_wait or 0.0
-        self.system_monitor = system_monitor or 0.0
+        self.wait = wait or 0.0
+        self.monitor = monitor or 0.0
+        self.run_wait = run_wait if run_wait is not None else self.wait
+        self.run_monitor = run_monitor if run_monitor is not None else self.monitor
+        self.system_wait = system_wait if system_wait is not None else self.wait
+        self.system_monitor = system_monitor if system_monitor is not None else self.monitor
         self.telemetry = telemetry
 
         cwd = os.getcwd()
@@ -364,13 +370,13 @@ class Scenario:
 
                         if process.returncode:
                             print(
-                                f"Command '{' '.join(self.command)}' failed with exit code: {process.returncode}"
+                                f"Command '{self.command}' failed with exit code: {process.returncode}"
                             )
                             out["returncode"] = process.returncode
 
                     except Exception as err:
                         print(
-                            f"Command '{' '.join(self.command)}' failed with error: {err}"
+                            f"Command '{self.command}' failed with error: {err}"
                         )
                         print("Full stack trace:")
                         traceback.print_exception(err)
