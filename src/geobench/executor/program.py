@@ -85,11 +85,14 @@ class ProgramExecutor(Executor):
 
     def execute(self, command: str, args: dict | None = None) -> subprocess.Popen:
         """Execute program command with the specified arguments."""
+        env = os.environ.copy()
+        env.update(self.config.get("environment", {}))
+
         process = psutil.Popen(
             [self.config["executable"]] + self.get_arguments(command, args or {}),
             shell=False,
             cwd=self.config.get("workdir"),
-            env=self.config.get("environment") or None,
+            env=env,
         )
 
         return process
