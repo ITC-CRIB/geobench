@@ -63,7 +63,7 @@ def get_collectors() -> dict[str, Collector]:
                     type = cls.get_info().type
                     collectors[type] = cls
                 else:
-                    logger.debug(f"{cls} has abstract methods, skipping")
+                    logger.debug("%s has abstract methods, skipping", cls)
 
     return collectors
 

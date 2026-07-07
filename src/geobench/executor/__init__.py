@@ -59,6 +59,6 @@ def get_executors() -> dict[str, Executor]:
                     type = cls.get_info().type
                     executors[type] = cls
                 else:
-                    logger.debug(f"{cls} has abstract methods, skipping")
+                    logger.debug("%s has abstract methods, skipping", cls)
 
     return executors
