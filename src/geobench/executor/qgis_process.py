@@ -2,7 +2,6 @@
 
 import glob
 import os
-import platform
 import shlex
 import shutil
 import subprocess
@@ -34,69 +33,53 @@ class QGISProcessExecutor(ProgramExecutor):
         """Return QGIS executable directory path.
 
         Raises:
-            RuntimeError: If unsupported operaing system.
             RuntimeError: If QGIS installation cannot be found.
         """
-        system = platform.system()
+        # Check the default qgis_process
+        path = shutil.which("qgis_process")
+        if path:
+            return os.path.dirname(os.path.realpath(path))
 
-        if system == "Windows":
-            if winreg is not None:
-                try:
-                    with winreg.OpenKey(
-                        winreg.HKEY_CLASSES_ROOT, r"QGIS Project\Shell\open\command"
-                    ) as key:
-                        val, _ = winreg.QueryValueEx(key, None)
-                        return os.path.dirname(shlex.split(val)[0])
-                except FileNotFoundError:
-                    pass
+        # Check Windows registry
+        if winreg is not None:
+            try:
+                with winreg.OpenKey(
+                    winreg.HKEY_CLASSES_ROOT, r"QGIS Project\Shell\open\command"
+                ) as key:
+                    val, _ = winreg.QueryValueEx(key, None)
+                    return os.path.dirname(shlex.split(val)[0])
+            except FileNotFoundError:
+                pass
 
-            path = os.environ.get("OSGEO4W_ROOT")
-            if path:
-                return os.path.join(path, "bin")
+        # Check OSGeo4W path
+        path = os.environ.get("OSGEO4W_ROOT")
+        if path:
+            return os.path.join(path, "bin")
 
-            path = os.environ.get("QGIS_PREFIX_PATH")
-            if path:
-                path = path.replace("\\", "/").split("/")
-                if (
-                    len(path) >= 2
-                    and path[-2].lower() == "apps"
-                    and path[-1].lower() == "qgis"
-                ):
-                    path = path[:-2]
-                return os.sep.join(path + ["bin"])
+        # Check common folders
+        for path in ("/usr/bin", "/usr/local/bin", "/opt/homebrew/bin"):
+            if os.path.isfile(os.path.join(path, "qgis_process")):
+                return path
 
-        elif system == "Linux":
-            # Check common folders
-            for path in ("/usr/bin", "/usr/local/bin"):
-                if os.path.isfile(os.path.join(path, "qgis_process")):
-                    return path
+        # Check app bundles under /Applications starting with "QGIS"
+        for app in sorted(glob.glob("/Applications/QGIS*.app"), reverse=True):
+            path = os.path.join(app, "Contents", "MacOS", "bin")
+            if os.path.isdir(path):
+                return path
 
-        elif system == "Darwin":
-            # Respect explicit prefix if provided
-            prefix = os.environ.get("QGIS_PREFIX_PATH")
-            if prefix:
-                path = os.path.join(prefix, "bin")
-                if os.path.isdir(path):
-                    return path
-
-            # Check the default qgis_process
-            path = shutil.which("qgis_process")
-            if path:
-                return os.path.dirname(os.path.realpath(path))
-
-            # Check app bundles under /Applications starting with "QGIS"
-            for app in sorted(glob.glob("/Applications/QGIS*.app"), reverse=True):
-                path = os.path.join(app, "Contents", "MacOS", "bin")
-                if os.path.isdir(path):
-                    return path
-
-            # Check common folders
-            for path in ("/opt/homebrew/bin", "/usr/local/bin"):
-                if os.path.isfile(os.path.join(path, "qgis_process")):
-                    return path
-
-        else:
-            raise RuntimeError("Unsupported operating system")
+        # Use explicit prefix if provided
+        path = os.environ.get("QGIS_PREFIX_PATH")
+        if path:
+            path = path.replace("\\", "/").split("/")
+            if (
+                len(path) >= 2
+                and path[-2].lower() == "apps"
+                and path[-1].lower() == "qgis"
+            ):
+                path = path[:-2]
+            path = os.sep.join(path + ["bin"])
+            if os.path.isdir(path):
+                return path 
 
         raise RuntimeError("Cannot find QGIS installation path")
 
