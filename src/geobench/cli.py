@@ -1,5 +1,6 @@
 """Command line interface module."""
 
+from itertools import count
 import argparse
 import ast
 import json
@@ -7,7 +8,7 @@ import os
 
 from .executor import get_executors
 from .executor.program import ProgramExecutor
-from .scenario import load_scenario
+from .scenario import Scenario, load_scenario
 
 import logging
 
@@ -47,11 +48,6 @@ class CLI:
             formatter_class=ArgumentDefaultsHelpFormatterNoNone,
         )
         self.parser.add_argument(
-            "filename",
-            type=str,
-            help="Scenario filename",
-        )
-        self.parser.add_argument(
             "-t",
             "--type",
             type=str,
@@ -89,8 +85,7 @@ class CLI:
             help="List of output files",
         )
         self.parser.add_argument(
-            "--args",
-            dest="arguments",
+            "--arguments",
             type=parse_arg_dict,
             help="Dictionary of arguments",
         )
@@ -157,6 +152,17 @@ class CLI:
             action="store_true",
             help="Enable debug mode",
         )
+        self.parser.add_argument(
+            "command",
+            type=str,
+            help="Scenario filename or command",
+        )
+        self.parser.add_argument(
+            "args",
+            type=str,
+            nargs=argparse.REMAINDER,
+            help="Shell command arguments",
+        )
 
     def run(self):
         """Run command line interface."""
@@ -178,9 +184,30 @@ class CLI:
                 level=logging.INFO, format="%(levelname)s - %(message)s"
             )
 
-        kwargs = {key: val for key, val in vars(args).items() if val is not None}
+        kwargs = {
+            key: val
+            for key, val in vars(args).items()
+            if val is not None and key not in ["command", "args", "clean", "debug"]
+        }
 
-        scenario = load_scenario(os.path.abspath(args.filename), **kwargs)
+        if args.command.endswith(".yaml"):
+            logger.debug("Loading scenario from %s", args.command)
+            scenario = load_scenario(os.path.abspath(args.command), **kwargs)
+
+        else:
+            logger.debug("Creating scenario from command line arguments")
+            if args.command.endswith(".py"):
+                logger.debug("Changing scenario type to Python")
+                kwargs["type"] = "python"
+            kwargs["command"] = args.command
+            kwargs["arguments"] = arguments = kwargs.get("arguments", {})
+            for arg in args.args or []:
+                for key in count():
+                    if key not in arguments:
+                        arguments[key] = arg
+                        break
+            scenario = Scenario(**kwargs)
+
         scenario.benchmark(clean=args.clean)
 
 
