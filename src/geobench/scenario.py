@@ -29,8 +29,8 @@ class Scenario:
     def __init__(
         self,
         type: str,
-        name: str,
         command: str,
+        name: str,
         inputs: list | dict = None,
         outputs: list | dict = None,
         arguments: list | dict = None,
@@ -43,14 +43,14 @@ class Scenario:
         basedir: str = None,
         outdir: str = None,
         venv: str = None,
-        telemetry: list = None,
+        telemetry: list | None = None,
     ):
         """Initialize scenario object.
 
         Args:
             type: Scenario type.
-            name: Scenario name.
             command: Command.
+            name: Optional scenario name.
             inputs: Optional list or dictionary of input files.
             outputs: Optional list or dictionary of output files.
             arguments: Optional list or dictionary of arguments.
@@ -69,17 +69,13 @@ class Scenario:
 
         Raises:
             ValueError: if invalid scenario type.
-            ValueError: if empty scenario name.
             ValueError: if empty command.
             ValueError: if invalid arguments.
             ValueError: if invalid inputs.
             ValueError: if invalid outputs.
         """
-        if type not in ["qgis-process", "qgis-python", "python", "shell"]:
+        if type not in get_executors().keys():
             raise ValueError(f"Invalid scenario type: {type}")
-
-        if not name:
-            raise ValueError("Empty scenario name")
 
         if not command:
             raise ValueError("Empty command")
@@ -94,7 +90,7 @@ class Scenario:
             raise ValueError("Invalid outputs")
 
         self.type = type
-        self.name = name
+        self.name = name or f"{type} Scenario"
         self.command = command
         self.inputs = inputs or {}
         self.outputs = outputs or {}
@@ -373,7 +369,9 @@ class Scenario:
                             out["returncode"] = process.returncode
 
                     except Exception as err:
-                        print(f"Command '{' '.join(self.command)}' failed with error: {err}")
+                        print(
+                            f"Command '{' '.join(self.command)}' failed with error: {err}"
+                        )
                         print("Full stack trace:")
                         traceback.print_exception(err)
                         out["error"] = str(err)
