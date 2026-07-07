@@ -1,6 +1,5 @@
 """QGIS Python executor module."""
 
-import importlib
 import os
 import platform
 import subprocess
@@ -74,6 +73,7 @@ class QGISPythonExecutor(QGISProcessExecutor):
 
             config["executable"] = qgis_python_path
             config["environment"] = __class__.get_qgis_environment()
+            config["version"] = result.stdout
 
         except subprocess.SubprocessError as err:
             raise RuntimeError("Error running QGIS Python") from err
@@ -92,14 +92,14 @@ class QGISPythonExecutor(QGISProcessExecutor):
         """
         qgis_code = f'processing.run("{command}", {args})'
 
-        with importlib.resources.path(__package__, "templates") as template_dir:
-            env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
-            template = env.get_template("qgis_python.j2")
-            script = template.render(
-                qgis_path=self.get_qgis_path(),
-                qgis_bin_path=os.path.dirname(self.config["executable"]),
-                qgis_code=qgis_code,
-            )
+        template_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
+        env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
+        template = env.get_template("qgis_python.j2")
+        script = template.render(
+            qgis_path=os.path.dirname(self.get_qgis_bin_path()),
+            qgis_bin_path=os.path.dirname(self.config["executable"]),
+            qgis_code=qgis_code,
+        )
 
         with tempfile.NamedTemporaryFile(mode="w+t", delete=False) as file:
             file.write(script)
