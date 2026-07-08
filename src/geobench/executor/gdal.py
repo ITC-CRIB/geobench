@@ -157,7 +157,7 @@ class GDALExecutor(ProgramExecutor):
         Returns:
             List of execution arguments.
         """
-        out = [command] + self.get_cli_arguments(args)
+        out = command.split(":") + self.get_cli_arguments(args)
 
         return out
 
