@@ -554,7 +554,11 @@ def load_scenario(path: str, **kwargs) -> Scenario:
 
     # Update scenario arguments
     logger.debug("Updating scenario with %s", kwargs)
-    scenario.update(kwargs)
+    for key, val in kwargs.items():
+        if isinstance(val, dict) and isinstance(scenario.get(key), dict):
+            scenario[key].update(val)
+        else:
+            scenario[key] = val
 
     # Set scenario name from the filename, if required
     if not scenario.get("name"):
