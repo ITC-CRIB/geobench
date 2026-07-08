@@ -79,7 +79,7 @@ class QGISProcessExecutor(ProgramExecutor):
                 path = path[:-2]
             path = os.sep.join(path + ["bin"])
             if os.path.isdir(path):
-                return path 
+                return path
 
         raise RuntimeError("Cannot find QGIS installation path")
 
@@ -159,16 +159,13 @@ class QGISProcessExecutor(ProgramExecutor):
         Returns:
             List of execution arguments.
         """
-        out = ["run", command]
-
-        for key, val in args.items():
-            out.append(f"--{key}={val}")
+        out = ["run", command] + self.get_cli_arguments(args)
 
         return out
 
     def get_help(self, command: str) -> str:
         """Return help content for the qgis_process algorithm.
-        
+
         Args:
             command: qgis_process algorithm.
         """

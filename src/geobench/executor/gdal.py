@@ -157,13 +157,7 @@ class GDALExecutor(ProgramExecutor):
         Returns:
             List of execution arguments.
         """
-        out = [command]
-
-        for key, val in args.items():
-            if val is True:
-                out.append(f"--{key}")
-            else:
-                out.append(f"--{key}={val}")
+        out = [command] + self.get_cli_arguments(args)
 
         return out
 

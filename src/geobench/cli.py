@@ -1,6 +1,5 @@
 """Command line interface module."""
 
-from itertools import count
 from typing import Any
 import argparse
 import ast

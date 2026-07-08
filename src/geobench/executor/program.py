@@ -9,6 +9,10 @@ import psutil
 
 from . import Executor
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class ProgramExecutor(Executor):
     """Program executor class."""
@@ -83,6 +87,43 @@ class ProgramExecutor(Executor):
             List of execution arguments.
         """
 
+    def get_cli_arguments(self, args: dict) -> list:
+        """Return arguments as command line arguments."""
+        out = []
+        pos = {}
+
+        for key, val in args.items():
+            try:
+                key = int(key)
+            except Exception:
+                pass
+
+            if isinstance(key, int):
+                pos[key] = val
+                continue
+
+            if key[0] == "_":
+                prefix = "-"
+                key = key[1:]
+            else:
+                prefix = "--"
+
+            try:
+                key, subkey = key.split("__", 1)
+                out.append(f"{prefix}{key}")
+                out.append(f"{subkey}={val}")
+
+            except ValueError:
+                if val is True:
+                    out.append(f"{prefix}{key}")
+                else:
+                    out.append(f"{prefix}{key}={val}")
+
+        for key, val in sorted(pos.items()):
+            out.append(val)
+
+        return out
+
     def get_environment(self) -> dict:
         """Return environment considering the process environment."""
         env = os.environ.copy()
@@ -91,8 +132,11 @@ class ProgramExecutor(Executor):
 
     def execute(self, command: str, args: dict | None = None) -> subprocess.Popen:
         """Execute program command with the specified arguments."""
+        args = [self.config["executable"]] + self.get_arguments(command, args or {})
+        logger.debug("Executing process with arguments: %s", args)
+
         process = psutil.Popen(
-            [self.config["executable"]] + self.get_arguments(command, args or {}),
+            args,
             shell=False,
             cwd=self.config.get("workdir"),
             env=self.get_environment(),

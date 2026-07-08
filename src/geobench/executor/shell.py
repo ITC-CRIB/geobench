@@ -59,12 +59,6 @@ class ShellExecutor(ProgramExecutor):
             out.append("/C")
 
         out.append(command)
-
-        for key, val in args.items():
-            try:
-                int(key)
-                out.append(val)
-            except Exception:
-                out.append(f"--{key}={val}")
+        out.extend(self.get_cli_arguments(args))
 
         return out

@@ -79,13 +79,6 @@ class PythonExecutor(ProgramExecutor):
         if not os.path.isfile(command):
             raise FileNotFoundError(f"Python script not found: {command}")
 
-        out = [command]
-
-        for key, val in args.items():
-            try:
-                int(key)
-                out.append(val)
-            except Exception:
-                out.append(f"--{key}={val}")
+        out = [command] + self.get_cli_arguments(args)
 
         return out
