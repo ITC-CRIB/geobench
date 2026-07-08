@@ -337,7 +337,6 @@ class Geobench:
             output_path=report_path,
         )
 
-        print(f"Report generated at {report_path}")
         return report_path
 
 
