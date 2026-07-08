@@ -168,7 +168,7 @@ class GDALExecutor(ProgramExecutor):
             command: GDAL command.
         """
         result = subprocess.run(
-            [self.config["executable"], command, "help"],
+            [self.config["executable"]] + command.split(":") + ["--help"],
             env=self.get_environment(),
             capture_output=True,
             text=True,
