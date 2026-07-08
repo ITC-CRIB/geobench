@@ -216,6 +216,11 @@ class CLI:
             help="Clean the output directory",
         )
         self.parser.add_argument(
+            "--clean-outputs",
+            action="store_true",
+            help="Clean the output files"
+        )
+        self.parser.add_argument(
             "-d",
             "--debug",
             action="store_true",

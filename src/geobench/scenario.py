@@ -41,7 +41,8 @@ class Scenario:
         run_monitor: float | None = None,
         system_wait: float | None = None,
         system_monitor: float | None = None,
-        archive: str  = "both",
+        archive: str = "both",
+        clean_outputs: bool = False,
         workdir: str | None = None,
         basedir: str | None = None,
         outdir: str | None = None,
@@ -65,6 +66,7 @@ class Scenario:
             system_wait: Wait time before and after all runs in seconds. Defaults to wait time.
             system_monitor: Monitoring time before and after all runs in seconds. Defaults to monitor time.
             archive: File types to archive. Options are 'none', 'both', 'input', 'output'.
+            clean_outputs: Clean outputs at the end of each run.
             workdir: Working directory path. It is also used as the root path of the input files.
                 Defaults to the current working directory.
             basedir: Base directory path. It is used as the root path of the output directory, if is it not an absolute path.
@@ -111,6 +113,7 @@ class Scenario:
             system_monitor if system_monitor is not None else self.monitor
         )
         self.archive = archive or "none"
+        self.clean_outputs = clean_outputs
         self.telemetry = telemetry
 
         cwd = os.getcwd()
@@ -408,13 +411,13 @@ class Scenario:
                         out["endline"] = monitor_system(self.run_monitor)
                         self._store(result_path, out)
 
-                    # TODO: Store input files in the output directory.
+                    # Store input files in the output directory.
                     if self.archive in ["both", "input"]:
                         for key in self.inputs.keys():
                             input_path = args[key]
                             print(f"Archiving input file {input_path}")
                             try:
-                                if os.path.exists(input_path) and os.path.exists(abs_path):
+                                if os.path.exists(input_path):
                                     shutil.copy(input_path, abs_path)
                             except shutil.SameFileError:
                                 pass
@@ -426,13 +429,13 @@ class Scenario:
                                     err,
                                 )
 
-                    # TODO: Store output files in the output directory, if required.
+                    # Store output files in the output directory, if required.
                     if self.archive in ["both", "output"]:
                         for key in self.outputs.keys():
                             output_path = args[key]
                             print(f"Archiving output file {output_path}")
                             try:
-                                if os.path.exists(output_path) and os.path.exists(abs_path):
+                                if os.path.exists(output_path):
                                     shutil.copy(output_path, abs_path)
                             except shutil.SameFileError:
                                 pass
@@ -441,6 +444,20 @@ class Scenario:
                                     "Error copying output file %s to %s: %s",
                                     output_path,
                                     abs_path,
+                                    err,
+                                )
+
+                    # Clean outputs if required
+                    if self.clean_outputs:
+                        for key in self.outputs.keys():
+                            output_path = args[key]
+                            print(f"Removing output file {output_path}")
+                            try:
+                                os.remove(output_path)
+                            except Exception as err:
+                                logger.error(
+                                    "Error removing output file %s: %s",
+                                    output_path,
                                     err,
                                 )
 
