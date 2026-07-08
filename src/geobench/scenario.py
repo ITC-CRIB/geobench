@@ -105,7 +105,9 @@ class Scenario:
         self.run_wait = run_wait if run_wait is not None else self.wait
         self.run_monitor = run_monitor if run_monitor is not None else self.monitor
         self.system_wait = system_wait if system_wait is not None else self.wait
-        self.system_monitor = system_monitor if system_monitor is not None else self.monitor
+        self.system_monitor = (
+            system_monitor if system_monitor is not None else self.monitor
+        )
         self.telemetry = telemetry
 
         cwd = os.getcwd()
@@ -124,12 +126,14 @@ class Scenario:
             if not os.path.isdir(self.basedir):
                 raise ValueError(f"Invalid base directory: {basedir}")
 
+        # Set output directory
         self.outdir = outdir or re.sub(
             r"-+", "-", re.sub(r"[^\w-]", "-", self.name.lower())
         ).strip("-")
         if not os.path.isabs(self.outdir):
             self.outdir = os.path.join(self.basedir, self.outdir)
 
+        # Set virtual environment path if required
         self.venv = venv
         if self.venv:
             if not os.path.isabs(self.venv):
@@ -138,7 +142,12 @@ class Scenario:
                 raise ValueError(f"Invalid virtual environment: {venv}")
 
         if isinstance(self.outputs, dict):
-            outputs = list(self.outputs.values())
+            outputs = []
+            for val in self.outputs.values():
+                if isinstance(val, list):
+                    outputs.extend(val)
+                else:
+                    outputs.append(val)
         else:
             outputs = self.outputs
 
@@ -152,7 +161,11 @@ class Scenario:
         else:
             args = self.arguments
 
-        args = args | (self.inputs if multi_input else {})
+        args = (
+            args
+            | (self.inputs if multi_input else {})
+            | (self.outputs if isinstance(self.outputs, dict) else {})
+        )
         args = {
             key: val if isinstance(val, list) else [val] for key, val in args.items()
         }
@@ -176,9 +189,6 @@ class Scenario:
                 )
 
             data["outputs"] = outputs
-            if isinstance(self.outputs, dict):
-                args.update(self.outputs)
-
             data["arguments"] = args
 
             self.sets.append(data)
@@ -344,7 +354,7 @@ class Scenario:
                             args[key] = os.path.normpath(
                                 args[key]
                                 if os.path.isabs(args[key])
-                                else os.path.join(abs_path, args[key])
+                                else os.path.join(self.workdir, args[key])
                             )
 
                     # Perform the run
@@ -375,9 +385,7 @@ class Scenario:
                             out["returncode"] = process.returncode
 
                     except Exception as err:
-                        print(
-                            f"Command '{self.command}' failed with error: {err}"
-                        )
+                        print(f"Command '{self.command}' failed with error: {err}")
                         print("Full stack trace:")
                         traceback.print_exception(err)
                         out["error"] = str(err)
@@ -398,18 +406,14 @@ class Scenario:
                         self._store(result_path, out)
 
                     # TODO: Store input files in the output directory.
-                    for key, value in self.inputs.items():
-                        input_path = os.path.normpath(
-                            value
-                            if os.path.isabs(value)
-                            else os.path.join(self.workdir, value)
-                        )
-                        # Copy input file
+                    for key in self.inputs.keys():
+                        input_path = args[key]
+                        print(f"Archiving input file {input_path}")
                         try:
-                            if os.path.exists(input_path) and not os.path.exists(
-                                abs_path
-                            ):
+                            if os.path.exists(input_path) and os.path.exists(abs_path):
                                 shutil.copy(input_path, abs_path)
+                        except shutil.SameFileError:
+                            pass
                         except Exception as err:
                             logger.error(
                                 "Error copying input file %s to %s: %s",
@@ -419,18 +423,14 @@ class Scenario:
                             )
 
                     # TODO: Store output files in the output directory, if required.
-                    for key, value in self.outputs.items():
-                        output_path = os.path.normpath(
-                            value
-                            if os.path.isabs(value)
-                            else os.path.join(abs_path, value)
-                        )
-                        # Copy output file
+                    for key in self.outputs.keys():
+                        output_path = args[key]
+                        print(f"Archiving output file {output_path}")
                         try:
-                            if os.path.exists(output_path) and not os.path.exists(
-                                abs_path
-                            ):
+                            if os.path.exists(output_path) and os.path.exists(abs_path):
                                 shutil.copy(output_path, abs_path)
+                        except shutil.SameFileError:
+                            pass
                         except Exception as err:
                             logger.error(
                                 "Error copying output file %s to %s: %s",
