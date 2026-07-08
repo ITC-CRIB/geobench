@@ -41,7 +41,6 @@ def parse_key_value(val: str) -> tuple[str, Any]:
     """Parse a key=value argument from a string."""
     try:
         key, val = val.split("=", 1)
-
     except ValueError:
         raise argparse.ArgumentTypeError("Argument must be in key=value format")
 
@@ -56,6 +55,20 @@ def parse_key_value(val: str) -> tuple[str, Any]:
         pass
 
     return key, val
+
+
+def merge_args(args: dict | None = None, arg_items: list | None = None) -> dict:
+    """Merge argument values from combined and separate representations."""
+    args = args.clone() if args else {}
+    for key, val in arg_items or []:
+        if key not in args:
+            args[key] = set()
+        if isinstance(val, tuple):
+            args[key].update(val)
+        else:
+            args[key].add(val)
+    args = {key: list(val) for key, val in args.items() if isinstance(val, set)}
+    return args
 
 
 class CLI:
@@ -92,6 +105,20 @@ class CLI:
             type=int,
             help="Number of repeats",
             default=1,
+        )
+        self.parser.add_argument(
+            "-i",
+            "--input",
+            type=parse_key_value,
+            action="append",
+            help="Input file (can be repeated)",
+        )
+        self.parser.add_argument(
+            "-o",
+            "--output",
+            type=parse_key_value,
+            action="append",
+            help="Output file (can be repeated)",
         )
         self.parser.add_argument(
             "--inputs",
@@ -223,20 +250,15 @@ class CLI:
             key: val
             for key, val in vars(args).items()
             if val is not None
-            and key not in ["command", "arg", "args", "clean", "debug"]
+            and key
+            not in ["command", "arg", "args", "input", "output", "clean", "debug"]
         }
 
-        arguments = kwargs.get("arguments", {})
-        for key, val in (args.arg or []) + list(enumerate(args.args or [])):
-            if key not in arguments:
-                arguments[key] = set()
-            if isinstance(val, tuple):
-                arguments[key].update(val)
-            else:
-                arguments[key].add(val)
-        kwargs["arguments"] = {
-            key: list(val) for key, val in arguments.items() if isinstance(val, set)
-        }
+        kwargs["arguments"] = merge_args(
+            kwargs.get("arguments"), (args.arg or []) + list(enumerate(args.args or []))
+        )
+        kwargs["inputs"] = merge_args(kwargs.get("inputs"), args.input)
+        kwargs["outputs"] = merge_args(kwargs.get("outputs"), args.output)
 
         if args.command == "help":
             try:
