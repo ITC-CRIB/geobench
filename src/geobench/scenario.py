@@ -41,10 +41,11 @@ class Scenario:
         run_monitor: float | None = None,
         system_wait: float | None = None,
         system_monitor: float | None = None,
-        workdir: str = None,
-        basedir: str = None,
-        outdir: str = None,
-        venv: str = None,
+        archive: str  = "both",
+        workdir: str | None = None,
+        basedir: str | None = None,
+        outdir: str | None = None,
+        venv: str | None = None,
         telemetry: list | None = None,
     ):
         """Initialize scenario object.
@@ -63,6 +64,7 @@ class Scenario:
             run_monitor: Monitoring time before and after each run in seconds. Defaults to monitor time.
             system_wait: Wait time before and after all runs in seconds. Defaults to wait time.
             system_monitor: Monitoring time before and after all runs in seconds. Defaults to monitor time.
+            archive: File types to archive. Options are 'none', 'both', 'input', 'output'.
             workdir: Working directory path. It is also used as the root path of the input files.
                 Defaults to the current working directory.
             basedir: Base directory path. It is used as the root path of the output directory, if is it not an absolute path.
@@ -108,6 +110,7 @@ class Scenario:
         self.system_monitor = (
             system_monitor if system_monitor is not None else self.monitor
         )
+        self.archive = archive or "none"
         self.telemetry = telemetry
 
         cwd = os.getcwd()
@@ -406,38 +409,40 @@ class Scenario:
                         self._store(result_path, out)
 
                     # TODO: Store input files in the output directory.
-                    for key in self.inputs.keys():
-                        input_path = args[key]
-                        print(f"Archiving input file {input_path}")
-                        try:
-                            if os.path.exists(input_path) and os.path.exists(abs_path):
-                                shutil.copy(input_path, abs_path)
-                        except shutil.SameFileError:
-                            pass
-                        except Exception as err:
-                            logger.error(
-                                "Error copying input file %s to %s: %s",
-                                input_path,
-                                abs_path,
-                                err,
-                            )
+                    if self.archive in ["both", "input"]:
+                        for key in self.inputs.keys():
+                            input_path = args[key]
+                            print(f"Archiving input file {input_path}")
+                            try:
+                                if os.path.exists(input_path) and os.path.exists(abs_path):
+                                    shutil.copy(input_path, abs_path)
+                            except shutil.SameFileError:
+                                pass
+                            except Exception as err:
+                                logger.error(
+                                    "Error copying input file %s to %s: %s",
+                                    input_path,
+                                    abs_path,
+                                    err,
+                                )
 
                     # TODO: Store output files in the output directory, if required.
-                    for key in self.outputs.keys():
-                        output_path = args[key]
-                        print(f"Archiving output file {output_path}")
-                        try:
-                            if os.path.exists(output_path) and os.path.exists(abs_path):
-                                shutil.copy(output_path, abs_path)
-                        except shutil.SameFileError:
-                            pass
-                        except Exception as err:
-                            logger.error(
-                                "Error copying output file %s to %s: %s",
-                                output_path,
-                                abs_path,
-                                err,
-                            )
+                    if self.archive in ["both", "output"]:
+                        for key in self.outputs.keys():
+                            output_path = args[key]
+                            print(f"Archiving output file {output_path}")
+                            try:
+                                if os.path.exists(output_path) and os.path.exists(abs_path):
+                                    shutil.copy(output_path, abs_path)
+                            except shutil.SameFileError:
+                                pass
+                            except Exception as err:
+                                logger.error(
+                                    "Error copying output file %s to %s: %s",
+                                    output_path,
+                                    abs_path,
+                                    err,
+                                )
 
                     # Calculate run summary
                     run_summary = calculate_run_summary(out)
