@@ -103,8 +103,7 @@ class CLI:
             "-r",
             "--repeat",
             type=int,
-            help="Number of repeats",
-            default=1,
+            help="Number of repeats (default: 1)",
         )
         self.parser.add_argument(
             "-i",
@@ -148,15 +147,13 @@ class CLI:
             "-w",
             "--wait",
             type=float,
-            help="Wait time before and after in seconds.",
-            default=2.0,
+            help="Wait time before and after in seconds (default: 2.0)",
         )
         self.parser.add_argument(
             "-m",
             "--monitor",
             type=float,
-            help="Monitor time before and after in seconds.",
-            default=2.0,
+            help="Monitor time before and after in seconds (default: 2.0)",
         )
         self.parser.add_argument(
             "-rw",
@@ -186,8 +183,7 @@ class CLI:
             "--archive",
             type=str,
             choices=["none", "both", "input", "output"],
-            help="File types to archive",
-            default="both",
+            help="File types to archive (default: both)",
         )
         self.parser.add_argument(
             "--workdir",
@@ -218,7 +214,7 @@ class CLI:
         self.parser.add_argument(
             "--clean-outputs",
             action="store_true",
-            help="Clean the output files"
+            help="Clean the output files",
         )
         self.parser.add_argument(
             "-d",
@@ -283,6 +279,7 @@ class CLI:
             exit()
 
         elif args.command.endswith(".yaml"):
+            del kwargs["type"]
             logger.debug("Loading scenario from %s", args.command)
             scenario = load_scenario(os.path.abspath(args.command), **kwargs)
 
