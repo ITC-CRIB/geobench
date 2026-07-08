@@ -207,6 +207,25 @@ class Scenario:
     def _store_result(self, result: dict):
         self._store("result.json", result)
 
+    def get_related_files(self, path: str) -> list[str]:
+        """Return related files."""
+        out = [path]
+
+        base, ext = os.path.splitext(path)
+        if ext == ".shp":
+            for ext in [
+                ".cpg",
+                ".dbf",
+                ".prj",
+                ".sbn",
+                ".sbx",
+                ".shp.xml",
+                ".shx",
+            ]:
+                out.append(base + ext)
+
+        return out
+
     def benchmark(self, clean: bool = False) -> dict:
         """Benchmark the scenario.
 
@@ -415,51 +434,64 @@ class Scenario:
                     if self.archive in ["both", "input"]:
                         for key in self.inputs.keys():
                             input_path = args[key]
+                            if not os.path.exists(input_path):
+                                continue
                             print(f"Archiving input file {input_path}")
-                            try:
-                                if os.path.exists(input_path):
+                            for input_path in self.get_related_files(input_path):
+                                if not os.path.exists(input_path):
+                                    continue
+                                try:
                                     shutil.copy(input_path, abs_path)
-                            except shutil.SameFileError:
-                                pass
-                            except Exception as err:
-                                logger.error(
-                                    "Error copying input file %s to %s: %s",
-                                    input_path,
-                                    abs_path,
-                                    err,
-                                )
+                                except shutil.SameFileError:
+                                    pass
+                                except Exception as err:
+                                    logger.error(
+                                        "Error copying input file %s to %s: %s",
+                                        input_path,
+                                        abs_path,
+                                        err,
+                                    )
 
                     # Store output files in the output directory, if required.
                     if self.archive in ["both", "output"]:
                         for key in self.outputs.keys():
                             output_path = args[key]
+                            if not os.path.exists(output_path):
+                                continue
                             print(f"Archiving output file {output_path}")
-                            try:
-                                if os.path.exists(output_path):
+                            for output_path in self.get_related_files(output_path):
+                                if not os.path.exists(output_path):
+                                    continue
+                                try:
                                     shutil.copy(output_path, abs_path)
-                            except shutil.SameFileError:
-                                pass
-                            except Exception as err:
-                                logger.error(
-                                    "Error copying output file %s to %s: %s",
-                                    output_path,
-                                    abs_path,
-                                    err,
-                                )
+                                except shutil.SameFileError:
+                                    pass
+                                except Exception as err:
+                                    logger.error(
+                                        "Error copying output file %s to %s: %s",
+                                        output_path,
+                                        abs_path,
+                                        err,
+                                    )
 
                     # Clean outputs if required
                     if self.clean_outputs:
                         for key in self.outputs.keys():
                             output_path = args[key]
+                            if not os.path.exists(output_path):
+                                continue
                             print(f"Removing output file {output_path}")
-                            try:
-                                os.remove(output_path)
-                            except Exception as err:
-                                logger.error(
-                                    "Error removing output file %s: %s",
-                                    output_path,
-                                    err,
-                                )
+                            for output_path in self.get_related_files(output_path):
+                                if not os.path.exists(output_path):
+                                    continue
+                                try:
+                                    os.remove(output_path)
+                                except Exception as err:
+                                    logger.error(
+                                        "Error removing output file %s: %s",
+                                        output_path,
+                                        err,
+                                    )
 
                     # Calculate run summary
                     run_summary = calculate_run_summary(out)
