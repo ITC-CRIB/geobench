@@ -183,6 +183,13 @@ class CLI:
             help="Monitoring time before and after all runs in seconds (default: monitor time)",
         )
         self.parser.add_argument(
+            "--archive",
+            type=str,
+            choices=["none", "both", "input", "output"],
+            help="File types to archive",
+            default="both",
+        )
+        self.parser.add_argument(
             "--workdir",
             type=str,
             help="Working directory (default: current working directory)",
