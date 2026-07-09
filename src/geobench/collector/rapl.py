@@ -1,23 +1,22 @@
-"""RAPL collector module."""
+"""RAPL system collector module."""
 
 import glob
 import os
 
-from . import CollectorType, CollectorInfo, Collector
+from . import CollectorInfo, SystemCollector
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class RAPLCollector(Collector):
-    """Collector for RAPL energy metrics."""
+class RAPLCollector(SystemCollector):
+    """Collector for system energy metrics using RAPL."""
 
     @classmethod
     def get_info(cls) -> CollectorInfo:
         """Return collector information."""
         return CollectorInfo(
-            type=CollectorType.SYSTEM,
             code="rapl",
             name="RAPL Energy Metrics Collector",
             description="Energy metrics using RAPL.",

@@ -2,7 +2,6 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from enum import Enum
 from functools import cache
 import importlib
 import inspect
@@ -13,16 +12,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class CollectorType(Enum):
-    SYSTEM = "system"
-    PROCESS = "process"
-
-
 @dataclass(frozen=True)
 class CollectorInfo:
     """Metadata describing a collector."""
 
-    type: CollectorType
     code: str
     name: str
     description: str
@@ -55,6 +48,19 @@ class Collector(ABC):
             metrics: Collected metrics data.
         """
         pass
+
+
+class SystemCollector(Collector):
+    """Abstract base class for system metrics collectors."""
+
+
+class ProcessCollector(Collector):
+    """Abstract base class for process metrics collectors."""
+
+    def __init__(self, process, config: dict | None = None):
+        """Initialize process metrics collector."""
+        super().__init__(config)
+        self.process = process
 
 
 @cache

@@ -1,17 +1,17 @@
-"""powermetrics collector module."""
+"""powermetrics system collector module."""
 
 import shutil
 import subprocess
 
-from . import CollectorType, CollectorInfo, Collector
+from . import CollectorInfo, SystemCollector
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class PowermetricsCollector(Collector):
-    """Collector for macOS powermetrics energy metrics."""
+class PowermetricsCollector(SystemCollector):
+    """Collector for system energy metrics using powermetrics."""
 
     SAMPLE_RATE = 100
 
@@ -19,7 +19,6 @@ class PowermetricsCollector(Collector):
     def get_info(cls) -> CollectorInfo:
         """Return collector information."""
         return CollectorInfo(
-            type=CollectorType.SYSTEM,
             code="powermetrics",
             name="powermetrics Energy Metrics Collector",
             description="Energy metrics using powermetrics.",

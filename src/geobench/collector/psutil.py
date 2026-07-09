@@ -1,22 +1,21 @@
-"""psutil collector module."""
+"""psutil system collector module."""
 
 import psutil
 
-from . import CollectorType, CollectorInfo, Collector
+from . import CollectorInfo, SystemCollector
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class PsutilsCollector(Collector):
-    """Collector for system metrics via psutil."""
+class PsutilsCollector(SystemCollector):
+    """Collector for system metrics using psutil."""
 
     @classmethod
     def get_info(cls) -> CollectorInfo:
         """Return collector information."""
         return CollectorInfo(
-            type=CollectorType.SYSTEM,
             code="psutil",
             name="psutil Collector",
             description="CPU, memory, IO, and network metrics using psutil.",
