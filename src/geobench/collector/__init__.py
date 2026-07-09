@@ -1,4 +1,4 @@
-"""Metrics collector module."""
+"""Collector module."""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -22,10 +22,10 @@ class CollectorInfo:
 
 
 class Collector(ABC):
-    """Abstract base class for metrics collectors."""
+    """Abstract base class for collectors."""
 
     def __init__(self, config: dict | None = None):
-        """Initialize metrics collector."""
+        """Initialize collector."""
         self.config = config or {}
 
     @classmethod
@@ -34,31 +34,31 @@ class Collector(ABC):
         """Return collector information."""
 
     @abstractmethod
-    def read_metrics(self) -> dict:
-        """Read current metrics.
+    def collect(self) -> dict:
+        """Collect current data.
 
         Returns:
-            Dictionary containing metric readings.
+            Dictionary containing collected data.
         """
 
     def postprocess(self, data: list[dict]):
-        """Postprocess collected metrics data.
+        """Postprocess collected data.
 
         Args:
-            metrics: Collected metrics data.
+            data: Collected data.
         """
         pass
 
 
 class SystemCollector(Collector):
-    """Abstract base class for system metrics collectors."""
+    """Abstract base class for system collectors."""
 
 
 class ProcessCollector(Collector):
-    """Abstract base class for process metrics collectors."""
+    """Abstract base class for process collectors."""
 
     def __init__(self, process, config: dict | None = None):
-        """Initialize process metrics collector."""
+        """Initialize process collector."""
         super().__init__(config)
         self.process = process
 

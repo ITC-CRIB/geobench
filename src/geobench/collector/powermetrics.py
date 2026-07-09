@@ -45,8 +45,8 @@ class PowermetricsCollector(SystemCollector):
         except (subprocess.TimeoutExpired, FileNotFoundError):
             raise RuntimeError("Cannot execute powermetrics")
 
-    def read_metrics(self) -> dict:
-        """Read current energy metrics using powermetrics.
+    def collect(self) -> dict:
+        """Collect energy metrics using powermetrics.
 
         Returns:
             Dictionary containing energy metrics in microjoules (μJ).

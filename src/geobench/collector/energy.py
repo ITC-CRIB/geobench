@@ -47,10 +47,10 @@ class EnergyCollector(SystemCollector):
 
         raise RuntimeError("No suitable energy metrics collector found")
 
-    def read_metrics(self) -> dict:
-        """Read energy consumption metrics.
+    def collect(self) -> dict:
+        """Collect energy consumption metrics.
 
         Returns:
             Dictionary containing energy consumption metrics.
         """
-        return self.collector.read_metrics()
+        return self.collector.collect()

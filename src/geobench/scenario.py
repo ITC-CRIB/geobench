@@ -14,8 +14,9 @@ import traceback
 import yaml
 
 from .cache import clear_cache
+from .collector.system_info import SystemInfoCollector
 from .executor import get_executors
-from .monitor import get_system_info, monitor_system, monitor_process
+from .monitor import monitor_system, monitor_process
 from .report import calculate_run_summary, generate_html_report
 
 import logging
@@ -299,7 +300,7 @@ class Scenario:
 
             # Store system information
             print("Storing system information.")
-            result["system"] = get_system_info()
+            result["system"] = SystemInfoCollector().collect()
             self._store_result(result)
 
             # Perform baseline monitoring before the runs, if required

@@ -72,8 +72,8 @@ class RAPLCollector(SystemCollector):
         if not self.domains:
             raise RuntimeError("No RAPL domain found")
 
-    def read_metrics(self) -> dict:
-        """Read current energy counters from all RAPL domains.
+    def collect(self) -> dict:
+        """Collect energy counters from all RAPL domains.
 
         Returns:
             Dictionary containing `energy` with mapping domain names to energy
@@ -97,10 +97,10 @@ class RAPLCollector(SystemCollector):
         return out
 
     def postprocess(self, data: list[dict]):
-        """Postprocess collected metrics data.
+        """Postprocess collected data.
 
         Args:
-            metrics: Collected metrics data.
+            data: Collected data.
         """
         super().postprocess(data)
 

@@ -1,6 +1,5 @@
 """Monitoring module."""
 
-import platform
 import statistics
 import threading
 import time
@@ -12,52 +11,6 @@ from .collector import get_collector
 import logging
 
 logger = logging.getLogger(__name__)
-
-
-def get_system_info() -> dict:
-    """Returns system information."""
-    out = {}
-
-    # OS information
-    out["os"] = {
-        "system": platform.system(),
-        "node": platform.node(),
-        "release": platform.release(),
-        "version": platform.version(),
-        "machine": platform.machine(),
-        "processor": platform.processor(),
-    }
-
-    # CPU information
-    out["cpu"] = {
-        "physical_count": psutil.cpu_count(logical=False),
-        "logical_count": psutil.cpu_count(logical=True),
-        "max_frequency": psutil.cpu_freq().max,
-        "min_frequency": psutil.cpu_freq().min,
-        "frequency": psutil.cpu_freq().current,
-        "percent": psutil.cpu_percent(interval=0.1, percpu=True),
-    }
-
-    # Memory information
-    out["memory"] = psutil.virtual_memory()._asdict()
-
-    # Disk information
-    out["disk"] = []
-    for partition in psutil.disk_partitions():
-        info = {
-            "device": partition.device,
-            "mountpoint": partition.mountpoint,
-            "fstype": partition.fstype,
-        }
-        try:
-            info.update(psutil.disk_usage(partition.mountpoint)._asdict())
-
-        except PermissionError:
-            pass
-
-        out["disk"].append(info)
-
-    return out
 
 
 def get_process_info(process) -> dict:
@@ -252,7 +205,7 @@ class DataCollector(threading.Thread):
 
             # Collect metrics from all collectors
             for collector in self.collectors:
-                metric.update(collector.read_metrics())
+                metric.update(collector.collect())
 
             self.data.append(metric)
 
@@ -273,7 +226,7 @@ class DataCollector(threading.Thread):
         """
         for collector in self.collectors:
             collector.postprocess(self.data)
-       
+
         return self.data
 
 
@@ -473,31 +426,17 @@ def monitor_process(
                 "cpu_percent": psutil.cpu_percent(percpu=True),
                 "memory_usage": psutil.virtual_memory()._asdict(),
             }
-            try:
-                net_io_counters = psutil.net_io_counters()
-                sys_net_bytes_sent = net_io_counters.bytes_sent
-                sys_net_bytes_recv = net_io_counters.bytes_recv
-            except (psutil.AccessDenied, AttributeError):
-                sys_net_bytes_sent = 0
-                sys_net_bytes_recv = 0
 
-            try:
-                disk_io_counters = psutil.disk_io_counters()
-                sys_disk_bytes_read = disk_io_counters.read_bytes
-                sys_disk_bytes_write = disk_io_counters.write_bytes
-            except (psutil.AccessDenied, AttributeError):
-                sys_disk_bytes_read = 0
-                sys_disk_bytes_write = 0
+            # Network I/O
+            net_io = psutil.net_io_counters()
+            sys_metric["net_bytes_sent"] = net_io.bytes_sent
+            sys_metric["net_bytes_recv"] = net_io.bytes_recv
 
-            # Update metrics
-            sys_metric.update(
-                {
-                    "net_bytes_sent": sys_net_bytes_sent,
-                    "net_bytes_recv": sys_net_bytes_recv,
-                    "disk_bytes_read": sys_disk_bytes_read,
-                    "disk_bytes_write": sys_disk_bytes_write,
-                }
-            )
+            # Disk I/O
+            disk_io = psutil.disk_io_counters()
+            if disk_io:
+                sys_metric["disk_bytes_read"] = disk_io.read_bytes
+                sys_metric["disk_bytes_write"] = disk_io.write_bytes
 
             system_metrics.append(sys_metric)
 

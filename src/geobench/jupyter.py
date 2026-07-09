@@ -9,7 +9,8 @@ import traceback
 import psutil
 
 from .cache import clear_cache
-from .monitor import get_system_info, monitor_process, monitor_system
+from .collector.system_info import SystemInfoCollector
+from .monitor import monitor_process, monitor_system
 from .report import calculate_run_summary, generate_html_report
 
 import logging
@@ -122,7 +123,7 @@ class Geobench:
         # Store system information only at first run
         if self.result["system"] is None:
             print("Storing system information.")
-            self.result["system"] = get_system_info()
+            self.result["system"] = SystemInfoCollector().collect()
             self._save_result()
 
         # Perform system cleanup

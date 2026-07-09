@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class PsutilsCollector(SystemCollector):
+class PsutilCollector(SystemCollector):
     """Collector for system metrics using psutil."""
 
     @classmethod
@@ -21,8 +21,8 @@ class PsutilsCollector(SystemCollector):
             description="CPU, memory, IO, and network metrics using psutil.",
         )
 
-    def read_metrics(self) -> dict:
-        """Read system metrics using psutil.
+    def collect(self) -> dict:
+        """Collect system metrics using psutil.
 
         Returns:
             Dictionary containing system metrics.
@@ -56,10 +56,10 @@ class PsutilsCollector(SystemCollector):
         return out
 
     def postprocess(self, data: list[dict]):
-        """Postprocess collected metrics data.
+        """Postprocess collected data.
 
         Args:
-            metrics: Collected metrics data.
+            data: Collected data.
         """
         super().postprocess(data)
 
