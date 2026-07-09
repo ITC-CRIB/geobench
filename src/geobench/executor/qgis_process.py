@@ -23,7 +23,7 @@ class QGISProcessExecutor(ProgramExecutor):
     @classmethod
     def get_info(cls) -> ExecutorInfo:
         return ExecutorInfo(
-            type="qgis-process",
+            code="qgis-process",
             name="QGIS Process Executor",
             description="Executes a qgis_process command with arguments.",
         )

@@ -13,7 +13,7 @@ class ShellExecutor(ProgramExecutor):
     @classmethod
     def get_info(cls) -> ExecutorInfo:
         return ExecutorInfo(
-            type="shell",
+            code="shell",
             name="Shell Script Executor",
             description="Executes a shell script.",
         )

@@ -17,7 +17,7 @@ class QGISPythonExecutor(QGISProcessExecutor):
     @classmethod
     def get_info(cls) -> ExecutorInfo:
         return ExecutorInfo(
-            type="qgis-python",
+            code="qgis-python",
             name="QGIS Python Script Executor",
             description="Executes a QGIS Python script.",
         )

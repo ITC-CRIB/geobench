@@ -14,7 +14,7 @@ class PythonExecutor(ProgramExecutor):
     @classmethod
     def get_info(cls) -> ExecutorInfo:
         return ExecutorInfo(
-            type="python",
+            code="python",
             name="Python Script Executor",
             description="Executes a Python script with arguments.",
         )

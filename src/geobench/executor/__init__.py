@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class ExecutorInfo:
     """Metadata describing a collector."""
 
-    type: str
+    code: str
     name: str
     description: str
 

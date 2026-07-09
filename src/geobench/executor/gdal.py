@@ -23,7 +23,7 @@ class GDALExecutor(ProgramExecutor):
     @classmethod
     def get_info(cls) -> ExecutorInfo:
         return ExecutorInfo(
-            type="gdal",
+            code="gdal",
             name="GDAL Executor",
             description="Executes a GDAL command with arguments.",
         )
