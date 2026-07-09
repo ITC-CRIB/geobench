@@ -7,31 +7,11 @@ import time
 import psutil
 
 from .collector import get_collector
+from .collector.process_info import ProcessInfoCollector
 
 import logging
 
 logger = logging.getLogger(__name__)
-
-
-def get_process_info(process) -> dict:
-    """Returns process information.
-
-    Args:
-        process: Process.
-
-    Returns:
-        Dictionary of process information.
-    """
-    return {
-        "pid": process.pid,
-        "parent_pid": process.ppid(),
-        "name": process.name(),
-        "executable": process.exe(),
-        "command": process.cmdline(),
-        "environment": process.environ(),
-        "create_time": process.create_time(),
-        "metrics": [],
-    }
 
 
 def monitor_system(duration: float = 10.0, interval: float = 1.0) -> dict:
@@ -254,7 +234,8 @@ def monitor_process(
         - processes: Process metrics
         - telemetry: List of source names (only in multi-threaded mode)
     """
-    process_metrics = {process.pid: get_process_info(process)}
+    process_metrics = {process.pid: ProcessInfoCollector(process).collect()}
+    process_metrics[process.pid]["metrics"] = []
 
     # Determine if we're using multi-threaded mode
     use_multi_threaded = telemetry is not None and len(telemetry) > 0
@@ -330,7 +311,10 @@ def monitor_process(
             for child in process.children(recursive=True):
                 try:
                     if child.pid not in process_metrics:
-                        process_metrics[child.pid] = get_process_info(child)
+                        process_metrics[child.pid] = ProcessInfoCollector(
+                            child
+                        ).collect()
+                        process_metrics[child.pid]["metrics"] = []
                     processes.append(child)
                     child.cpu_percent()
                 except psutil.NoSuchProcess:
@@ -408,7 +392,10 @@ def monitor_process(
             for child in process.children(recursive=True):
                 try:
                     if child.pid not in process_metrics:
-                        process_metrics[child.pid] = get_process_info(child)
+                        process_metrics[child.pid] = ProcessInfoCollector(
+                            child
+                        ).collect()
+                        process_metrics[child.pid]["metrics"] = []
 
                     processes.append(child)
                     child.cpu_percent()
