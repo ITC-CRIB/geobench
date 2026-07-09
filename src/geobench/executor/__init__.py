@@ -61,8 +61,8 @@ def get_executors() -> dict[str, Executor]:
         for name, cls in inspect.getmembers(module, inspect.isclass):
             if issubclass(cls, Executor) and cls is not Executor:
                 if not cls.__abstractmethods__:
-                    type = cls.get_info().type
-                    executors[type] = cls
+                    code = cls.get_info().code
+                    executors[code] = cls
                 else:
                     logger.debug("%s has abstract methods, skipping", cls)
 
