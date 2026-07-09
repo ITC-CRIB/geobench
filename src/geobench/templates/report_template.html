@@ -423,8 +423,7 @@
                     <li><span class="info-label">CPU Frequency:</span> {{ system_data.system.cpu.frequency }} MHz</li>
                     {% endif %}
                     {% if system_data.system.memory %}
-                    <li><span class="info-label">Total Memory:</span> {{ "%.2f"|format(system_data.system.memory.total / 1024**3) }} GB</li>
-                    <li><span class="info-label">Available:</span> {{ "%.2f"|format(system_data.system.memory.available / 1024**3) }} GB</li>
+                    <li><span class="info-label">Total Memory:</span> {{ "%.2f"|format(system_data.system.memory / 1024**3) }} GB</li>
                     {% endif %}
                 </ul>
             </div>
