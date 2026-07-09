@@ -1,6 +1,6 @@
 """Energy collector module."""
 
-from . import Collector, CollectorInfo
+from . import CollectorType, CollectorInfo, Collector
 from .powermetrics import PowermetricsCollector
 from .rapl import RAPLCollector
 
@@ -16,7 +16,8 @@ class EnergyCollector(Collector):
     def get_info(cls) -> CollectorInfo:
         """Return collector information."""
         return CollectorInfo(
-            type="energy",
+            type=CollectorType.SYSTEM,
+            code="energy",
             name="Energy Metrics Collector",
             description="Energy consumption metrics using RAPL or powermetrics.",
         )

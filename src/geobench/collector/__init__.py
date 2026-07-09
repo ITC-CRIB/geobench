@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from enum import Enum
 from functools import cache
 import importlib
 import inspect
@@ -12,11 +13,17 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class CollectorType(Enum):
+    SYSTEM = "system"
+    PROCESS = "process"
+
+
 @dataclass(frozen=True)
 class CollectorInfo:
     """Metadata describing a collector."""
 
-    type: str
+    type: CollectorType
+    code: str
     name: str
     description: str
 
@@ -60,8 +67,8 @@ def get_collectors() -> dict[str, Collector]:
         for name, cls in inspect.getmembers(module, inspect.isclass):
             if issubclass(cls, Collector) and cls is not Collector:
                 if not cls.__abstractmethods__:
-                    type = cls.get_info().type
-                    collectors[type] = cls
+                    code = cls.get_info().code
+                    collectors[code] = cls
                 else:
                     logger.debug("%s has abstract methods, skipping", cls)
 

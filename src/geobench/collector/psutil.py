@@ -2,7 +2,7 @@
 
 import psutil
 
-from . import Collector, CollectorInfo
+from . import CollectorType, CollectorInfo, Collector
 
 import logging
 
@@ -16,7 +16,8 @@ class PsutilsCollector(Collector):
     def get_info(cls) -> CollectorInfo:
         """Return collector information."""
         return CollectorInfo(
-            type="psutil",
+            type=CollectorType.SYSTEM,
+            code="psutil",
             name="psutil Collector",
             description="CPU, memory, IO, and network metrics using psutil.",
         )

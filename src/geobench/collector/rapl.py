@@ -3,7 +3,7 @@
 import glob
 import os
 
-from . import Collector, CollectorInfo
+from . import CollectorType, CollectorInfo, Collector
 
 import logging
 
@@ -17,7 +17,8 @@ class RAPLCollector(Collector):
     def get_info(cls) -> CollectorInfo:
         """Return collector information."""
         return CollectorInfo(
-            type="rapl",
+            type=CollectorType.SYSTEM,
+            code="rapl",
             name="RAPL Energy Metrics Collector",
             description="Energy metrics using RAPL.",
         )

@@ -3,7 +3,7 @@
 import shutil
 import subprocess
 
-from . import Collector, CollectorInfo
+from . import CollectorType, CollectorInfo, Collector
 
 import logging
 
@@ -19,7 +19,8 @@ class PowermetricsCollector(Collector):
     def get_info(cls) -> CollectorInfo:
         """Return collector information."""
         return CollectorInfo(
-            type="powermetrics",
+            type=CollectorType.SYSTEM,
+            code="powermetrics",
             name="powermetrics Energy Metrics Collector",
             description="Energy metrics using powermetrics.",
         )
