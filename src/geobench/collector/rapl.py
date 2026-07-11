@@ -102,8 +102,6 @@ class RAPLCollector(SystemCollector):
         Args:
             data: Collected data.
         """
-        super().postprocess(data)
-
         prev_item = None
 
         for item in data:
@@ -126,3 +124,5 @@ class RAPLCollector(SystemCollector):
                     item["power"][name] = power_watts
 
             prev_item = item
+
+        super().postprocess(data)

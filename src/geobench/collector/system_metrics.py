@@ -61,10 +61,10 @@ class SystemMetricsCollector(SystemCollector):
         Args:
             data: Collected data.
         """
-        super().postprocess(data)
-
         for item in data:
             item["cpu_times"] = [val._asdict() for val in item["cpu_times"]]
             item["cpu_freq"] = [val._asdict() for val in item["cpu_freq"]]
             item["memory_usage"] = item["memory_usage"]._asdict()
             item["swap_usage"] = item["swap_usage"]._asdict()
+
+        super().postprocess(data)
