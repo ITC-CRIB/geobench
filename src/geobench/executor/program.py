@@ -5,8 +5,6 @@ import os
 import platform
 import subprocess
 
-import psutil
-
 from . import Executor
 
 import logging
@@ -135,7 +133,7 @@ class ProgramExecutor(Executor):
         args = [self.config["executable"]] + self.get_arguments(command, args or {})
         logger.debug("Executing process with arguments: %s", args)
 
-        process = psutil.Popen(
+        process = subprocess.Popen(
             args,
             shell=False,
             cwd=self.config.get("workdir"),
