@@ -23,11 +23,13 @@ class ProcessInfoCollector(ProcessCollector):
         """
         with self.process.oneshot():
             return {
-                "pid": self.process.pid,
-                "parent_pid": self.process.ppid(),
+                "id": self.process.pid,
+                "parent_id": self.process.ppid(),
                 "name": self.process.name(),
-                "executable": self.process.exe(),
-                "command": self.process.cmdline(),
-                "environment": self.process.environ(),
                 "create_time": self.process.create_time(),
+                "command": {
+                    "executable": self.process.exe(),
+                    "command_line": self.process.cmdline(),
+                    "environment": self.process.environ(),
+                }
             }
