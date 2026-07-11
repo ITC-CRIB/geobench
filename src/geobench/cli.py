@@ -259,7 +259,7 @@ class CLI:
             for key, val in vars(args).items()
             if val is not None
             and key
-            not in ["command", "arg", "args", "input", "output", "clean", "debug"]
+            not in ["command", "arg", "args", "input", "output", "debug"]
         }
 
         kwargs["arguments"] = merge_args(
@@ -292,7 +292,7 @@ class CLI:
             kwargs["command"] = args.command
             scenario = Scenario(**kwargs)
 
-        scenario.benchmark(clean=args.clean)
+        scenario.benchmark()
 
 
 def main():

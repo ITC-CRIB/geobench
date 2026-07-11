@@ -43,6 +43,7 @@ class Scenario:
         system_wait: float | None = None,
         system_monitor: float | None = None,
         archive: str = "both",
+        clean: bool = False,
         clean_outputs: bool = False,
         workdir: str | None = None,
         basedir: str | None = None,
@@ -67,7 +68,8 @@ class Scenario:
             system_wait: Wait time before and after all runs in seconds. Defaults to wait time.
             system_monitor: Monitoring time before and after all runs in seconds. Defaults to monitor time.
             archive: File types to archive. Options are 'none', 'both', 'input', 'output'.
-            clean_outputs: Clean outputs at the end of each run.
+            clean: If True, clean the output directory before running the benchmark.
+            clean_outputs: If True, clean output files at the end of each run.
             workdir: Working directory path. It is also used as the root path of the input files.
                 Defaults to the current working directory.
             basedir: Base directory path. It is used as the root path of the output directory, if is it not an absolute path.
@@ -114,6 +116,7 @@ class Scenario:
             system_monitor if system_monitor is not None else self.monitor
         )
         self.archive = archive or "none"
+        self.clean = clean
         self.clean_outputs = clean_outputs
         self.telemetry = telemetry
 
@@ -227,11 +230,8 @@ class Scenario:
 
         return out
 
-    def benchmark(self, clean: bool = False) -> dict:
+    def benchmark(self) -> dict:
         """Benchmark the scenario.
-
-        Args:
-            clean: If True, clean the output directory before running the benchmark.
 
         Returns:
             Benchmarking results.
@@ -270,7 +270,7 @@ class Scenario:
             print(f"Setting up output directory {self.outdir}.")
             if os.path.exists(self.outdir):
                 if os.path.isdir(self.outdir):
-                    if not clean:
+                    if not self.clean:
                         print("Output directory exists, aborting.")
                         return {}
                     else:
