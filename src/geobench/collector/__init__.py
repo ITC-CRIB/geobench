@@ -41,13 +41,25 @@ class Collector(ABC):
             Dictionary containing collected data.
         """
 
+    def cleanup(self, item: dict):
+        """Clean empty data item attributes."""
+        remove = []
+        for key, val in item.items():
+            if val is None or val == -1:
+                remove.append(key)
+            if isinstance(val, dict):
+                self.cleanup(val)
+        for key in remove:
+            del item[key]
+
     def postprocess(self, data: list[dict]):
         """Postprocess collected data.
 
         Args:
             data: Collected data.
         """
-        pass
+        for item in data:
+            self.cleanup(item)
 
 
 class SystemCollector(Collector):
