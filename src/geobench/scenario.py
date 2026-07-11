@@ -567,42 +567,43 @@ class Scenario:
 
         return result
 
+    @classmethod
+    def load(path: str, **kwargs) -> "Scenario":
+        """Load scenario from a YAML file and customize it keyword arguments, if required.
 
-def load_scenario(path: str, **kwargs) -> Scenario:
-    """Load scenario from a YAML file and customize it keyword arguments, if required.
+        See Scenario class initialization method for available arguments.
 
-    See Scenario class initialization method for available arguments.
+        Args:
+            path: Path of the YAML file.
+            **kwargs: Optional scenario arguments.
 
-    Args:
-        path: Path of the YAML file.
-        **kwargs: Optional scenario arguments.
+        Returns:
+            Configured scenario.
+        """
+        # Load scenario from file
+        logger.debug("Loading scenario from %s", path)
+        with open(path, "r", encoding="utf-8") as file:
+            scenario = yaml.safe_load(file)
 
-    Returns:
-        Configured scenario.
-    """
-    # Load scenario from file
-    logger.debug("Loading scenario from %s", path)
-    with open(path, "r", encoding="utf-8") as file:
-        scenario = yaml.safe_load(file)
+        # Update scenario arguments
+        logger.debug("Updating scenario with %s", kwargs)
+        for key, val in kwargs.items():
+            if isinstance(val, dict) and isinstance(scenario.get(key), dict):
+                scenario[key].update(val)
+            else:
+                scenario[key] = val
 
-    # Update scenario arguments
-    logger.debug("Updating scenario with %s", kwargs)
-    for key, val in kwargs.items():
-        if isinstance(val, dict) and isinstance(scenario.get(key), dict):
-            scenario[key].update(val)
-        else:
-            scenario[key] = val
+        # Set scenario name from the filename, if required
+        if not scenario.get("name"):
+            scenario["name"] = os.path.splitext(os.path.basename(path))[0]
 
-    # Set scenario name from the filename, if required
-    if not scenario.get("name"):
-        scenario["name"] = os.path.splitext(os.path.basename(path))[0]
+        # Sanitize arguments
+        args = {}
+        for key in inspect.signature(Scenario.__init__).parameters.keys():
+            val = scenario.get(key)
+            if key != "self" and val is not None:
+                args[key] = val
 
-    # Sanitize arguments
-    args = {}
-    for key in inspect.signature(Scenario.__init__).parameters.keys():
-        val = scenario.get(key)
-        if key != "self" and val is not None:
-            args[key] = val
+        # Create scenario
+        return Scenario(**args)
 
-    # Create scenario
-    return Scenario(**args)

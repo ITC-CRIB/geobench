@@ -8,7 +8,7 @@ import os
 
 from .executor import get_executors
 from .executor.program import ProgramExecutor
-from .scenario import Scenario, load_scenario
+from .scenario import Scenario
 
 import logging
 
@@ -281,7 +281,7 @@ class CLI:
         elif args.command.endswith(".yaml"):
             del kwargs["type"]
             logger.debug("Loading scenario from %s", args.command)
-            scenario = load_scenario(os.path.abspath(args.command), **kwargs)
+            scenario = Scenario.load(os.path.abspath(args.command), **kwargs)
 
         else:
             logger.debug("Creating scenario from command line arguments")
