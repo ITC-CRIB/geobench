@@ -21,12 +21,13 @@ class ProcessInfoCollector(ProcessCollector):
         Returns:
             Dictionary containing process information.
         """
-        return {
-            "pid": self.process.pid,
-            "parent_pid": self.process.ppid(),
-            "name": self.process.name(),
-            "executable": self.process.exe(),
-            "command": self.process.cmdline(),
-            "environment": self.process.environ(),
-            "create_time": self.process.create_time(),
-        }
+        with self.process.oneshot():
+            return {
+                "pid": self.process.pid,
+                "parent_pid": self.process.ppid(),
+                "name": self.process.name(),
+                "executable": self.process.exe(),
+                "command": self.process.cmdline(),
+                "environment": self.process.environ(),
+                "create_time": self.process.create_time(),
+            }
