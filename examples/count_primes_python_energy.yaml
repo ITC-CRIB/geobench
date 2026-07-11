@@ -13,5 +13,5 @@ telemetry:
     - name: main
       interval: 1.0
       metrics:
-      - type: psutil
+      - type: system_metrics
       - type: energy
