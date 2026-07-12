@@ -27,11 +27,15 @@ class SystemInfoCollector(SystemCollector):
         """
         out = {}
 
-        # OS information
-        out["os"] = {
-            "machine": platform.machine(),
+        # Hardware information
+        out["machine"] = {
+            "type": platform.machine(),
             "processor": platform.processor(),
             "node": platform.node(),
+        }
+
+        # OS information
+        out["os"] = {
             "system": platform.system(),
             "release": platform.release(),
             "version": platform.version(),
@@ -48,8 +52,10 @@ class SystemInfoCollector(SystemCollector):
         }
 
         # Memory information
-        out["memory"] = psutil.virtual_memory().total
-        out["swap"] = psutil.swap_memory().total
+        out["memory"] = {
+            "virtual": psutil.virtual_memory().total,
+            "swap": psutil.swap_memory().total,
+        }
 
         # Disk information
         out["disk"] = []

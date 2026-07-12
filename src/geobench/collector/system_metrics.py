@@ -30,24 +30,32 @@ class SystemMetricsCollector(SystemCollector):
         out = {}
 
         try:
-            # CPU metrics
-            out["cpu_times"] = psutil.cpu_times(percpu=True)
-            out["cpu_freq"] = psutil.cpu_freq(percpu=True)
+            # CPU information
+            out["cpu"] = {
+                "times": psutil.cpu_times(percpu=True),
+                "freqs": psutil.cpu_freq(percpu=True),
+            }
 
-            # Memory metrics
-            out["memory_usage"] = psutil.virtual_memory()
-            out["swap_usage"] = psutil.swap_memory()
+            # Memory information
+            out["memory"] = {
+                "virtual": psutil.virtual_memory(),
+                "swap": psutil.swap_memory(),
+            }
 
-            # Network I/O
+            # Network information
             net_io = psutil.net_io_counters()
-            out["net_bytes_sent"] = net_io.bytes_sent
-            out["net_bytes_recv"] = net_io.bytes_recv
+            out["net"] = {
+                "sent_bytes": net_io.bytes_sent,
+                "received_bytes": net_io.bytes_recv,
+            }
 
-            # Disk I/O
+            # Disk information
             disk_io = psutil.disk_io_counters()
             if disk_io:
-                out["disk_bytes_read"] = disk_io.read_bytes
-                out["disk_bytes_write"] = disk_io.write_bytes
+                out["disk"] = {
+                    "read_bytes": disk_io.read_bytes,
+                    "write_bytes": disk_io.write_bytes,
+                }
 
         except Exception as err:
             logger.error("Error reading psutil metrics: %s", err)
@@ -62,9 +70,9 @@ class SystemMetricsCollector(SystemCollector):
             data: Collected data.
         """
         for item in data:
-            item["cpu_times"] = [val._asdict() for val in item["cpu_times"]]
-            item["cpu_freq"] = [val._asdict() for val in item["cpu_freq"]]
-            item["memory_usage"] = item["memory_usage"]._asdict()
-            item["swap_usage"] = item["swap_usage"]._asdict()
+            item["cpu"]["times"] = [val._asdict() for val in item["cpu"]["times"]]
+            item["cpu"]["freqs"] = [val._asdict() for val in item["cpu"]["freqs"]]
+            item["memory"]["virtual"] = item["memory"]["virtual"]._asdict()
+            item["memory"]["swap"] = item["memory"]["swap"]._asdict()
 
         super().postprocess(data)

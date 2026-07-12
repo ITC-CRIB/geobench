@@ -31,5 +31,5 @@ class ProcessInfoCollector(ProcessCollector):
                     "executable": self.process.exe(),
                     "command_line": self.process.cmdline(),
                     "environment": self.process.environ(),
-                }
+                },
             }

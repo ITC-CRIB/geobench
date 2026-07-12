@@ -84,7 +84,9 @@ class SystemProcessesCollector(SystemCollector):
                         "read_bytes": info["io_counters"].read_bytes,
                         "write_bytes": info["io_counters"].write_bytes,
                         "other_bytes": getattr(info["io_counters"], "other_bytes"),
-                    },
+                    }
+                    if info["io_counters"]
+                    else {},
                     "resources": {
                         "num_threads": info["num_threads"],
                         "num_handles": info.get("num_handles"),

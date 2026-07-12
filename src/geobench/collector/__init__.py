@@ -6,6 +6,9 @@ from functools import cache
 import importlib
 import inspect
 import pkgutil
+import subprocess
+
+import psutil
 
 import logging
 
@@ -69,9 +72,23 @@ class SystemCollector(Collector):
 class ProcessCollector(Collector):
     """Abstract base class for process collectors."""
 
-    def __init__(self, process, config: dict | None = None):
+    def __init__(
+        self,
+        process: int | subprocess.Popen | psutil.Process,
+        config: dict | None = None,
+    ):
         """Initialize process collector."""
         super().__init__(config)
+
+        if not isinstance(process, psutil.Process):
+            if isinstance(process, subprocess.Popen):
+                id = process.pid
+            elif isinstance(process, int):
+                id = process
+            else:
+                raise ValueError("Invalid process: %s", process)
+            process = psutil.Process(id)
+
         self.process = process
 
 
