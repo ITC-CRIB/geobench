@@ -90,7 +90,7 @@ bench = Geobench(
     name="my-benchmark",
     outdir="results",
     run_monitor=2.0,
-    clean=True
+    clear=True
 )
 
 # Start benchmarking
@@ -111,7 +111,7 @@ bench.generate_report()
 ```python
 from geobench import geobench
 
-@geobench(name="my-function-benchmark", outdir="results", clean=True)
+@geobench(name="my-function-benchmark", outdir="results", clear=True)
 def my_function():
     # Your code here
     return result

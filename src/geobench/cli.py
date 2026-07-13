@@ -207,14 +207,19 @@ class CLI:
         )
         self.parser.add_argument(
             "-c",
-            "--clean",
+            "--clear",
             action="store_true",
-            help="Clean the output directory",
+            help="Clear the output directory",
         )
         self.parser.add_argument(
-            "--clean-outputs",
+            "--clear-outputs",
             action="store_true",
-            help="Clean the output files",
+            help="Clear the output files",
+        )
+        self.parser.add_argument(
+            "--clear-cache",
+            action=argparse.BooleanOptionalAction,
+            help="Clear the system caches (default: True)",
         )
         self.parser.add_argument(
             "-d",

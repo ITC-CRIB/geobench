@@ -28,7 +28,7 @@ class Geobench:
         run_wait: float = 2.0,
         run_monitor: float = 2.0,
         system_monitor: float = 2.0,
-        clean: bool = False,
+        clear: bool = False,
     ):
         """Initialize the JupyterBenchmark.
 
@@ -38,7 +38,7 @@ class Geobench:
             run_wait (float): Idle wait time before and after each run (s) (default = 2.0)
             run_monitor (float): Monitoring time before and after each run (s) (default = 2.0).
             system_monitor (float): Monitoring time before and after all runs (s) (default = 2.0)
-            clean (bool): Set True to clean the output directory, if exists.
+            clear (bool): Set True to clear the output directory, if exists.
         """
         self.name = name
         self.run_wait = run_wait
@@ -59,13 +59,12 @@ class Geobench:
         # Setup output directory
         if os.path.exists(self.outdir):
             if os.path.isdir(self.outdir):
-                if clean:
+                if clear:
                     logger.debug("Removing existing output directory: %s", self.outdir)
                     import shutil
 
                     shutil.rmtree(self.outdir)
                     os.makedirs(self.outdir)
-                # If not clean, we'll keep using the existing directory
             else:
                 raise ValueError(f"Invalid output directory: {self.outdir}")
         else:
@@ -126,7 +125,7 @@ class Geobench:
             self.result["system"] = SystemInfoCollector().collect()
             self._save_result()
 
-        # Perform system cleanup
+        # Clear system caches
         print("Clearing system caches.")
         clear_cache()
 

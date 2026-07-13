@@ -43,8 +43,9 @@ class Scenario:
         system_wait: float | None = None,
         system_monitor: float | None = None,
         archive: str = "both",
-        clean: bool = False,
-        clean_outputs: bool = False,
+        clear: bool = False,
+        clear_outputs: bool = False,
+        clear_cache: bool = True,
         workdir: str | None = None,
         basedir: str | None = None,
         outdir: str | None = None,
@@ -68,8 +69,9 @@ class Scenario:
             system_wait: Wait time before and after all runs in seconds. Defaults to wait time.
             system_monitor: Monitoring time before and after all runs in seconds. Defaults to monitor time.
             archive: File types to archive. Options are 'none', 'both', 'input', 'output'.
-            clean: If True, clean the output directory before running the benchmark.
-            clean_outputs: If True, clean output files at the end of each run.
+            clear: If True, clear the output directory before running the benchmark.
+            clear_outputs: If True, clear output files at the end of each run.
+            clear_cache: If True, clear system caches before each run.
             workdir: Working directory path. It is also used as the root path of the input files.
                 Defaults to the current working directory.
             basedir: Base directory path. It is used as the root path of the output directory, if is it not an absolute path.
@@ -116,8 +118,9 @@ class Scenario:
             system_monitor if system_monitor is not None else self.monitor
         )
         self.archive = archive or "none"
-        self.clean = clean
-        self.clean_outputs = clean_outputs
+        self.clear = clear
+        self.clear_outputs = clear_outputs
+        self.clear_cache = clear_cache
         self.telemetry = telemetry
 
         cwd = os.getcwd()
@@ -270,7 +273,7 @@ class Scenario:
             print(f"Setting up output directory {self.outdir}.")
             if os.path.exists(self.outdir):
                 if os.path.isdir(self.outdir):
-                    if not self.clean:
+                    if not self.clear:
                         print("Output directory exists, aborting.")
                         return {}
                     else:
@@ -288,9 +291,10 @@ class Scenario:
             result["config"] = executor.config
             self._store_result(result)
 
-            # Perform system cleanup
-            print("Clearing system caches.")
-            clear_cache()
+            # Clear system caches, if required
+            if self.clear_cache:
+                print("Clearing system caches.")
+                clear_cache()
 
             # Idle wait before the runs, if required
             # REMARK: Allowing some time after cleanup is recommended.
@@ -345,9 +349,10 @@ class Scenario:
                         "arguments": data["arguments"],
                     }
 
-                    # Perform system cleanup
-                    print("Clearing system caches.")
-                    clear_cache()
+                    # Clear system caches, if required
+                    if self.clear_cache:
+                        print("Clearing system caches.")
+                        clear_cache()
 
                     # Idle wait before the run, if required
                     if self.run_wait:
@@ -475,8 +480,8 @@ class Scenario:
                                         err,
                                     )
 
-                    # Clean outputs if required
-                    if self.clean_outputs:
+                    # Clear outputs if required
+                    if self.clear_outputs:
                         for key in self.outputs.keys():
                             output_path = args[key]
                             if not os.path.exists(output_path):
