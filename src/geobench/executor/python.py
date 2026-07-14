@@ -3,6 +3,7 @@
 import os
 import platform
 import shutil
+import subprocess
 
 from . import ExecutorInfo
 from .program import ProgramExecutor
@@ -56,7 +57,21 @@ class PythonExecutor(ProgramExecutor):
             if not path:
                 raise FileNotFoundError("Python executable not found")
 
-        config["executable"] = path
+        try:
+            result = subprocess.run(
+                [path, "--version"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+
+            config["executable"] = path
+            config["versions"] = [
+                line for line in result.stdout.splitlines() if line.strip()
+            ]
+
+        except subprocess.SubprocessError as err:
+            raise RuntimeError("Error running Python") from err
 
         return config
 
