@@ -1,6 +1,7 @@
 """Monitoring module."""
 
 import statistics
+import subprocess
 import threading
 import time
 
@@ -198,11 +199,11 @@ class DataCollector(threading.Thread):
             len(self.data),
         )
 
-    def get_metrics(self) -> list:
-        """Get collected metrics.
+    def get_data(self) -> list[dict]:
+        """Get collected data.
 
         Returns:
-            List of collected metric dictionaries
+            List of collected data dictionaries
         """
         for collector in self.collectors:
             collector.postprocess(self.data)
@@ -211,7 +212,7 @@ class DataCollector(threading.Thread):
 
 
 def monitor_process(
-    process,
+    process: subprocess.Popen,
     interval: float = 1.0,
     telemetry: list = None,
     stop_event=None,
@@ -221,7 +222,7 @@ def monitor_process(
     Args:
         process: Process to be monitored.
         interval: Interval between each sample in seconds (default = 1.0).
-        telemetry (list, optional): List of telemetry sources for multi-threaded collection.
+        telemetry: Optional list of telemetry sources.
             Each source should have:
             - name: Source identifier
             - interval: Collection interval in seconds
@@ -288,6 +289,8 @@ def monitor_process(
             data_collectors.append(data_collector)
             data_collector.start()
 
+        process = psutil.Process(process.pid)
+        
         # Monitor process and collect process-specific metrics
         step = 0
         psutil.cpu_percent()
@@ -358,7 +361,7 @@ def monitor_process(
         # Aggregate results from all collectors
         system_metrics_by_source = {}
         for data_collector in data_collectors:
-            system_metrics_by_source[data_collector.name] = data_collector.get_metrics()
+            system_metrics_by_source[data_collector.name] = data_collector.get_data()
 
         out = {"system": system_metrics_by_source, "processes": process_metrics}
 
@@ -368,6 +371,8 @@ def monitor_process(
 
         step = 0
         system_metrics = []
+
+        process = psutil.Process(process.pid)
 
         # Initialize metrics
         psutil.cpu_percent()
