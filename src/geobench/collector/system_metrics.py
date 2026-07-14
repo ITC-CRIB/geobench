@@ -63,16 +63,15 @@ class SystemMetricsCollector(SystemCollector):
 
         return out
 
-    def postprocess(self, data: list[dict]):
-        """Postprocess collected data.
+    def transform(self, item: dict):
+        """Perform transformation operations on the data item.
 
         Args:
-            data: Collected data.
+            item: Data item to be transformed.
         """
-        for item in data:
-            item["cpu"]["times"] = [val._asdict() for val in item["cpu"]["times"]]
-            item["cpu"]["freqs"] = [val._asdict() for val in item["cpu"]["freqs"]]
-            item["memory"]["virtual"] = item["memory"]["virtual"]._asdict()
-            item["memory"]["swap"] = item["memory"]["swap"]._asdict()
+        item["cpu"]["times"] = [val._asdict() for val in item["cpu"]["times"]]
+        item["cpu"]["freqs"] = [val._asdict() for val in item["cpu"]["freqs"]]
+        item["memory"]["virtual"] = item["memory"]["virtual"]._asdict()
+        item["memory"]["swap"] = item["memory"]["swap"]._asdict()
 
-        super().postprocess(data)
+        super().transform(item)

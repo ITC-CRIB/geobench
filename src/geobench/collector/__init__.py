@@ -45,7 +45,11 @@ class Collector(ABC):
         """
 
     def cleanup(self, item: dict):
-        """Clean empty data item attributes."""
+        """Clean empty data item attributes.
+
+        Args:
+            item: Data item to be cleaned.
+        """
         remove = []
         for key, val in item.items():
             if val is None or val == -1:
@@ -55,6 +59,14 @@ class Collector(ABC):
         for key in remove:
             del item[key]
 
+    def transform(self, item: dict):
+        """Perform transformation operations on the data item.
+
+        Args:
+            item: Data item to be transformed.
+        """
+        self.cleanup(item)
+
     def postprocess(self, data: list[dict]):
         """Postprocess collected data.
 
@@ -62,7 +74,7 @@ class Collector(ABC):
             data: Collected data.
         """
         for item in data:
-            self.cleanup(item)
+            self.transform(item)
 
 
 class SystemCollector(Collector):

@@ -53,45 +53,44 @@ class SystemProcessesCollector(SystemCollector):
 
         return out
 
-    def postprocess(self, data: list[dict]):
-        """Postprocess collected data.
+    def transform(self, item: dict) -> dict:
+        """Perform transformation operations on the data item.
 
         Args:
-            data: Collected data.
+            item: Data item to be transformed.
         """
-        for item in data:
-            for id, info in item["processes"].items():
-                item["processes"][id] = {
-                    "id": info["pid"],
-                    "parent_id": info["ppid"],
-                    "name": info["name"],
-                    "create_time": info["create_time"],
-                    "username": info["username"],
-                    "status": info["status"],
-                    "command": {
-                        "executable": info["exe"],
-                    },
-                    "cpu": {
-                        "user_time": info["cpu_times"].user,
-                        "system_time": info["cpu_times"].system,
-                        "num": info.get("cpu_num"),
-                    },
-                    "memory": {
-                        "rss": info["memory_info"].rss,
-                        "vms": info["memory_info"].vms,
-                    },
-                    "io": {
-                        "read_bytes": info["io_counters"].read_bytes,
-                        "write_bytes": info["io_counters"].write_bytes,
-                        "other_bytes": getattr(info["io_counters"], "other_bytes"),
-                    }
-                    if info["io_counters"]
-                    else {},
-                    "resources": {
-                        "num_threads": info["num_threads"],
-                        "num_handles": info.get("num_handles"),
-                        "num_fds": info.get("num_fds"),
-                    },
+        for id, info in item["processes"].items():
+            item["processes"][id] = {
+                "id": info["pid"],
+                "parent_id": info["ppid"],
+                "name": info["name"],
+                "create_time": info["create_time"],
+                "username": info["username"],
+                "status": info["status"],
+                "command": {
+                    "executable": info["exe"],
+                },
+                "cpu": {
+                    "user_time": info["cpu_times"].user,
+                    "system_time": info["cpu_times"].system,
+                    "num": info.get("cpu_num"),
+                },
+                "memory": {
+                    "rss": info["memory_info"].rss,
+                    "vms": info["memory_info"].vms,
+                },
+                "io": {
+                    "read_bytes": info["io_counters"].read_bytes,
+                    "write_bytes": info["io_counters"].write_bytes,
+                    "other_bytes": getattr(info["io_counters"], "other_bytes"),
                 }
+                if info["io_counters"]
+                else {},
+                "resources": {
+                    "num_threads": info["num_threads"],
+                    "num_handles": info.get("num_handles"),
+                    "num_fds": info.get("num_fds"),
+                },
+            }
 
-        super().postprocess(data)
+        super().transform(item)
