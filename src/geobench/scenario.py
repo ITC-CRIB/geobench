@@ -107,8 +107,12 @@ class Scenario:
         self.repeat = repeat or 1
         self.wait = wait or 0.0
         self.monitor = monitor or 0.0
-        self.monitor_baseline = monitor_baseline if monitor_baseline is not None else self.monitor
-        self.monitor_endline = monitor_endline if monitor_endline is not None else self.monitor
+        self.monitor_baseline = (
+            monitor_baseline if monitor_baseline is not None else self.monitor
+        )
+        self.monitor_endline = (
+            monitor_endline if monitor_endline is not None else self.monitor
+        )
         self.archive = archive or "none"
         self.clear = clear
         self.clear_outputs = clear_outputs
@@ -275,6 +279,10 @@ class Scenario:
                     print("Invalid output directory, aborting.")
                     return {"error": "Invalid output directory"}
             os.makedirs(self.outdir)
+
+            # Store scenario
+            print("Storing scenarion.")
+            self.save(os.path.join(self.outdir, "scenario.yaml"))
 
             # Store executor configuration
             print("Storing executor configuration.")
@@ -575,3 +583,45 @@ class Scenario:
 
         # Create scenario
         return Scenario(**args)
+
+    def save(self, path: str):
+        """Save scenario to a YAML file.
+
+        Args:
+            path: Path of the YAML file.
+        """
+        out = {
+            "type": self.type,
+            "command": self.command,
+            "name": self.name,
+            "inputs": self.inputs,
+            "outputs": self.outputs,
+            "arguments": self.arguments,
+            "repeat": self.repeat,
+            "wait": self.wait,
+            "monitor": self.monitor,
+            "monitor_baseline": self.monitor_baseline
+            if self.monitor_baseline != self.monitor
+            else None,
+            "monitor_endline": self.monitor_endline
+            if self.monitor_endline != self.monitor
+            else None,
+            "archive": self.archive,
+            "clear": self.clear or None,
+            "clear_outputs": self.clear_outputs or None,
+            "clear_cache": self.clear_cache,
+            "workdir": self.workdir,
+            "basedir": self.basedir,
+            "outdir": self.outdir,
+            "venv": self.venv,
+            "telemetry": self.telemetry,
+        }
+
+        out = {
+            key: val
+            for key, val in out.items()
+            if val is not None and not (isinstance(val, (dict, list)) and len(val) == 0)
+        }
+
+        with open(path, "w", encoding="utf-8") as file:
+            yaml.safe_dump(out, file, sort_keys=False, allow_unicode=True)
