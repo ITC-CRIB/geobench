@@ -25,8 +25,8 @@ class Geobench:
         self,
         name: str,
         outdir: str = None,
-        run_wait: float = 2.0,
-        run_monitor: float = 2.0,
+        wait: float = 2.0,
+        monitor: float = 2.0,
         clear: bool = False,
     ):
         """Initialize the JupyterBenchmark.
@@ -34,13 +34,13 @@ class Geobench:
         Args:
             name (str): Benchmark name (used for output directory).
             outdir (str): Output directory path (default = generated from name).
-            run_wait (float): Idle wait time before and after each run (s) (default = 2.0)
-            run_monitor (float): Monitoring time before and after each run (s) (default = 2.0).
+            wait (float): Idle wait time before and after each run in seconds (default = 2.0)
+            monitor (float): Monitoring time before and after each run in seconds (default = 2.0).
             clear (bool): Set True to clear the output directory, if exists.
         """
         self.name = name
-        self.run_wait = run_wait
-        self.run_monitor = run_monitor
+        self.wait = wait
+        self.monitor = monitor
 
         self._stop_event = threading.Event()  # Replace is_monitoring
 
@@ -131,9 +131,9 @@ class Geobench:
             self.result["start_time"] = time.time()
 
         # Idle wait before the run, if required
-        if self.run_wait:
-            print(f"Waiting {self.run_wait} s before the run.")
-            time.sleep(self.run_wait)
+        if self.wait:
+            print(f"Waiting {self.wait} s before the run.")
+            time.sleep(self.wait)
 
         # Create run data structure
         self._current_run = {
@@ -148,9 +148,9 @@ class Geobench:
         }
 
         # Perform baseline monitoring before the run, if required
-        if self.run_monitor:
-            print(f"Baseline monitoring for {self.run_monitor} s.")
-            self._current_run["baseline"] = monitor_system(self.run_monitor)
+        if self.monitor:
+            print(f"Baseline monitoring for {self.monitor} s.")
+            self._current_run["baseline"] = monitor_system(self.monitor)
 
         # Set up and start the process monitoring in a background thread
         current_process = psutil.Process()
@@ -191,14 +191,14 @@ class Geobench:
         self._current_run["finished"] = True
 
         # Idle wait after the run, if required
-        if self.run_wait:
-            print(f"Waiting {self.run_wait} s after the run.")
-            time.sleep(self.run_wait)
+        if self.wait:
+            print(f"Waiting {self.wait} s after the run.")
+            time.sleep(self.wait)
 
         # Perform endline monitoring after the run, if required
-        if self.run_monitor:
-            print(f"Endline monitoring for {self.run_monitor} s.")
-            self._current_run["endline"] = monitor_system(self.run_monitor)
+        if self.monitor:
+            print(f"Endline monitoring for {self.monitor} s.")
+            self._current_run["endline"] = monitor_system(self.monitor)
 
         # Store run data in run directory
         run_path = os.path.join(self._current_run["directory"], "result.json")

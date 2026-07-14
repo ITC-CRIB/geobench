@@ -89,7 +89,7 @@ from geobench import Geobench
 bench = Geobench(
     name="my-benchmark",
     outdir="results",
-    run_monitor=2.0,
+    monitor=2.0,
     clear=True
 )
 

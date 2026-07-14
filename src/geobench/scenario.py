@@ -38,8 +38,8 @@ class Scenario:
         repeat: int = 1,
         wait: float = 2.0,
         monitor: float = 2.0,
-        run_wait: float | None = None,
-        run_monitor: float | None = None,
+        monitor_baseline: float | None = None,
+        monitor_endline: float | None = None,
         archive: str = "both",
         clear: bool = False,
         clear_outputs: bool = False,
@@ -60,10 +60,10 @@ class Scenario:
             outputs: Optional list or dictionary of output files.
             arguments: Optional list or dictionary of arguments.
             repeat: Number of repeats.
-            wait: Wait time before and after in seconds.
-            monitor: Monitoring time before and after in seconds.
-            run_wait: Wait time before and after each run in seconds. Defaults to wait time.
-            run_monitor: Monitoring time before and after each run in seconds. Defaults to monitor time.
+            wait: Idle wait time before each run, in seconds.
+            monitor: Monitoring duration before and after each run, in seconds.
+            monitor_baseline: Monitoring duration before each run, in seconds. Defaults to `monitor` value.
+            monitor_endline: Monitoring duration after each run, in seconds. Defaults to `monitor` value.
             archive: File types to archive. Options are 'none', 'both', 'input', 'output'.
             clear: If True, clear the output directory before running the benchmark.
             clear_outputs: If True, clear output files at the end of each run.
@@ -107,8 +107,8 @@ class Scenario:
         self.repeat = repeat or 1
         self.wait = wait or 0.0
         self.monitor = monitor or 0.0
-        self.run_wait = run_wait if run_wait is not None else self.wait
-        self.run_monitor = run_monitor if run_monitor is not None else self.monitor
+        self.monitor_baseline = monitor_baseline if monitor_baseline is not None else self.monitor
+        self.monitor_endline = monitor_endline if monitor_endline is not None else self.monitor
         self.archive = archive or "none"
         self.clear = clear
         self.clear_outputs = clear_outputs
@@ -335,14 +335,14 @@ class Scenario:
                         clear_cache()
 
                     # Idle wait before the run, if required
-                    if self.run_wait:
-                        print(f"Waiting {self.run_wait} s before the run.")
-                        time.sleep(self.run_wait)
+                    if self.wait:
+                        print(f"Waiting {self.wait} s before the run.")
+                        time.sleep(self.wait)
 
                     # Perform baseline monitoring before the run, if required
-                    if self.run_monitor:
-                        print(f"Baseline monitoring for {self.run_monitor} s.")
-                        out["baseline"] = monitor_system(self.run_monitor)
+                    if self.monitor_baseline:
+                        print(f"Baseline monitoring for {self.monitor_baseline} s.")
+                        out["baseline"] = monitor_system(self.monitor_baseline)
                         self._store(result_path, out)
 
                     # Modify run-specific arguments
@@ -405,15 +405,10 @@ class Scenario:
 
                     self._store(result_path, out)
 
-                    # Idle wait after the run, if required
-                    if self.run_wait:
-                        print(f"Waiting {self.run_wait} s after the run.")
-                        time.sleep(self.run_wait)
-
                     # Perform endline monitoring after the run, if required
-                    if self.run_monitor:
-                        print(f"Endline monitoring for {self.run_monitor} s.")
-                        out["endline"] = monitor_system(self.run_monitor)
+                    if self.monitor_endline:
+                        print(f"Endline monitoring for {self.monitor_endline} s.")
+                        out["endline"] = monitor_system(self.monitor_endline)
                         self._store(result_path, out)
 
                     # Store input files in the output directory.
