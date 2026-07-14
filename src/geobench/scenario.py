@@ -289,11 +289,6 @@ class Scenario:
             result["config"] = executor.config
             self._store_result(result)
 
-            # Clear system caches, if required
-            if self.clear_cache:
-                print("Clearing system caches.")
-                clear_cache()
-
             # Store system information
             print("Storing system information.")
             collector = SystemInfoCollector()
