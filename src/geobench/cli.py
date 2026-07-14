@@ -168,12 +168,6 @@ class CLI:
             help="Monitoring time before and after each run in seconds (default: monitor time)",
         )
         self.parser.add_argument(
-            "-sw",
-            "--system-wait",
-            type=float,
-            help="Wait time before and after all runs in seconds (default: wait time)",
-        )
-        self.parser.add_argument(
             "-sm",
             "--system-monitor",
             type=float,

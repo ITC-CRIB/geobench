@@ -40,7 +40,6 @@ class Scenario:
         monitor: float = 2.0,
         run_wait: float | None = None,
         run_monitor: float | None = None,
-        system_wait: float | None = None,
         system_monitor: float | None = None,
         archive: str = "both",
         clear: bool = False,
@@ -66,7 +65,6 @@ class Scenario:
             monitor: Monitoring time before and after in seconds.
             run_wait: Wait time before and after each run in seconds. Defaults to wait time.
             run_monitor: Monitoring time before and after each run in seconds. Defaults to monitor time.
-            system_wait: Wait time before and after all runs in seconds. Defaults to wait time.
             system_monitor: Monitoring time before and after all runs in seconds. Defaults to monitor time.
             archive: File types to archive. Options are 'none', 'both', 'input', 'output'.
             clear: If True, clear the output directory before running the benchmark.
@@ -113,7 +111,6 @@ class Scenario:
         self.monitor = monitor or 0.0
         self.run_wait = run_wait if run_wait is not None else self.wait
         self.run_monitor = run_monitor if run_monitor is not None else self.monitor
-        self.system_wait = system_wait if system_wait is not None else self.wait
         self.system_monitor = (
             system_monitor if system_monitor is not None else self.monitor
         )
@@ -167,8 +164,6 @@ class Scenario:
         if not all(isinstance(item, str) for item in outputs):
             raise ValueError("Invalid outputs")
 
-        multi_input = isinstance(self.inputs, dict)
-
         if isinstance(self.arguments, list):
             args = {key: val for key, val in enumerate(self.arguments)}
         else:
@@ -176,7 +171,7 @@ class Scenario:
 
         args = (
             args
-            | (self.inputs if multi_input else {})
+            | (self.inputs if isinstance(self.inputs, dict) else {})
             | (self.outputs if isinstance(self.outputs, dict) else {})
         )
         args = {
@@ -194,7 +189,7 @@ class Scenario:
         for args in sets:
             data = {}
 
-            if multi_input:
+            if isinstance(self.inputs, dict):
                 data["inputs"] = [args[key] for key in self.inputs.keys()]
             else:
                 data["inputs"] = (
@@ -275,7 +270,7 @@ class Scenario:
                 if os.path.isdir(self.outdir):
                     if not self.clear:
                         print("Output directory exists, aborting.")
-                        return {}
+                        return {"error": "Output directory exists"}
                     else:
                         logger.debug(
                             "Removing existing output directory %s", self.outdir
@@ -283,7 +278,7 @@ class Scenario:
                         shutil.rmtree(self.outdir)
                 else:
                     print("Invalid output directory, aborting.")
-                    return {}
+                    return {"error": "Invalid output directory"}
             os.makedirs(self.outdir)
 
             # Store executor configuration
@@ -296,15 +291,11 @@ class Scenario:
                 print("Clearing system caches.")
                 clear_cache()
 
-            # Idle wait before the runs, if required
-            # REMARK: Allowing some time after cleanup is recommended.
-            if self.system_wait:
-                print(f"Waiting {self.system_wait} s before the scenario runs.")
-                time.sleep(self.system_wait)
-
             # Store system information
             print("Storing system information.")
-            result["system"] = SystemInfoCollector().collect()
+            collector = SystemInfoCollector()
+            result["system"] = collector.collect()
+            collector.transform(result["system"])
             self._store_result(result)
 
             # Perform baseline monitoring before the runs, if required
@@ -544,11 +535,6 @@ class Scenario:
 
             print(f"{num_sets} run(s) completed in {duration} s.")
 
-            # Idle wait after the runs, if required
-            if self.system_wait:
-                print(f"Waiting {self.system_wait} s after the scenario runs.")
-                time.sleep(self.system_wait)
-
             # Perform endline monitoring after the runs, if required
             if self.system_monitor:
                 print(f"Endline monitoring for {self.system_monitor} s.")
@@ -611,4 +597,3 @@ class Scenario:
 
         # Create scenario
         return Scenario(**args)
-
