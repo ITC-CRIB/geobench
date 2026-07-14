@@ -168,12 +168,6 @@ class CLI:
             help="Monitoring time before and after each run in seconds (default: monitor time)",
         )
         self.parser.add_argument(
-            "-sm",
-            "--system-monitor",
-            type=float,
-            help="Monitoring time before and after all runs in seconds (default: monitor time)",
-        )
-        self.parser.add_argument(
             "--archive",
             type=str,
             choices=["none", "both", "input", "output"],

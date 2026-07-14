@@ -27,7 +27,6 @@ class Geobench:
         outdir: str = None,
         run_wait: float = 2.0,
         run_monitor: float = 2.0,
-        system_monitor: float = 2.0,
         clear: bool = False,
     ):
         """Initialize the JupyterBenchmark.
@@ -37,13 +36,11 @@ class Geobench:
             outdir (str): Output directory path (default = generated from name).
             run_wait (float): Idle wait time before and after each run (s) (default = 2.0)
             run_monitor (float): Monitoring time before and after each run (s) (default = 2.0).
-            system_monitor (float): Monitoring time before and after all runs (s) (default = 2.0)
             clear (bool): Set True to clear the output directory, if exists.
         """
         self.name = name
         self.run_wait = run_wait
         self.run_monitor = run_monitor
-        self.system_monitor = system_monitor
 
         self._stop_event = threading.Event()  # Replace is_monitoring
 
@@ -221,12 +218,6 @@ class Geobench:
             or self.result["end_time"] < self._current_run["end_time"]
         ):
             self.result["end_time"] = self._current_run["end_time"]
-
-        # If this is the last run, perform final system monitoring
-        if self.system_monitor:
-            if self.result["baseline"] is None:
-                self.result["baseline"] = monitor_system(self.system_monitor)
-            self.result["endline"] = monitor_system(self.system_monitor)
 
         self._save_result()
 

@@ -40,7 +40,6 @@ class Scenario:
         monitor: float = 2.0,
         run_wait: float | None = None,
         run_monitor: float | None = None,
-        system_monitor: float | None = None,
         archive: str = "both",
         clear: bool = False,
         clear_outputs: bool = False,
@@ -65,7 +64,6 @@ class Scenario:
             monitor: Monitoring time before and after in seconds.
             run_wait: Wait time before and after each run in seconds. Defaults to wait time.
             run_monitor: Monitoring time before and after each run in seconds. Defaults to monitor time.
-            system_monitor: Monitoring time before and after all runs in seconds. Defaults to monitor time.
             archive: File types to archive. Options are 'none', 'both', 'input', 'output'.
             clear: If True, clear the output directory before running the benchmark.
             clear_outputs: If True, clear output files at the end of each run.
@@ -111,9 +109,6 @@ class Scenario:
         self.monitor = monitor or 0.0
         self.run_wait = run_wait if run_wait is not None else self.wait
         self.run_monitor = run_monitor if run_monitor is not None else self.monitor
-        self.system_monitor = (
-            system_monitor if system_monitor is not None else self.monitor
-        )
         self.archive = archive or "none"
         self.clear = clear
         self.clear_outputs = clear_outputs
@@ -297,12 +292,6 @@ class Scenario:
             result["system"] = collector.collect()
             collector.transform(result["system"])
             self._store_result(result)
-
-            # Perform baseline monitoring before the runs, if required
-            if self.system_monitor:
-                print(f"Baseline monitoring for {self.system_monitor} s.")
-                result["baseline"] = monitor_system(self.system_monitor)
-                self._store_result(result)
 
             # Start execution loop
             print("Executing the runs.")
@@ -534,12 +523,6 @@ class Scenario:
             duration = time.time() - start_time
 
             print(f"{num_sets} run(s) completed in {duration} s.")
-
-            # Perform endline monitoring after the runs, if required
-            if self.system_monitor:
-                print(f"Endline monitoring for {self.system_monitor} s.")
-                result["endline"] = monitor_system(self.system_monitor)
-                self._store_result(result)
 
             # TODO: Generate summary of all runs.
             # TODO: Store summary of all runs.
