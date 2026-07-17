@@ -88,3 +88,24 @@ class SystemMetricsCollector(SystemCollector):
         }
 
         super().process_item(item)
+
+    def process_data(self, data: list[dict]) -> dict:
+        super().process_data(data)
+
+        return self.reduce(
+            data,
+            {
+                "timestamp": "pair",
+                "cpu:times:user": "diff",
+                "cpu:times:system": "diff",
+                "cpu:times:idle": "diff",
+                "memory:virtual:used": "diff",
+                "memory:virtual:free": "diff",
+                "memory:swap:used": "diff",
+                "memory:swap:free": "diff",
+                "net:sent": "diff",
+                "net:received": "diff",
+                "disk:read": "diff",
+                "disk:write": "diff",
+            },
+        )
