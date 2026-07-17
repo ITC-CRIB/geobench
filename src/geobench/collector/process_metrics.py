@@ -44,6 +44,17 @@ class ProcessMetricsCollector(ProcessCollector):
 
     @classmethod
     def process_info(cls, info: dict):
+        """Standardize process information.
+        
+        Process information attributes:
+            - io:read_chars = Data requested from OS.
+            - io:read_bytes = Data actually read from storage.
+            - io:write_chars = Data handed to OS.
+            - io:write_bytes = Data actually written to storage.
+
+        Args:
+            info: Process information.
+        """
         cpu_times = info.pop("cpu_times", {})
         memory_info = info.pop("memory_info", {})
         io_counters = info.pop("io_counters", {})
@@ -68,7 +79,9 @@ class ProcessMetricsCollector(ProcessCollector):
                 },
                 "io": {
                     "read_bytes": getattr(io_counters, "read_bytes", None),
+                    "read_chars": getattr(io_counters, "read_chars", None),
                     "write_bytes": getattr(io_counters, "write_bytes", None),
+                    "write_chars": getattr(io_counters, "write_chars", None),
                     "other_bytes": getattr(io_counters, "other_bytes", None),
                 },
                 "resources": {
