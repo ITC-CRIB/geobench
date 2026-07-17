@@ -403,7 +403,7 @@ class Scenario:
         return result
 
     @classmethod
-    def load(path: str, **kwargs) -> "Scenario":
+    def load(cls, path: str, **kwargs) -> "Scenario":
         """Load scenario from a YAML file and customize it keyword arguments, if required.
 
         See Scenario class initialization method for available arguments.

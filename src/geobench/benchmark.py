@@ -78,16 +78,26 @@ class Benchmark:
 
     @classmethod
     def get_path(cls, path: str | None = None, root: str | None = None) -> str:
+        """Return normalized absolute path.
+
+        Args:
+            path: Optional path.
+            root: Optional root path.
+
+        Returns:
+            Normalized absolute path.
+        """
         path = path or ""
         if not os.path.isabs(path):
             if root:
                 return cls.get_path(os.path.join(root, path))
             else:
-                return os.path.abspath(path)
+                return os.path.abspath(path or os.getcwd())
         return os.path.normpath(path)
 
     @classmethod
     def get_default_telemetry(cls) -> dict:
+        """Return default telemetry."""
         return {
             "init": {
                 "collectors": ["system_info"],
@@ -115,6 +125,15 @@ class Benchmark:
     def get_telemetry(
         cls, telemetry: dict | None = None, duration: float | None = None
     ) -> dict:
+        """Return customized telemetry considering default telemetry.
+
+        Args:
+            telemetry: Custom telemetry.
+            duration: Optional monitoring duration, in seconds.
+
+        Returns:
+            Customized telemetry.
+        """
         out = cls.get_default_telemetry()
 
         for key, val in (telemetry or {}).items():
@@ -132,7 +151,14 @@ class Benchmark:
 
     @classmethod
     def get_related_files(cls, path: str) -> list[str]:
-        """Return paths of the related files."""
+        """Return paths of the related files.
+
+        Args:
+            path: Path of the reference file.
+
+        Returns:
+            Paths of related files, including the reference file.
+        """
         paths = [path]
 
         base, ext = os.path.splitext(path)
@@ -151,6 +177,20 @@ class Benchmark:
         return paths
 
     def start(self, process: Callable | None = None):
+        """Start benchmarking.
+
+        The following operations are performed:
+            - Set up output directory.
+            - Collect and save initial information.
+            - Clear system caches*.
+            - Idle wait*.
+            - Perform and save baseline monitoring*.
+            - Start process to be monitored*.
+            - Start monitors.
+
+        Args:
+            process: Optional callback to create process to be monitored.
+        """
         self.result = copy.deepcopy(self.metadata)
 
         # Set up output directory
@@ -174,7 +214,7 @@ class Benchmark:
             collector = Monitor.get_collector(collector)
             self.result["init"][collector.code] = collector.collect()
             collector.process_item(self.result["init"][collector.code])
-        self.store()
+        self.save()
 
         # Clear system caches, if required
         if self.clear_cache:
@@ -201,7 +241,17 @@ class Benchmark:
             )
             monitor.run()
             self.result["baseline"] = monitor.get_data()
-            self.store()
+            self.save()
+
+        # Collect initial information of wrappers, if required
+        self.wrappers = []
+        if self.telemetry.get("wrap"):
+            self.result["wrap"] = {}
+            print("Collecting initial information of wrappers.")
+            for item in self.telemetry["wrap"].get("collectors", []):
+                collector = Monitor.get_collector(item)
+                self.wrappers.append(collector)
+                self.result["wrap"][collector.code] = [collector.collect()]
 
         # Start monitors
         print("Starting monitoring.")
@@ -225,6 +275,7 @@ class Benchmark:
             monitor.start()
 
     def stop(self):
+        """Stop benchmarking."""
         print("Stopping monitoring.")
 
         # Signal all monitors to stop
@@ -234,12 +285,19 @@ class Benchmark:
         for monitor in self.monitors:
             monitor.join(timeout=monitor.interval)
 
+        # Collect final information of wrappers, if required
+        if self.wrappers:
+            print("Collecting final information of wrappers.")
+            for collector in self.wrappers:
+                self.result["wrap"][collector.code].append(collector.collect())
+                collector.process_data(self.result["wrap"][collector.code])
+
         # Aggregate results from all monitors
         for monitor in self.monitors:
             self.result[monitor.name] = monitor.get_data()
 
-        # Store results
-        self.store()
+        # Save results
+        self.save()
 
         # Perform endline monitoring, if required
         endline = self.telemetry.get("endline", {})
@@ -254,7 +312,7 @@ class Benchmark:
             )
             monitor.run()
             self.result["endline"] = monitor.get_data()
-            self.store()
+            self.save()
 
         # Store input files in the output directory, if required
         if self.archive in ["both", "input"]:
@@ -302,7 +360,8 @@ class Benchmark:
                             err,
                         )
 
-    def store(self):
+    def save(self):
+        """Save benchmarking results."""
         path = os.path.join(self.outdir, "result.json")
         with open(path, "w", encoding="utf-8") as file:
             json.dump(self.result, file, ensure_ascii=False, indent=2)
