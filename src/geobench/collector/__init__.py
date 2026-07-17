@@ -6,6 +6,7 @@ from functools import cache, cached_property
 from typing import TypeAlias
 import importlib
 import inspect
+import operator
 import pkgutil
 import subprocess
 
@@ -69,6 +70,72 @@ class Collector(ABC):
                     remove.append(key)
         for key in remove:
             del item[key]
+
+    @classmethod
+    def reduce(cls, data: list[dict], opts: dict):
+        """Reduce collected data.
+        
+        Args:
+            data: Collected data.
+            opts: Reduction options.
+        """
+        ops = {
+            "diff": operator.sub,
+        }
+
+        def _apply(lhs: dict, rhs: dict, rule: dict, idx: int = 0):
+            if not isinstance(lhs, dict):
+                raise ValueError("Invalid left operand")
+            if not isinstance(rhs, dict):
+                raise ValueError("Invalid right operand")
+
+            keys = rule["keys"]
+            key = keys[idx]
+            if key not in lhs or key not in rhs:
+                raise ValueError(f"Invalid key: {key}")
+            parent = lhs            
+            lhs = lhs[key]
+            rhs = rhs[key]
+
+            if idx == len(keys) - 1:
+                if callable(rule["op"]):
+                    val = rule["op"](lhs, rhs)
+                elif rule["op"] == "pair":
+                    val = [rhs, lhs]
+                elif rule["op"] == "mean":
+                    val = (rhs + lhs) / 2
+                else:
+                    raise ValueError(f"Invalid operator: {rule['op']}")
+                parent[key] = val
+
+            elif isinstance(lhs, list) or isinstance(rhs, list):
+                for lval, rval in zip(lhs, rhs, strict=True):
+                    _apply(lval, rval, rule, idx + 1)
+            else:
+                _apply(lhs, rhs, rule, idx + 1)
+
+        if len(data) < 2:
+            data.clear()
+            return
+
+        rules = []
+        for key, val in opts.items():
+            rule = {"keys": key.split(":")}
+            if isinstance(val, dict):
+                rule.update(val)
+            else:
+                rule["op"] = val
+            if rule["op"] in ops:
+                rule["op"] = ops[rule["op"]]
+            rules.append(rule)
+
+        first = prev = data.pop(0)
+        for item in data:
+            for rule in rules:
+                _apply(item, prev, rule)
+            prev = item
+        
+        return first
 
     def process_item(self, item: dict):
         """Process collected data item.
