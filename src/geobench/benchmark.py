@@ -55,7 +55,7 @@ class Benchmark:
         """
         self.wait = wait or 0.0
         self.monitor = monitor
-        self.telemetry = self.get_telemetry(telemetry)
+        self.telemetry = self.get_telemetry(telemetry, duration=monitor)
         self.archive = archive or "none"
         self.clear = clear
         self.clear_cache = clear_cache
@@ -112,7 +112,9 @@ class Benchmark:
         }
 
     @classmethod
-    def get_telemetry(cls, telemetry: dict | None = None) -> dict:
+    def get_telemetry(
+        cls, telemetry: dict | None = None, duration: float | None = None
+    ) -> dict:
         out = cls.get_default_telemetry()
 
         for key, val in (telemetry or {}).items():
@@ -120,6 +122,11 @@ class Benchmark:
                 out[key] = val
             else:
                 out[key] |= val
+
+        if duration is not None:
+            for key, val in out.items():
+                if "duration" in val:
+                    val["duration"] = duration
 
         return out
 

@@ -94,7 +94,7 @@ class Scenario:
         self.clear = clear
         self.clear_outputs = clear_outputs
         self.clear_cache = clear_cache
-        self.telemetry = Benchmark.get_telemetry(telemetry)
+        self.telemetry = Benchmark.get_telemetry(telemetry, duration=monitor)
 
         self.workdir = Benchmark.get_path(workdir)
         if not os.path.isdir(self.workdir):
