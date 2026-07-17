@@ -1,0 +1,301 @@
+"""Benchmark module."""
+
+from collections.abc import Callable
+import copy
+import json
+import os
+import shutil
+import threading
+import time
+
+from .cache import clear_cache
+from .monitor import Monitor
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class Benchmark:
+    """Benchmark class."""
+
+    def __init__(
+        self,
+        wait: float = 5.0,
+        monitor: float | None = None,
+        telemetry: dict | None = None,
+        inputs: list | None = None,
+        outputs: list | None = None,
+        archive: str = "both",
+        clear: bool = False,
+        clear_cache: bool = True,
+        workdir: str | None = None,
+        basedir: str | None = None,
+        outdir: str | None = None,
+        metadata: dict | None = None,
+    ):
+        """Initialize benchmark.
+
+        Args:
+            wait: Idle wait time before the run, in seconds.
+            monitor: Monitoring duration before and after the run, in seconds.
+            telemetry: Optional telemetry configuration.
+            inputs: Optional list of input files.
+            outputs: Optional list of output files.
+            archive: File types to archive. Options are 'none', 'both', 'input', 'output'.
+            clear: If True, clear the output directory before the run.
+            clear_cache: If True, clear system caches before the run.
+            workdir: Working directory path. It is also used as the root path of the input files.
+                Defaults to the current working directory.
+            basedir: Base directory path. It is used as the root path of the output directory, if is it not an absolute path.
+                Defaults to the current working directory.
+            outdir: Output directory path. Defaults to 'benchmark'.
+            metadata: Optional metadata.
+
+        """
+        self.wait = wait or 0.0
+        self.monitor = monitor
+        self.telemetry = self.get_telemetry(telemetry)
+        self.archive = archive or "none"
+        self.clear = clear
+        self.clear_cache = clear_cache
+        self.metadata = metadata or {}
+
+        self.workdir = self.get_path(workdir)
+        if not os.path.isdir(self.workdir):
+            raise ValueError(f"Invalid working directory: {workdir}")
+
+        self.basedir = self.get_path(basedir)
+        if not os.path.isdir(self.basedir):
+            raise ValueError(f"Invalid base directory: {basedir}")
+
+        self.outdir = self.get_path(outdir or "benchmark", root=self.basedir)
+
+        self.inputs = [self.get_path(path, self.workdir) for path in inputs or []]
+        self.outputs = [self.get_path(path, self.workdir) for path in outputs or []]
+
+        self.result = None
+
+    @classmethod
+    def get_path(cls, path: str | None = None, root: str | None = None) -> str:
+        path = path or ""
+        if not os.path.isabs(path):
+            if root:
+                return cls.get_path(os.path.join(root, path))
+            else:
+                return os.path.abspath(path)
+        return os.path.normpath(path)
+
+    @classmethod
+    def get_default_telemetry(cls) -> dict:
+        return {
+            "init": {
+                "collectors": ["system_info"],
+            },
+            "baseline": {
+                "duration": 5.0,
+                "interval": 1.0,
+                "collectors": ["system_metrics"],
+            },
+            "main": {
+                "interval": 1.0,
+                "collectors": ["process_metrics"],
+            },
+            "endline": {
+                "duration": 5.0,
+                "interval": 1.0,
+                "collectors": ["system_metrics"],
+            },
+            "wrap": {
+                "collectors": ["system_metrics"],
+            },
+        }
+
+    @classmethod
+    def get_telemetry(cls, telemetry: dict | None = None) -> dict:
+        out = cls.get_default_telemetry()
+
+        for key, val in (telemetry or {}).items():
+            if key not in out:
+                out[key] = val
+            else:
+                out[key] |= val
+
+        return out
+
+    @classmethod
+    def get_related_files(cls, path: str) -> list[str]:
+        """Return paths of the related files."""
+        paths = [path]
+
+        base, ext = os.path.splitext(path)
+        if ext == ".shp":
+            for ext in [
+                ".cpg",
+                ".dbf",
+                ".prj",
+                ".sbn",
+                ".sbx",
+                ".shp.xml",
+                ".shx",
+            ]:
+                paths.append(base + ext)
+
+        return paths
+
+    def start(self, process: Callable | None = None):
+        self.result = copy.deepcopy(self.metadata)
+
+        # Set up output directory
+        print(f"Setting up output directory {self.outdir}.")
+        if os.path.exists(self.outdir):
+            if os.path.isdir(self.outdir):
+                if not self.clear:
+                    raise RuntimeError("Output directory exists")
+                else:
+                    logger.debug("Removing existing output directory: %s", self.outdir)
+                    shutil.rmtree(self.outdir)
+            else:
+                raise RuntimeError("Invalid output directory")
+        logger.debug("Creating output directory: %s", self.outdir)
+        os.makedirs(self.outdir)
+
+        # Store initial information
+        print("Storing initial information.")
+        self.result["init"] = {}
+        for collector in self.telemetry.get("init", {}).get("collectors", []):
+            collector = Monitor.get_collector(collector)
+            self.result["init"][collector.code] = collector.collect()
+            collector.process_item(self.result["init"][collector.code])
+        self.store()
+
+        # Clear system caches, if required
+        if self.clear_cache:
+            print("Clearing system caches.")
+            clear_cache()
+
+        # Idle wait, if required
+        if self.wait:
+            print(f"Waiting for {self.wait} s.")
+            time.sleep(self.wait)
+
+        # Perform baseline monitoring, if required
+        baseline = self.telemetry.get("baseline", {})
+        duration = (
+            self.monitor if self.monitor is not None else baseline.get("duration")
+        )
+        if duration:
+            print(f"Baseline monitoring for {duration} s.")
+            monitor = Monitor(
+                name="baseline",
+                collectors=baseline.get("collectors", []),
+                duration=duration,
+                interval=baseline.get("interval"),
+            )
+            monitor.run()
+            self.result["baseline"] = monitor.get_data()
+            self.store()
+
+        # Start monitors
+        print("Starting monitoring.")
+
+        self.monitors = []
+        self.stop_event = threading.Event()
+
+        self.result["pid"] = process() if process else os.getpid()
+
+        for code, item in self.telemetry.items():
+            if code in ["init", "wrap", "baseline", "endline"]:
+                continue
+            monitor = Monitor(
+                name=code,
+                collectors=item.get("collectors", []),
+                interval=item.get("interval"),
+                process=self.result["pid"],
+                stop_event=self.stop_event,
+            )
+            self.monitors.append(monitor)
+            monitor.start()
+
+    def stop(self):
+        print("Stopping monitoring.")
+
+        # Signal all monitors to stop
+        self.stop_event.set()
+
+        # Wait for all monitors to finish
+        for monitor in self.monitors:
+            monitor.join(timeout=monitor.interval)
+
+        # Aggregate results from all monitors
+        for monitor in self.monitors:
+            self.result[monitor.name] = monitor.get_data()
+
+        # Store results
+        self.store()
+
+        # Perform endline monitoring, if required
+        endline = self.telemetry.get("endline", {})
+        duration = self.monitor if self.monitor is not None else endline.get("duration")
+        if endline:
+            print(f"Endline monitoring for {duration} s.")
+            monitor = Monitor(
+                name="endline",
+                collectors=endline.get("collectors", []),
+                duration=duration,
+                interval=endline.get("interval"),
+            )
+            monitor.run()
+            self.result["endline"] = monitor.get_data()
+            self.store()
+
+        # Store input files in the output directory, if required
+        if self.archive in ["both", "input"]:
+            for path in self.inputs:
+                if not os.path.exists(path):
+                    logger.debug("Input file not found: %s", path)
+                    continue
+                print(f"Archiving input file {path}")
+                for path in self.get_related_files(path):
+                    if not os.path.exists(path):
+                        logger.debug("Related input file not found: %s", path)
+                        continue
+                    try:
+                        shutil.copy(path, self.outdir)
+                    except shutil.SameFileError:
+                        pass
+                    except Exception as err:
+                        logger.error(
+                            "Error copying input file %s to %s: %s",
+                            path,
+                            self.outdir,
+                            err,
+                        )
+
+        # Store output files in the output directory, if required
+        if self.archive in ["both", "output"]:
+            for path in self.outputs:
+                if not os.path.exists(path):
+                    logger.debug("Output file not found: %s", path)
+                    continue
+                print(f"Archiving output file {path}")
+                for path in self.get_related_files(path):
+                    if not os.path.exists(path):
+                        logger.debug("Related output file not found: %s", path)
+                        continue
+                    try:
+                        shutil.copy(path, self.outdir)
+                    except shutil.SameFileError:
+                        pass
+                    except Exception as err:
+                        logger.error(
+                            "Error copying output file %s to %s: %s",
+                            path,
+                            self.outdir,
+                            err,
+                        )
+
+    def store(self):
+        path = os.path.join(self.outdir, "result.json")
+        with open(path, "w", encoding="utf-8") as file:
+            json.dump(self.result, file, ensure_ascii=False, indent=2)

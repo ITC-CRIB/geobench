@@ -6,7 +6,6 @@ from functools import cache
 import importlib
 import inspect
 import pkgutil
-import subprocess
 
 import logging
 
@@ -43,8 +42,16 @@ class Executor(ABC):
         """Return executor configuration considering the arguments."""
 
     @abstractmethod
-    def execute(self, command, args: dict | None = None) -> subprocess.Popen:
-        """Execute command with the specified arguments."""
+    def execute(self, command, args: dict | None = None) -> int:
+        """Execute command with the specified arguments.
+        
+        Returns:
+            Process id.
+        """
+
+    @abstractmethod
+    def wait(self):
+        """Wait until command execution ends."""
 
     def get_help(self, command) -> str:
         """Return help content for the command."""
@@ -52,8 +59,8 @@ class Executor(ABC):
 
 
 @cache
-def get_executors() -> dict[str, Executor]:
-    """Return dictionary of available collectors."""
+def get_executors() -> dict[str, type[Executor]]:
+    """Return dictionary of available collector classes."""
     executors = {}
 
     for _, name, _ in pkgutil.iter_modules([__path__[0]]):

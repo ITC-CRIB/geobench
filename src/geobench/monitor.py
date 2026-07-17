@@ -1,463 +1,146 @@
 """Monitoring module."""
 
-import statistics
-import subprocess
 import threading
 import time
 
-import psutil
-
-from .collector import get_collector
-from .collector.process_info import ProcessInfoCollector
+from .collector import get_collector, get_process, Collector, Process
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-def monitor_system(duration: float = 10.0, interval: float = 1.0) -> dict:
-    """Performs system monitoring for a specific duration.
+class Monitor(threading.Thread):
+    """Thread-based monitor class."""
 
-    Args:
-        duration: Monitoring duration in seconds (default = 10.0).
-        interval: Interval between each sample in seconds (default = 1.0)
+    @classmethod
+    def get_collector(
+        cls, collector: str | dict, process: Process | None = None
+    ) -> Collector:
+        if isinstance(collector, str):
+            type, config = collector, {}
 
-    Returns:
-        Dictionary of system monitoring results.
-    """
-    timestamps = []
-    cpu_percents = []
-    memory_percents = []
-    processes = []
-    summary = {}
+        elif isinstance(collector, dict):
+            type, config = collector.get("type"), collector.get("config", {})
 
-    start_time = time.time()
-    while True:
-        now = time.time()
-        if (now - start_time) >= duration:
-            break
-
-        timestamps.append(now)
-        cpu_percents.append(psutil.cpu_percent())
-        memory_percents.append(psutil.virtual_memory().percent)
-
-        data = []
-        for proc in psutil.process_iter(
-            ["pid", "name", "username", "cpu_percent", "memory_percent", "status"]
-        ):
-            try:
-                info = proc.info
-
-                try:
-                    io_counters = proc.io_counters()
-                    read_bytes = io_counters.read_bytes
-                    write_bytes = io_counters.write_bytes
-
-                except (psutil.AccessDenied, AttributeError):
-                    read_bytes = None
-                    write_bytes = None
-
-                pid = info["pid"]
-
-                if pid not in summary:
-                    summary[pid] = {
-                        "pid": pid,
-                        "name": info["name"],
-                        "username": info.get("username"),
-                        "data": [],
-                    }
-
-                item = {
-                    "pid": pid,
-                    "cpu_percent": info["cpu_percent"]
-                    if info["cpu_percent"] is not None
-                    else 0.0,
-                    "memory_percent": info["memory_percent"]
-                    if info["memory_percent"] is not None
-                    else 0.0,
-                    "read_bytes": read_bytes if read_bytes is not None else 0,
-                    "write_bytes": write_bytes if write_bytes is not None else 0,
-                }
-
-                data.append(item)
-                summary[pid]["data"].append(item)
-
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                pass
-
-        processes.append(data)
-
-        time.sleep(interval)
-
-    for item in summary.values():
-        data = item["data"]
-        # Only include non-None values for calculating average CPU and memory
-        cpu_percent_list = [
-            item["cpu_percent"] for item in data if item["cpu_percent"] is not None
-        ]
-        if cpu_percent_list:
-            item["avg_cpu_percent"] = statistics.mean(cpu_percent_list)
-        memory_percent_list = [
-            item["memory_percent"]
-            for item in data
-            if item["memory_percent"] is not None
-        ]
-        if memory_percent_list:
-            item["avg_memory_percent"] = statistics.mean(memory_percent_list)
-        # Check if read/write bytes are available at the first and last data points
-        if len(data) > 0:
-            # Calculate read/write bytes if the values are not None
-            if data[-1]["read_bytes"] and data[0]["read_bytes"]:
-                item["read_bytes"] = data[-1]["read_bytes"] - data[0]["read_bytes"]
-            # Calculate read/write bytes if the values are not None
-            if data[-1]["write_bytes"] and data[0]["write_bytes"]:
-                item["write_bytes"] = data[-1]["write_bytes"] - data[0]["write_bytes"]
-        del item["data"]
-
-    summary = list(summary.values())
-    summary.sort(key=lambda item: item["avg_cpu_percent"], reverse=True)
-
-    return {
-        "duration": duration,
-        "interval": interval,
-        "start_time": timestamps[0],
-        "end_time": timestamps[-1],
-        "avg_cpu_percent": statistics.mean(cpu_percents) if cpu_percents else None,
-        "avg_memory_percent": statistics.mean(memory_percents)
-        if memory_percents
-        else None,
-        "process_summary": summary,
-        "timestamps": timestamps,
-        "cpu_percents": cpu_percents,
-        "memory_percents": memory_percents,
-        "processes": processes,
-    }
-
-
-class DataCollector(threading.Thread):
-    """Thread-based data collector for system metrics from different sources."""
+        return get_collector(type, config, process)
 
     def __init__(
         self,
-        name: str,
-        interval: float,
-        collectors: list,
-        process,
-        stop_event: threading.Event,
+        collectors: list[str | dict | Collector],
+        name: str | None = None,
+        duration: float = 0.0,
+        interval: float = 1.0,
+        process: Process | None = None,
+        stop_event: threading.Event | None = None,
     ):
-        """Initialize data collector thread.
+        """Initialize monitor.
 
         Args:
-            name: Name identifier for this collector
-            interval: Collection interval in seconds
-            collectors: List of Collector instances to collect data from
-            process: Process being monitored
-            stop_event: Event to signal thread to stop
+            collectors: List of collectors.
+            name: Code of the monitor.
+            duration: Monitoring duration, in seconds (default = unlimited).
+            interval: Interval between each sample, in seconds (default = 1.0).
+            process: Optional process to monitor.
+            stop_event: Optional stop event.
         """
         super().__init__(daemon=True)
+
+        if process:
+            process = get_process(process)
+
         self.name = name
+        self.duration = duration
         self.interval = interval
-        self.collectors = collectors
+        self.collectors = {
+            collector.code: collector
+            for item in collectors
+            for collector in [
+                item
+                if isinstance(item, Collector)
+                else self.get_collector(item, process)
+            ]
+        }
         self.process = process
         self.stop_event = stop_event
-        self.data = []
+        self.done = False
 
     def run(self):
         """Run the data collection loop."""
-        step = 0
+        self.start_time = None
+        self.end_time = None
+        self.step = 0
+        self.done = False
+        self.data = {code: [] for code in self.collectors.keys()}
 
         logger.debug(
-            "[%s] Data collector started (interval = %f s)", self.name, self.interval
-        )
-
-        while not self.stop_event.is_set():
-            step += 1
-
-            # Check if process is still running
-            if type(self.process) is psutil.Process:
-                if not self.process.is_running():
-                    break
-            else:
-                if self.process.poll() is not None:
-                    break
-
-            # Collect timestamp
-            metric = {"step": step, "timestamp": time.time()}
-
-            # Collect metrics from all collectors
-            for collector in self.collectors:
-                metric.update(collector.collect())
-
-            self.data.append(metric)
-
-            # Sleep for the specified interval
-            time.sleep(self.interval)
-
-        logger.debug(
-            "[%s] Data collector stopped (%d samples)",
+            "[%s] Monitor started (interval: %f s, duration: %f s)",
             self.name,
-            len(self.data),
+            self.interval,
+            self.duration,
         )
 
-    def get_data(self) -> list[dict]:
+        while True:
+            now = time.time()
+            if not self.start_time:
+                self.start_time = now
+
+            if self.duration and (now - self.start_time) >= self.duration:
+                self.done = True
+
+            elif self.process and not self.process.is_running():
+                self.done = True
+                self.end_time = now
+                break
+
+            elif self.stop_event and self.stop_event.is_set():
+                self.done = True
+
+            for code, collector in self.collectors.items():
+                self.data[code].append(
+                    {"step": self.step, "timestamp": now} | collector.collect()
+                )
+
+            if self.done:
+                self.end_time = now
+                break
+
+            time.sleep(self.interval)
+            self.step += 1
+
+        logger.debug(
+            "[%s] Monitor stopped (%d samples)",
+            self.name,
+            self.step + 1,
+        )
+
+    def get_data(self) -> dict:
         """Get collected data.
 
         Returns:
-            List of collected data dictionaries
+            Dictionary of collected data.
         """
-        for collector in self.collectors:
-            collector.postprocess(self.data)
+        if not self.done:
+            raise RuntimeError("Monitoring not completed")
 
-        return self.data
+        out = {
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "duration": {
+                "target": self.duration,
+                "actual": self.end_time - self.start_time,
+            },
+            "interval": {
+                "target": self.interval,
+                "actual": (self.end_time - self.start_time) / self.step,
+            },
+            "reference": {},
+            "data": {},
+        }
 
+        for code, collector in self.collectors.items():
+            reference = collector.process_data(self.data[code])
+            out["data"][code] = self.data[code]
+            out["reference"][code] = reference
 
-def monitor_process(
-    process: subprocess.Popen,
-    interval: float = 1.0,
-    telemetry: list = None,
-    stop_event=None,
-) -> dict:
-    """Monitor process and system metrics while process is running.
-
-    Args:
-        process: Process to be monitored.
-        interval: Interval between each sample in seconds (default = 1.0).
-        telemetry: Optional list of telemetry sources.
-            Each source should have:
-            - name: Source identifier
-            - interval: Collection interval in seconds
-            - metrics: List of metrics to collect (e.g., ['psutil', 'energy', {'psutil': {...}}])
-        stop_event: Optional event to signal monitoring to stop.
-
-    Returns:
-        Dictionary containing:
-        - system: List of system metrics (legacy mode) or dict of metrics by source (multi-threaded mode)
-        - processes: Process metrics
-        - telemetry: List of source names (only in multi-threaded mode)
-    """
-    process_metrics = {process.pid: ProcessInfoCollector(process).collect()}
-    process_metrics[process.pid]["metrics"] = []
-
-    # Determine if we're using multi-threaded mode
-    use_multi_threaded = telemetry is not None and len(telemetry) > 0
-
-    if use_multi_threaded:
-        # Multi-threaded mode with parallel data collection
-        logger.debug(
-            "Starting multi-threaded monitoring with %d data sources", len(telemetry)
-        )
-
-        # Create stop event if not provided
-        if stop_event is None:
-            stop_event = threading.Event()
-
-        # Create and start data collector threads
-        data_collectors = []
-        for source_config in telemetry:
-            source_name = source_config.get("name", f"source_{len(data_collectors)}")
-            source_interval = source_config.get("interval", interval)
-
-            # Get appropriate metrics collectors for this source
-            collectors = []
-            for item in source_config.get("metrics", []):
-                if isinstance(item, str):
-                    collector_type = item
-                    collector_config = {}
-
-                elif isinstance(item, dict):
-                    collector_type = item.get("type")
-                    if not collector_type:
-                        raise ValueError(f"No collector type: {source_name}")
-                    collector_config = item.get("config", {})
-
-                else:
-                    raise ValueError(f"Invalid collector definition: {source_name}")
-
-                collector = get_collector(collector_type, collector_config)
-                collectors.append(collector)
-
-            if not collectors:
-                raise ValueError("No collectors available for source: %s", source_name)
-
-            data_collector = DataCollector(
-                name=source_name,
-                interval=source_interval,
-                collectors=collectors,
-                process=process,
-                stop_event=stop_event,
-            )
-            data_collectors.append(data_collector)
-            data_collector.start()
-
-        process = psutil.Process(process.pid)
-        
-        # Monitor process and collect process-specific metrics
-        step = 0
-        psutil.cpu_percent()
-        process.cpu_percent()
-
-        while True:
-            step += 1
-
-            # Stop if process has terminated or stop event is set
-            if type(process) is psutil.Process:
-                if not process.is_running():
-                    break
-                if stop_event.is_set():
-                    break
-            else:
-                if process.poll() is not None:
-                    break
-
-            # Get related processes
-            processes = [process]
-            for child in process.children(recursive=True):
-                try:
-                    if child.pid not in process_metrics:
-                        process_metrics[child.pid] = ProcessInfoCollector(
-                            child
-                        ).collect()
-                        process_metrics[child.pid]["metrics"] = []
-                    processes.append(child)
-                    child.cpu_percent()
-                except psutil.NoSuchProcess:
-                    pass
-
-            # Sleep with the base interval
-            time.sleep(interval)
-
-            # Collect process metrics
-            for p in processes:
-                try:
-                    with p.oneshot():
-                        try:
-                            io_counters = p.io_counters()
-                            read_bytes = io_counters.read_bytes
-                            write_bytes = io_counters.write_bytes
-                        except (psutil.AccessDenied, AttributeError):
-                            read_bytes = 0
-                            write_bytes = 0
-
-                        collected_metric = {
-                            "step": step,
-                            "timestamp": time.time(),
-                            "cpu_percent": p.cpu_percent(),
-                            "memory_percent": p.memory_percent(),
-                            "num_threads": p.num_threads(),
-                            "read_bytes": read_bytes,
-                            "write_bytes": write_bytes,
-                        }
-                        process_metrics[p.pid]["metrics"].append(collected_metric)
-                except psutil.NoSuchProcess:
-                    pass
-
-        # Signal all collectors to stop
-        stop_event.set()
-
-        # Wait for all collector threads to finish
-        for data_collector in data_collectors:
-            data_collector.join(timeout=5.0)
-
-        # Aggregate results from all collectors
-        system_metrics_by_source = {}
-        for data_collector in data_collectors:
-            system_metrics_by_source[data_collector.name] = data_collector.get_data()
-
-        out = {"system": system_metrics_by_source, "processes": process_metrics}
-
-    else:
-        # Legacy single-threaded mode for backward compatibility
-        logger.debug("Starting single-threaded monitoring (legacy mode)")
-
-        step = 0
-        system_metrics = []
-
-        process = psutil.Process(process.pid)
-
-        # Initialize metrics
-        psutil.cpu_percent()
-        process.cpu_percent()
-
-        # Monitoring loop
-        while True:
-            step += 1
-
-            # Stop if process has terminated or stop event is set
-            if type(process) is psutil.Process:
-                if not process.is_running():
-                    break
-                if stop_event and stop_event.is_set():
-                    break
-            else:
-                if process.poll() is not None:
-                    break
-
-            # Get related processes
-            processes = [process]
-            for child in process.children(recursive=True):
-                try:
-                    if child.pid not in process_metrics:
-                        process_metrics[child.pid] = ProcessInfoCollector(
-                            child
-                        ).collect()
-                        process_metrics[child.pid]["metrics"] = []
-
-                    processes.append(child)
-                    child.cpu_percent()
-
-                except psutil.NoSuchProcess:
-                    pass
-
-            # Sleep
-            time.sleep(interval)
-
-            # Get system metrics
-            sys_metric = {
-                "step": step,
-                "timestamp": time.time(),
-                "cpu_percent": psutil.cpu_percent(percpu=True),
-                "memory_usage": psutil.virtual_memory()._asdict(),
-            }
-
-            # Network I/O
-            net_io = psutil.net_io_counters()
-            sys_metric["net_bytes_sent"] = net_io.bytes_sent
-            sys_metric["net_bytes_recv"] = net_io.bytes_recv
-
-            # Disk I/O
-            disk_io = psutil.disk_io_counters()
-            if disk_io:
-                sys_metric["disk_bytes_read"] = disk_io.read_bytes
-                sys_metric["disk_bytes_write"] = disk_io.write_bytes
-
-            system_metrics.append(sys_metric)
-
-            # Get process metrics
-            for p in processes:
-                try:
-                    with p.oneshot():
-                        try:
-                            io_counters = p.io_counters()
-                            read_bytes = io_counters.read_bytes
-                            write_bytes = io_counters.write_bytes
-                        except (psutil.AccessDenied, AttributeError):
-                            read_bytes = 0
-                            write_bytes = 0
-                        collected_metric = {
-                            "step": step,
-                            "timestamp": time.time(),
-                            "cpu_percent": p.cpu_percent(),
-                            "memory_percent": p.memory_percent(),
-                            "num_threads": p.num_threads(),
-                            "read_bytes": read_bytes,
-                            "write_bytes": write_bytes,
-                        }
-
-                        process_metrics[p.pid]["metrics"].append(collected_metric)
-
-                except psutil.NoSuchProcess:
-                    pass
-
-        out = {"system": system_metrics, "processes": process_metrics}
-
-    return out
+        return out

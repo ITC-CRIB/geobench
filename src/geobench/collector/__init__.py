@@ -2,7 +2,8 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from functools import cache
+from functools import cache, cached_property
+from typing import TypeAlias
 import importlib
 import inspect
 import pkgutil
@@ -13,6 +14,9 @@ import psutil
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+Process: TypeAlias = int | subprocess.Popen | psutil.Process
 
 
 @dataclass(frozen=True)
@@ -36,45 +40,57 @@ class Collector(ABC):
     def get_info(cls) -> CollectorInfo:
         """Return collector information."""
 
+    @cached_property
+    def code(self) -> str:
+        return self.get_info().code
+
     @abstractmethod
     def collect(self) -> dict:
-        """Collect current data.
+        """Collect data.
 
         Returns:
             Dictionary containing collected data.
         """
 
-    def cleanup(self, item: dict):
-        """Clean empty data item attributes.
+    @classmethod
+    def clean_dict(cls, item: dict):
+        """Clean empty data item attributes recursively.
 
         Args:
             item: Data item to be cleaned.
         """
         remove = []
         for key, val in item.items():
-            if val is None or val == -1:
+            if val is None or val == -1 or (isinstance(val, list) and len(val) == 0):
                 remove.append(key)
-            if isinstance(val, dict):
-                self.cleanup(val)
+            elif isinstance(val, dict):
+                cls.clean_dict(val)
+                if not val:
+                    remove.append(key)
         for key in remove:
             del item[key]
 
-    def transform(self, item: dict):
-        """Perform transformation operations on the data item.
+    def process_item(self, item: dict):
+        """Process collected data item.
 
         Args:
-            item: Data item to be transformed.
+            item: Data item to be processed.
         """
-        self.cleanup(item)
+        self.clean_dict(item)
 
-    def postprocess(self, data: list[dict]):
-        """Postprocess collected data.
+    def process_data(self, data: list[dict]) -> dict:
+        """Process collected data.
 
         Args:
             data: Collected data.
+
+        Returns:
+            Additional data generated during processing.
         """
         for item in data:
-            self.transform(item)
+            self.process_item(item)
+
+        return {}
 
 
 class SystemCollector(Collector):
@@ -84,24 +100,11 @@ class SystemCollector(Collector):
 class ProcessCollector(Collector):
     """Abstract base class for process collectors."""
 
-    def __init__(
-        self,
-        process: int | subprocess.Popen | psutil.Process,
-        config: dict | None = None,
-    ):
+    def __init__(self, process: Process, config: dict | None = None):
         """Initialize process collector."""
         super().__init__(config)
 
-        if not isinstance(process, psutil.Process):
-            if isinstance(process, subprocess.Popen):
-                id = process.pid
-            elif isinstance(process, int):
-                id = process
-            else:
-                raise ValueError("Invalid process: %s", process)
-            process = psutil.Process(id)
-
-        self.process = process
+        self.process = get_process(process)
 
 
 @cache
@@ -122,20 +125,45 @@ def get_collectors() -> dict[str, Collector]:
     return collectors
 
 
-def get_collector(type: str, config: dict | None = None) -> Collector:
-    """Return collector with the specified type and configuration.
+def get_collector(
+    code: str, config: dict | None = None, process: Process | None = None
+) -> Collector:
+    """Return collector with the specified code and configuration.
 
     Args:
-        type: Collector type.
+        code: Collector code.
         config: Optional configuration.
+        process: Optional process.
 
     Returns:
-        Collector with the specified type and configuration.
+        Collector with the specified code and configuration.
 
     Raises:
         ValueError: If invalid collector type.
     """
-    collector = get_collectors().get(type)
-    if not collector:
+    collector = get_collectors().get(code)
+
+    if not collector or (issubclass(collector, ProcessCollector) and not process):
         raise ValueError(f"Invalid collector type: {type}")
+
+    if issubclass(collector, ProcessCollector):
+        return collector(process, config)
+
     return collector(config)
+
+
+def get_process(process: Process) -> psutil.Process:
+    """Return standard process."""
+    if isinstance(process, psutil.Process):
+        return process
+
+    if isinstance(process, subprocess.Popen):
+        id = process.pid
+
+    elif isinstance(process, int):
+        id = process
+
+    else:
+        raise ValueError(f"Invalid process: {process}")
+
+    return psutil.Process(id)

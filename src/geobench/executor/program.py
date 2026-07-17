@@ -60,6 +60,8 @@ class ProgramExecutor(Executor):
         if not self.config["executable"]:
             raise ValueError("No program executable found")
 
+        self.process = None
+
     def get_config(self, args: dict) -> dict:
         """Return executor configuration considering the arguments.
 
@@ -128,16 +130,23 @@ class ProgramExecutor(Executor):
         env.update(self.config.get("environment", {}))
         return env
 
-    def execute(self, command: str, args: dict | None = None) -> subprocess.Popen:
+    def execute(self, command: str, args: dict | None = None) -> int:
         """Execute program command with the specified arguments."""
         args = [self.config["executable"]] + self.get_arguments(command, args or {})
         logger.debug("Executing process with arguments: %s", args)
 
-        process = subprocess.Popen(
+        self.process = subprocess.Popen(
             args,
             shell=False,
             cwd=self.config.get("workdir"),
             env=self.get_environment(),
         )
 
-        return process
+        return self.process.pid
+
+    def wait(self):
+        """Wait until execution ends."""
+        if not self.process:
+            raise RuntimeError("Program is not running")
+
+        self.process.wait()

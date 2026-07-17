@@ -96,12 +96,14 @@ class RAPLCollector(SystemCollector):
 
         return out
 
-    def postprocess(self, data: list[dict]):
+    def process_data(self, data: list[dict]):
         """Postprocess collected data.
 
         Args:
             data: Collected data.
         """
+        super().process_data(data)
+
         prev_item = None
 
         for item in data:
@@ -124,5 +126,3 @@ class RAPLCollector(SystemCollector):
                     item["power"][name] = power_watts
 
             prev_item = item
-
-        super().postprocess(data)

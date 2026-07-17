@@ -147,23 +147,13 @@ class CLI:
             "-w",
             "--wait",
             type=float,
-            help="Idle wait time before each run, in seconds (default: 2.0)",
+            help="Idle wait time before each run, in seconds (default: 5.0)",
         )
         self.parser.add_argument(
             "-m",
             "--monitor",
             type=float,
-            help="Monitoring duration before and after each run, in seconds (default: 2.0)",
-        )
-        self.parser.add_argument(
-            "--monitor-baseline",
-            type=float,
-            help="Monitoring duration before each run, in seconds (default: `monitor` value)",
-        )
-        self.parser.add_argument(
-            "--monitor-endline",
-            type=float,
-            help="Monitoring duration after each run, in seconds (default: `monitor` value)"
+            help="Monitoring duration before and after each run, in seconds (default: 5.0)",
         )
         self.parser.add_argument(
             "--archive",

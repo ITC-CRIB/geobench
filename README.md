@@ -80,13 +80,13 @@ Feel free to contribute to the development of GeoBench by submitting issues or p
 
 GeoBench now supports benchmarking directly within Jupyter notebooks. There are three ways to use this functionality:
 
-### 1. Using the Geobench Class
+### 1. Using the GeoBench Class
 
 ```python
-from geobench import Geobench
+from geobench import GeoBench
 
 # Create a benchmark instance
-bench = Geobench(
+bench = GeoBench(
     name="my-benchmark",
     outdir="results",
     monitor=2.0,

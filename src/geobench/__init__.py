@@ -2,9 +2,11 @@
 GeoBench - A benchmarking tool for geospatial operations.
 """
 
-from .jupyter import Geobench
+from .benchmark import Benchmark as GeoBench
+from .scenario import Scenario
 
-__all__ = ["Geobench", "geobench"]
+
+__all__ = ["GeoBench", "geobench"]
 
 
 def geobench(name: str | None = None, **kwargs) -> callable:
@@ -12,17 +14,28 @@ def geobench(name: str | None = None, **kwargs) -> callable:
 
     Args:
         name: Optional name of the benchmark. If None, the name of the decorated function is used.
-        **kwargs: Additional keyword arguments passed to the Geobench constructor.
+        **kwargs: Additional keyword arguments passed to the Scenario constructor.
 
     Returns:
         A decorator that wraps the function and benchmarks its execution.
     """
 
     def decorator(func):
-        bench = Geobench(name or func.__name__, **kwargs)
+        def wrapper(*func_args, **func_kwargs):
+            arguments = kwargs.pop("arguments", {})
+            arguments.update(
+                func_kwargs | {key: val for key, val in enumerate(func_args)}
+            )
 
-        def wrapper(*args, **kwargs):
-            return bench.benchmark(func, *args, **kwargs)
+            scenario = Scenario(
+                name=name or func.__name__,
+                type="function",
+                command=func,
+                arguments=arguments,
+                **kwargs,
+            )
+
+            return scenario.benchmark()
 
         return wrapper
 

@@ -10,8 +10,7 @@ arguments:
     - 2000000
 repeat: 2
 telemetry:
-    - name: main
-      interval: 1.0
-      metrics:
+    wrap:
+      collectors:
       - type: system_metrics
       - type: energy

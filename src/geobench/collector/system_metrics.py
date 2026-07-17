@@ -45,16 +45,16 @@ class SystemMetricsCollector(SystemCollector):
             # Network information
             net_io = psutil.net_io_counters()
             out["net"] = {
-                "sent_bytes": net_io.bytes_sent,
-                "received_bytes": net_io.bytes_recv,
+                "sent": net_io.bytes_sent,
+                "received": net_io.bytes_recv,
             }
 
             # Disk information
             disk_io = psutil.disk_io_counters()
             if disk_io:
                 out["disk"] = {
-                    "read_bytes": disk_io.read_bytes,
-                    "write_bytes": disk_io.write_bytes,
+                    "read": disk_io.read_bytes,
+                    "write": disk_io.write_bytes,
                 }
 
         except Exception as err:
@@ -63,15 +63,28 @@ class SystemMetricsCollector(SystemCollector):
 
         return out
 
-    def transform(self, item: dict):
-        """Perform transformation operations on the data item.
+    def process_item(self, item: dict):
+        """Process collected data item.
 
         Args:
-            item: Data item to be transformed.
+            item: Data item to be processed.
         """
-        item["cpu"]["times"] = [val._asdict() for val in item["cpu"]["times"]]
-        item["cpu"]["freqs"] = [val._asdict() for val in item["cpu"]["freqs"]]
-        item["memory"]["virtual"] = item["memory"]["virtual"]._asdict()
-        item["memory"]["swap"] = item["memory"]["swap"]._asdict()
+        item["cpu"] = {
+            "times": [
+                {"user": item.user, "system": item.system, "idle": item.idle}
+                for item in item["cpu"]["times"]
+            ],
+            "freqs": [val._asdict() for val in item["cpu"]["freqs"]],
+        }
+        item["memory"] = {
+            "virtual": {
+                "used": item["memory"]["virtual"].used,
+                "free": item["memory"]["virtual"].free,
+            },
+            "swap": {
+                "used": item["memory"]["swap"].used,
+                "free": item["memory"]["swap"].free,
+            },
+        }
 
-        super().transform(item)
+        super().process_item(item)

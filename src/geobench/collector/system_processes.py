@@ -3,6 +3,7 @@
 import psutil
 
 from . import CollectorInfo, SystemCollector
+from .process_metrics import ProcessMetricsCollector
 
 
 class SystemProcessesCollector(SystemCollector):
@@ -13,31 +14,34 @@ class SystemProcessesCollector(SystemCollector):
         return CollectorInfo(
             code="system_processes",
             name="System Processes Collector",
-            description="Collector for process metrics for all processes system-wide.",
+            description="Process metrics for all processes system-wide.",
         )
 
     def __init__(self, config: dict | None = None):
-        attrs = [
-            "cpu_times",
-            "cpu_num",
-            "create_time",
-            "exe",
-            "io_counters",
-            "memory_info",
-            "name",
-            "num_fds",
-            "num_handles",
-            "num_threads",
-            "pid",
-            "ppid",
-            "status",
-            "username",
-        ]
-        self.attrs = []
-        process = psutil.Process()
-        for name in attrs:
-            if getattr(process, name, None):
-                self.attrs.append(name)
+        """Initialize system processes collector."""
+        super().__init__(config)
+
+        self.attrs = ProcessMetricsCollector.get_attrs(
+            self.config.get(
+                "attrs",
+                [
+                    "cpu_times",
+                    "cpu_num",
+                    "create_time",
+                    "exe",
+                    "io_counters",
+                    "memory_info",
+                    "name",
+                    "num_fds",
+                    "num_handles",
+                    "num_threads",
+                    "pid",
+                    "ppid",
+                    "status",
+                    "username",
+                ],
+            )
+        )
 
     def collect(self) -> dict:
         """Collect system processes metrics.
@@ -45,52 +49,19 @@ class SystemProcessesCollector(SystemCollector):
         Returns:
             Dictionary containing system processes metrics.
         """
-        out = {
+        return {
             "processes": {
                 process.pid: process.info for process in psutil.process_iter(self.attrs)
             }
         }
 
-        return out
-
-    def transform(self, item: dict) -> dict:
-        """Perform transformation operations on the data item.
+    def process_item(self, item: dict):
+        """Process collected data item.
 
         Args:
-            item: Data item to be transformed.
+            item: Data item to be processed.
         """
-        for id, info in item["processes"].items():
-            item["processes"][id] = {
-                "id": info["pid"],
-                "parent_id": info["ppid"],
-                "name": info["name"],
-                "create_time": info["create_time"],
-                "username": info["username"],
-                "status": info["status"],
-                "command": {
-                    "executable": info["exe"],
-                },
-                "cpu": {
-                    "user_time": info["cpu_times"].user,
-                    "system_time": info["cpu_times"].system,
-                    "num": info.get("cpu_num"),
-                },
-                "memory": {
-                    "rss": info["memory_info"].rss,
-                    "vms": info["memory_info"].vms,
-                },
-                "io": {
-                    "read_bytes": info["io_counters"].read_bytes,
-                    "write_bytes": info["io_counters"].write_bytes,
-                    "other_bytes": getattr(info["io_counters"], "other_bytes"),
-                }
-                if info["io_counters"]
-                else {},
-                "resources": {
-                    "num_threads": info["num_threads"],
-                    "num_handles": info.get("num_handles"),
-                    "num_fds": info.get("num_fds"),
-                },
-            }
+        for info in item["processes"]:
+            ProcessMetricsCollector.process_info(info)
 
-        super().transform(item)
+        super().process_item(item)
