@@ -61,34 +61,18 @@ class ProcessMetricsCollector(ProcessCollector):
         info.update(
             {
                 "parent_id": info.pop("ppid", None),
-                "command": {
-                    "cmdline": info.pop("cmdline", None),
-                    "executable": info.pop("exe", None),
-                    "environment": info.pop("environ", None),
-                },
-                "cpu": {
-                    "affinity": info.pop("cpu_affinity", None),
-                    "num": info.pop("cpu_num", None),
-                    "user_time": getattr(cpu_times, "user", None),
-                    "system_time": getattr(cpu_times, "system", None),
-                    "num_ctx_switches": info.pop("num_ctx_switches", None),
-                },
-                "memory": {
-                    "rss": getattr(memory_info, "rss", None),
-                    "vms": getattr(memory_info, "vms", None),
-                },
-                "io": {
-                    "read_bytes": getattr(io_counters, "read_bytes", None),
-                    "read_chars": getattr(io_counters, "read_chars", None),
-                    "write_bytes": getattr(io_counters, "write_bytes", None),
-                    "write_chars": getattr(io_counters, "write_chars", None),
-                    "other_bytes": getattr(io_counters, "other_bytes", None),
-                },
-                "resources": {
-                    "num_threads": info.pop("num_threads", None),
-                    "num_handles": info.pop("num_handles", None),
-                    "num_fds": info.pop("num_fds", None),
-                },
+                "executable": info.pop("exe", None),
+                "environment": info.pop("environ", None),
+                "cpu_time_user": getattr(cpu_times, "user", None),
+                "cpu_time_system": getattr(cpu_times, "system", None),
+                "cpu_num_ctx_switches": info.pop("num_ctx_switches", None),
+                "memory_rss": getattr(memory_info, "rss", None),
+                "memory_vms": getattr(memory_info, "vms", None),
+                "io_read_bytes": getattr(io_counters, "read_bytes", None),
+                "io_read_chars": getattr(io_counters, "read_chars", None),
+                "io_write_bytes": getattr(io_counters, "write_bytes", None),
+                "io_write_chars": getattr(io_counters, "write_chars", None),
+                "io_other_bytes": getattr(io_counters, "other_bytes", None),
                 "threads": [item._as_dict() for item in info.get("threads", [])],
             }
         )

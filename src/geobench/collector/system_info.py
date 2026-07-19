@@ -25,57 +25,53 @@ class SystemInfoCollector(SystemCollector):
         Returns:
             Dictionary containing system information.
         """
-        out = {}
-
-        # Hardware information
-        out["machine"] = {
-            "type": platform.machine(),
-            "processor": platform.processor(),
-            "node": platform.node(),
-        }
-
-        # OS information
-        out["os"] = {
-            "system": platform.system(),
-            "release": platform.release(),
-            "version": platform.version(),
-        }
-
-        # CPU information
-        out["cpu"] = {
-            "physical_count": psutil.cpu_count(logical=False),
-            "logical_count": psutil.cpu_count(logical=True),
-            "frequency": [
-                {"min": freq.min, "max": freq.max}
-                for freq in psutil.cpu_freq(percpu=True)
-            ],
-        }
-
-        # Memory information
-        out["memory"] = {
-            "virtual": psutil.virtual_memory().total,
-            "swap": psutil.swap_memory().total,
+        out = {
+            # Machine information
+            "machine_type": platform.machine(),
+            "machine_processor": platform.processor(),
+            "machine_name": platform.node(),
+            # OS information
+            "system_name": platform.system(),
+            "system_release": platform.release(),
+            "system_version": platform.version(),
+            # CPU information
+            "cpu_count_physical": psutil.cpu_count(logical=False),
+            "cpu_count_logical": psutil.cpu_count(logical=True),
+            "cpu_freqs": psutil.cpu_freq(percpu=True),
+            # Memory information
+            "memory_virtual": psutil.virtual_memory().total,
+            "memory_swap": psutil.swap_memory().total,
+            # Network
+            "network": psutil.net_if_addrs(),
         }
 
         # Disk information
         out["disk"] = []
         for partition in psutil.disk_partitions():
-            info = partition._asdict()
             try:
-                info["size"] = psutil.disk_usage(partition.mountpoint).total
-
+                size = psutil.disk_usage(partition.mountpoint).total
             except PermissionError:
-                pass
-
-            out["disk"].append(info)
-
-        # Network information
-        out["network"] = {
-            name: [
-                {key: val for key, val in item._asdict().items() if val is not None}
-                for item in info
-            ]
-            for name, info in psutil.net_if_addrs().items()
-        }
+                size = None
+            out["disk"].append((partition, size))
 
         return out
+
+    def process_item(self, item: dict):
+        """Process collected data item.
+
+        Args:
+            item: Data item to be processed.
+        """
+        item["cpu_freqs"] = [
+            {"min": freq.min, "max": freq.max} for freq in item["cpu_freqs"]
+        ]
+        item["disk"] = [
+            partition._asdict() | {"size": size} if size is not None else {}
+            for partition, size in item["disk"]
+        ]
+        item["network"] = {
+            name: [item._asdict() for item in info]
+            for name, info in item["network"].items()
+        }
+
+        super().process_item(item)

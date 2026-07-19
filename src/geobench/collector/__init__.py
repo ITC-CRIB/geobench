@@ -68,13 +68,17 @@ class Collector(ABC):
                 cls.clean_dict(val)
                 if not val:
                     remove.append(key)
+            elif isinstance(val, list):
+                for subval in val:
+                    if isinstance(subval, dict):
+                        cls.clean_dict(subval)
         for key in remove:
             del item[key]
 
     @classmethod
     def reduce(cls, data: list[dict], opts: dict):
         """Reduce collected data.
-        
+
         Args:
             data: Collected data.
             opts: Reduction options.
@@ -93,7 +97,7 @@ class Collector(ABC):
             key = keys[idx]
             if key not in lhs or key not in rhs:
                 raise ValueError(f"Invalid key: {key}")
-            parent = lhs            
+            parent = lhs
             lhs = lhs[key]
             rhs = rhs[key]
 
@@ -134,7 +138,7 @@ class Collector(ABC):
             for rule in rules:
                 _apply(item, prev, rule)
             prev = item
-        
+
         return first
 
     def process_item(self, item: dict):

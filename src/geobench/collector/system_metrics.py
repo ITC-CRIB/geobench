@@ -27,41 +27,14 @@ class SystemMetricsCollector(SystemCollector):
         Returns:
             Dictionary containing system metrics.
         """
-        out = {}
-
-        try:
-            # CPU information
-            out["cpu"] = {
-                "times": psutil.cpu_times(percpu=True),
-                "freqs": psutil.cpu_freq(percpu=True),
-            }
-
-            # Memory information
-            out["memory"] = {
-                "virtual": psutil.virtual_memory(),
-                "swap": psutil.swap_memory(),
-            }
-
-            # Network information
-            net_io = psutil.net_io_counters()
-            out["net"] = {
-                "sent": net_io.bytes_sent,
-                "received": net_io.bytes_recv,
-            }
-
-            # Disk information
-            disk_io = psutil.disk_io_counters()
-            if disk_io:
-                out["disk"] = {
-                    "read": disk_io.read_bytes,
-                    "write": disk_io.write_bytes,
-                }
-
-        except Exception as err:
-            logger.error("Error reading psutil metrics: %s", err)
-            out = {"error": str(err)}
-
-        return out
+        return {
+            "cpu_times": psutil.cpu_times(percpu=True),
+            "cpu_freqs": psutil.cpu_freq(percpu=True),
+            "memory_virtual": psutil.virtual_memory(),
+            "memory_swap": psutil.swap_memory(),
+            "network": psutil.net_io_counters(),
+            "disk": psutil.disk_io_counters(),
+        }
 
     def process_item(self, item: dict):
         """Process collected data item.
@@ -69,23 +42,27 @@ class SystemMetricsCollector(SystemCollector):
         Args:
             item: Data item to be processed.
         """
-        item["cpu"] = {
-            "times": [
-                {"user": item.user, "system": item.system, "idle": item.idle}
-                for item in item["cpu"]["times"]
-            ],
-            "freqs": [val._asdict() for val in item["cpu"]["freqs"]],
-        }
-        item["memory"] = {
-            "virtual": {
-                "used": item["memory"]["virtual"].used,
-                "free": item["memory"]["virtual"].free,
-            },
-            "swap": {
-                "used": item["memory"]["swap"].used,
-                "free": item["memory"]["swap"].free,
-            },
-        }
+        item["cpu_times"] = [
+            {"user": item.user, "system": item.system, "idle": item.idle}
+            for item in item["cpu_times"]
+        ]
+        item["cpu_freqs"] = [val._asdict() for val in item["cpu_freqs"]],
+        
+        virtual = item.pop("memory_virtual")
+        item["memory_virtual_used"] = virtual.used
+        item["memory_virtual_free"] = virtual.free
+
+        swap = item.pop("memory_swap")
+        item["memory_swap_used"] = swap.used
+        item["memory_swap_free"] = swap.free
+
+        network = item.pop("network")
+        item["network_sent"] = network.bytes_sent
+        item["network_received"] = network.bytes_recv
+
+        disk = item.pop("disk")
+        item["disk_read"] = getattr(disk, "read_bytes", None)
+        item["disk_write"] = getattr(disk, "write_bytes", None)
 
         super().process_item(item)
 
@@ -96,16 +73,16 @@ class SystemMetricsCollector(SystemCollector):
             data,
             {
                 "timestamp": "pair",
-                "cpu:times:user": "diff",
-                "cpu:times:system": "diff",
-                "cpu:times:idle": "diff",
-                "memory:virtual:used": "diff",
-                "memory:virtual:free": "diff",
-                "memory:swap:used": "diff",
-                "memory:swap:free": "diff",
-                "net:sent": "diff",
-                "net:received": "diff",
-                "disk:read": "diff",
-                "disk:write": "diff",
+                "cpu_times:user": "diff",
+                "cpu_times:system": "diff",
+                "cpu_times:idle": "diff",
+                "memory_virtual_used": "diff",
+                "memory_virtual_free": "diff",
+                "memory_swap_used": "diff",
+                "memory_swap_free": "diff",
+                "network_sent": "diff",
+                "network_received": "diff",
+                "disk_read": "diff",
+                "disk_write": "diff",
             },
         )
