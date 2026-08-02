@@ -2,7 +2,6 @@
 
 import argparse
 import ast
-import json
 import logging
 import os
 import sys
@@ -24,19 +23,6 @@ class ArgumentDefaultsHelpFormatterNoNone(argparse.ArgumentDefaultsHelpFormatter
         return super()._get_help_string(action)
 
 
-def parse_dict(val: str) -> dict:
-    """Parse a dictionary argument from a JSON or Python literal string.
-
-    Attempts to parse the input as JSON first. If JSON parsing fails,
-    falls back to parsing a Python literal (e.g., using single quotes).
-    """
-    try:
-        return json.loads(val)
-
-    except json.JSONDecodeError:
-        return ast.literal_eval(val)
-
-
 def parse_key_value(val: str) -> tuple[str, Any]:
     """Parse a key=value argument from a string."""
     try:
@@ -46,7 +32,9 @@ def parse_key_value(val: str) -> tuple[str, Any]:
 
     try:
         val = ast.literal_eval(val)
-    except (ValueError, SyntaxError):
+    except ValueError:
+        pass
+    except SyntaxError:
         raise argparse.ArgumentTypeError("Value must be a literal")
 
     try:
@@ -57,10 +45,10 @@ def parse_key_value(val: str) -> tuple[str, Any]:
     return key, val
 
 
-def merge_args(args: dict | None = None, arg_items: list | None = None) -> dict:
-    """Merge argument values from combined and separate representations."""
-    args = args.clone() if args else {}
-    for key, val in arg_items or []:
+def parse_args(items: list | None = None) -> dict:
+    """Parse separate argument representations."""
+    args = {}
+    for key, val in items or []:
         if key not in args:
             args[key] = set()
         if isinstance(val, tuple):
@@ -110,26 +98,14 @@ class CLI:
             "--input",
             type=parse_key_value,
             action="append",
-            help="Input file (can be repeated)",
+            help="Input file as key=value (can be repeated)",
         )
         self.parser.add_argument(
             "-o",
             "--output",
             type=parse_key_value,
             action="append",
-            help="Output file (can be repeated)",
-        )
-        self.parser.add_argument(
-            "--inputs",
-            type=str,
-            nargs="+",
-            help="List of input files",
-        )
-        self.parser.add_argument(
-            "--outputs",
-            type=str,
-            nargs="+",
-            help="List of output files",
+            help="Output file as key=value (can be repeated)",
         )
         self.parser.add_argument(
             "-a",
@@ -137,11 +113,6 @@ class CLI:
             type=parse_key_value,
             action="append",
             help="Argument as key=value (can be repeated)",
-        )
-        self.parser.add_argument(
-            "--arguments",
-            type=parse_dict,
-            help="Dictionary of arguments",
         )
         self.parser.add_argument(
             "-w",
@@ -238,15 +209,14 @@ class CLI:
             key: val
             for key, val in vars(args).items()
             if val is not None
-            and key
-            not in ["command", "arg", "args", "input", "output", "debug"]
+            and key not in ["command", "arg", "args", "input", "output", "debug"]
         }
 
-        kwargs["arguments"] = merge_args(
-            kwargs.get("arguments"), (args.arg or []) + list(enumerate(args.args or []))
+        kwargs["arguments"] = parse_args(
+            (args.arg or []) + list(enumerate(args.args or []))
         )
-        kwargs["inputs"] = merge_args(kwargs.get("inputs"), args.input)
-        kwargs["outputs"] = merge_args(kwargs.get("outputs"), args.output)
+        kwargs["inputs"] = parse_args(args.input)
+        kwargs["outputs"] = parse_args(args.output)
 
         if args.command == "help":
             try:
@@ -258,7 +228,7 @@ class CLI:
             print(help)
             sys.exit()
 
-        elif args.command.endswith(".yaml"):
+        elif args.command.endswith((".yaml", ".yml")):
             del kwargs["type"]
             logger.debug("Loading scenario from %s", args.command)
             scenario = Scenario.load(os.path.abspath(args.command), **kwargs)
