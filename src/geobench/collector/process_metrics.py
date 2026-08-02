@@ -63,7 +63,7 @@ class ProcessMetricsCollector(ProcessCollector):
         io_counters = info.get("io_counters", {})
         return {
             "pid": info.get("pid"),
-            "parent_id": info.get("ppid"),
+            "parent_pid": info.get("ppid"),
             "create_time": info.get("create_time"),
             "name": info.get("name"),
             "username": info.get("username"),
