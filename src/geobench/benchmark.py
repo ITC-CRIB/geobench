@@ -246,14 +246,10 @@ class Benchmark:
         self.wrappers = []
         if self.telemetry.get("wrap"):
             print("Collecting initial information of wrappers.")
-            self.result["wrap"] = {}
-            now = time.time()
             for item in self.telemetry["wrap"].get("collectors", []):
-                collector = Monitor.get_collector(item)
-                self.wrappers.append(collector)
-                self.result["wrap"][collector.code] = [
-                    {"timestamp": now} | collector._collect()
-                ]
+                self.wrappers.append(Monitor.get_collector(item))
+            for collector in self.wrappers:
+                collector.collect()
 
         # Start monitors
         print("Starting monitoring.")
@@ -290,6 +286,7 @@ class Benchmark:
         # Collect final information of wrappers, if required
         if self.wrappers:
             print("Collecting final information of wrappers.")
+            self.result["wrap"] = {}
             for collector in self.wrappers:
                 collector.collect()
                 self.result["wrap"][collector.code] = collector.get_data()
