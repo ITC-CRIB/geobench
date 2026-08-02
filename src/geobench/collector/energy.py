@@ -66,10 +66,10 @@ class EnergyCollector(SystemCollector):
         """
         return self.collector._process(item)
 
-    def _postprocess(self, data: list[dict]):
-        """Postprocess data series of processed samples.
+    def _postprocess(self, data: list[dict]) -> None:
+        """Postprocess a data series containing processed samples.
 
         Args:
-            data: Data series to postprocess.
+            data: Data series containing processed samples.
         """
         self.collector._postprocess(data)

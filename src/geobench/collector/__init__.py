@@ -37,45 +37,34 @@ class CollectorRule:
 
     keys: list[str]
     op: Operator
+    ref_first: bool = False
 
-    def _apply(self, lhs: dict, rhs: dict, idx: int = 0) -> None:
-        if not isinstance(lhs, dict):
-            raise TypeError("Invalid left operand")
-        if not isinstance(rhs, dict):
-            raise TypeError("Invalid right operand")
-
+    def _apply(self, item: dict, ref_item: dict, idx: int = 0) -> None:
         key = self.keys[idx]
-        if key not in lhs or key not in rhs:
+        if key not in item or key not in ref_item:
             raise ValueError(f"Invalid key: {key}")
-        parent = lhs
-        lhs = lhs[key]
-        rhs = rhs[key]
+        parent = item
+        item = item[key]
+        ref_item = ref_item[key]
 
         if idx == len(self.keys) - 1:
             if callable(self.op):
-                val = self.op(lhs, rhs)
+                val = self.op(item, ref_item)
             elif self.op == "pair":
-                val = [lhs, rhs]
+                val = [item, ref_item]
             elif self.op == "mean":
-                val = (lhs + rhs) / 2
+                val = (item + ref_item) / 2
             elif self.op == "diff":
-                val = rhs - lhs
+                val = item - ref_item
             else:
                 raise ValueError(f"Invalid operator: {self.op}")
             parent[key] = val
 
-        elif isinstance(lhs, list) or isinstance(rhs, list):
-            for lval, rval in zip(lhs, rhs, strict=True):
+        elif isinstance(item, list) or isinstance(ref_item, list):
+            for lval, rval in zip(item, ref_item, strict=True):
                 self._apply(lval, rval, idx + 1)
         else:
-            self._apply(lhs, rhs, idx + 1)
-
-    def apply(self, lhs: dict, rhs: dict) -> None:
-        """Apply the rule to the given operands.
-        
-        Modifies left operand in place.
-        """
-        self._apply(lhs, rhs, 0)
+            self._apply(item, ref_item, idx + 1)
 
     @classmethod
     def get_rules(cls, rules: dict) -> list["CollectorRule"]:
@@ -96,6 +85,21 @@ class CollectorRule:
                 args["op"] = val
             out.append(cls(**args))
         return out
+
+    @classmethod
+    def apply_rules(cls, data: list[dict], rules: dict | list["CollectorRule"]) -> None:
+        """Apply the rule to the given data."""
+        n = len(data)
+
+        if n < 2:
+            data.clear()
+            return
+
+        for rule in cls.get_rules(rules) if isinstance(rules, dict) else rules:
+            for i in range(n - 1, 0, -1):
+                rule._apply(data[i], data[0 if rule.ref_first else i - 1], 0)
+
+        del data[0]
 
 
 class Collector(ABC):
@@ -283,7 +287,7 @@ def get_process(process: Process) -> psutil.Process:
     """Return standard process.
 
     Raises:
-        ValueError: If invalid process.
+        TypeError: If invalid process.
     """
     if isinstance(process, psutil.Process):
         return process

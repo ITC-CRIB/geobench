@@ -95,11 +95,11 @@ class RAPLCollector(SystemCollector):
 
         return out
 
-    def _postprocess(self, data: list[dict]):
-        """Postprocess collected data.
+    def _postprocess(self, data: list[dict]) -> None:
+        """Postprocess a data series containing processed samples.
 
         Args:
-            data: Collected data.
+            data: Data series containing processed samples.
         """
         super()._postprocess(data)
 

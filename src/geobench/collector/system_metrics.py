@@ -67,11 +67,8 @@ class SystemMetricsCollector(SystemCollector):
         Args:
             data: Data series containing processed samples.
         """
-        if len(data) < 2:
-            data.clear()
-            return
-
-        rules = CollectorRule.get_rules(
+        CollectorRule.apply_rules(
+            data,
             {
                 "cpu_times:user": "diff",
                 "cpu_times:system": "diff",
@@ -84,9 +81,5 @@ class SystemMetricsCollector(SystemCollector):
                 "network_received": "diff",
                 "disk_read": "diff",
                 "disk_write": "diff",
-            }
+            },
         )
-
-        for item in data[1:]:
-            for rule in rules:
-                rule.apply(data[0], item)
