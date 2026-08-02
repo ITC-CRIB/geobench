@@ -212,7 +212,11 @@ class Benchmark:
         for collector in self.telemetry.get("init", {}).get("collectors", []):
             collector = Monitor.get_collector(collector)
             collector.collect()
-            self.result["init"][collector.code] = collector.get_data()
+            data, refs = collector.get_data()
+            self.result["init"][collector.code] = {
+                "refs": refs,
+                "data": data,
+            }
         self.save()
 
         # Clear system caches, if required
@@ -289,7 +293,11 @@ class Benchmark:
             self.result["wrap"] = {}
             for collector in self.wrappers:
                 collector.collect()
-                self.result["wrap"][collector.code] = collector.get_data()
+                data, refs = collector.get_data()
+                self.result["wrap"][collector.code] = {
+                    "refs": refs,
+                    "data": data,
+                }
 
         # Aggregate results from all monitors
         for monitor in self.monitors:

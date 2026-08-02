@@ -1,5 +1,6 @@
 """Collector module."""
 
+import copy
 import importlib
 import inspect
 import logging
@@ -37,7 +38,7 @@ class CollectorRule:
 
     keys: list[str]
     op: Operator
-    ref_first: bool = False
+    ref_first: bool = True
 
     def _apply(self, item: dict, ref_item: dict, idx: int = 0) -> None:
         key = self.keys[idx]
@@ -50,10 +51,6 @@ class CollectorRule:
         if idx == len(self.keys) - 1:
             if callable(self.op):
                 val = self.op(item, ref_item)
-            elif self.op == "pair":
-                val = [item, ref_item]
-            elif self.op == "mean":
-                val = (item + ref_item) / 2
             elif self.op == "diff":
                 val = item - ref_item
             else:
@@ -87,20 +84,24 @@ class CollectorRule:
         return out
 
     @classmethod
-    def apply_rules(cls, data: list[dict], rules: dict | list["CollectorRule"]) -> None:
+    def apply_rules(cls, data: list[dict], rules: dict | list["CollectorRule"]) -> dict:
         """Apply the rule to the given data."""
-        n = len(data)
-
-        if n < 2:
-            data.clear()
+        if not data:
             return
 
-        for rule in cls.get_rules(rules) if isinstance(rules, dict) else rules:
-            for i in range(n - 1, 0, -1):
-                rule._apply(data[i], data[0 if rule.ref_first else i - 1], 0)
+        rules = cls.get_rules(rules) if isinstance(rules, dict) else rules
 
-        del data[0]
+        refs = {}
+        for rule in rules:
+            if rule.op == "diff":
+                key = rule.keys[0]
+                refs[key] = copy.deepcopy(data[0][key])
 
+        for rule in rules:
+            for i in range(len(data) - 1, -1, -1):
+                rule._apply(data[i], data[0 if (rule.ref_first or not i) else i - 1], 0)
+
+        return refs
 
 class Collector(ABC):
     """Abstract base class for collectors."""
@@ -172,13 +173,16 @@ class Collector(ABC):
             Processed data sample.
         """
 
-    def _postprocess(self, data: list[dict]) -> None:
+    def _postprocess(self, data: list[dict]) -> dict:
         """Postprocess a data series containing processed samples.
 
         Args:
             data: Data series containing processed samples.
+
+        Returns:
+            Reference data for the processed samples.
         """
-        # NOP
+        return {}
 
     def _clean(self, item: dict) -> None:
         """Remove empty data item entries recursively.
@@ -202,21 +206,19 @@ class Collector(ABC):
             del item[key]
 
     @final
-    def get_data(self) -> list[dict]:
-        """Return processed and cleaned data series."""
-        data = []
+    def get_data(self) -> tuple[list[dict], dict]:
+        """Return processed and cleaned data series and postprocessing references."""
+        data = [self._process(sample) for sample in self._data]
 
-        for item in self._data:
-            data.append(self._process(item))
-
-        self._postprocess(data)
+        refs = self._postprocess(data) or {}
 
         for item in data:
             self._clean(item)
+        self._clean(refs)
 
         self._data = []
 
-        return data
+        return data, refs
 
 
 class SystemCollector(Collector):

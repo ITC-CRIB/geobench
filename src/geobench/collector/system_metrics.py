@@ -61,13 +61,16 @@ class SystemMetricsCollector(SystemCollector):
             "disk_write": getattr(sample["disk"], "write_bytes", None),
         }
 
-    def _postprocess(self, data: list[dict]) -> None:
+    def _postprocess(self, data: list[dict]) -> dict:
         """Postprocess a data series containing processed samples.
 
         Args:
             data: Data series containing processed samples.
+
+        Returns:
+            Reference data for the processed samples.
         """
-        CollectorRule.apply_rules(
+        return CollectorRule.apply_rules(
             data,
             {
                 "cpu_times:user": "diff",

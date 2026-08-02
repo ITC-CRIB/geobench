@@ -130,10 +130,13 @@ class Monitor(threading.Thread):
                 "target": self.interval,
                 "actual": (self.end_time - self.start_time) / self.step,
             },
-            "data": {},
         }
 
         for collector in self.collectors:
-            out["data"][collector.code] = collector.get_data()
+            data, refs = collector.get_data()
+            out[collector.code] = {
+                "refs": refs,
+                "data": data,
+            }
 
         return out
