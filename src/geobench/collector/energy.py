@@ -34,7 +34,7 @@ class EnergyCollector(SystemCollector):
             self.collector = RAPLCollector(config)
             return
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("RAPL energy collector not found")
 
         # Check if powermetrics collector is available
@@ -42,7 +42,7 @@ class EnergyCollector(SystemCollector):
             self.collector = PowermetricsCollector(config)
             return
 
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.debug("Powermetric energy collector not found")
 
         raise RuntimeError("No suitable energy metrics collector found")
@@ -55,16 +55,16 @@ class EnergyCollector(SystemCollector):
         """
         return self.collector._collect()
 
-    def _process(self, item: dict) -> dict:
-        """Process collected data sample.
+    def _process(self, sample: dict) -> dict:
+        """Process a collected data sample.
 
         Args:
-            data: Collected data sample.
+            sample: Collected data sample.
 
         Returns:
-            Dictionary containing processed data sample.
+            Processed data sample.
         """
-        return self.collector._process(item)
+        return self.collector._process(sample)
 
     def _postprocess(self, data: list[dict]) -> None:
         """Postprocess a data series containing processed samples.

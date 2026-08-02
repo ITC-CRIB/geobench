@@ -1,13 +1,12 @@
 """Program executor module."""
 
-from abc import abstractmethod
+import logging
 import os
 import platform
 import subprocess
+from abc import abstractmethod
 
 from . import Executor
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +94,7 @@ class ProgramExecutor(Executor):
         for key, val in args.items():
             try:
                 key = int(key)
-            except Exception:
+            except ValueError:
                 pass
 
             if isinstance(key, int):

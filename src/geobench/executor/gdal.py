@@ -8,7 +8,7 @@ import subprocess
 
 try:
     import winreg
-except Exception:
+except ImportError:
     winreg = None
 
 import dotenv
@@ -173,6 +173,7 @@ class GDALExecutor(ProgramExecutor):
             capture_output=True,
             text=True,
             encoding="utf-8",
+            check=False,
         )
 
         return result.stdout

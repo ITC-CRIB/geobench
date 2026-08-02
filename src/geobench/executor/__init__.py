@@ -1,13 +1,12 @@
 """Executor module."""
 
+import importlib
+import inspect
+import logging
+import pkgutil
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import cache
-import importlib
-import inspect
-import pkgutil
-
-import logging
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,6 @@ GeoBench - A benchmarking tool for geospatial operations.
 from .benchmark import Benchmark as GeoBench
 from .scenario import Scenario
 
-
 __all__ = ["GeoBench", "geobench"]
 
 

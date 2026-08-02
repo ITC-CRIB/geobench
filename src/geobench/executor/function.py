@@ -3,7 +3,7 @@
 import os
 import threading
 
-from . import ExecutorInfo, Executor
+from . import Executor, ExecutorInfo
 
 
 class FunctionExecutor(Executor):

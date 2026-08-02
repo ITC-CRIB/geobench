@@ -1,13 +1,12 @@
 """Report module."""
 
-from datetime import datetime
-from typing import Dict, List
 import json
 import os
 import statistics
+from datetime import datetime
 
-from jinja2 import Environment, FileSystemLoader
 import plotly.graph_objects as go
+from jinja2 import Environment, FileSystemLoader
 
 
 def calculate_run_summary(run_result: dict) -> dict:
@@ -202,12 +201,12 @@ def calculate_run_summary(run_result: dict) -> dict:
 
 
 def create_line_chart(
-    data: Dict[str, List],
+    data: dict[str, list],
     title: str,
     x_title: str,
     y_title: str,
     div_id: str,
-    colors: List[str] = None,
+    colors: list[str] | None = None,
 ) -> str:
     """Create a generalized line chart.
 
@@ -239,7 +238,7 @@ def create_line_chart(
                     y=values,
                     mode="lines+markers",
                     name=series_name,
-                    line=dict(color=colors[i % len(colors)], width=2),
+                    line={"color": colors[i % len(colors)], "width": 2},
                 )
             )
 
@@ -317,7 +316,7 @@ def create_pie_chart(
     data=None,
     title: str = "",
     div_id: str = "",
-    colors: List[str] = None,
+    colors: list[str] | None = None,
 ) -> str:
     """Create a generalized pie chart.
 
@@ -368,12 +367,12 @@ def create_pie_chart(
 
 
 def create_multi_series_line_chart(
-    series_data: Dict[str, Dict[str, List]],
+    series_data: dict[str, dict[str, list]],
     title: str,
     x_title: str,
     y_title: str,
     div_id: str,
-    colors: List[str] = None,
+    colors: list[str] | None = None,
 ) -> str:
     """Create a line chart with multiple series, each with their own x and y values.
 
@@ -435,7 +434,7 @@ def create_multi_series_line_chart(
                         y=series_y,
                         mode="lines+markers",
                         name=series_name,
-                        line=dict(color=colors[i % len(colors)], width=2),
+                        line={"color": colors[i % len(colors)], "width": 2},
                     )
                 )
 
@@ -451,7 +450,7 @@ def create_multi_series_line_chart(
 
 
 def generate_html_report(
-    system_data: Dict, set_summaries: List[Dict], output_path: str = "report.html"
+    system_data: dict, set_summaries: list[dict], output_path: str = "report.html"
 ) -> str:
     """Generate a comprehensive HTML report with all charts.
 
@@ -543,10 +542,7 @@ def generate_html_report(
                                 color="#1f77b4",
                             ),
                             "system_memory_chart": create_bar_chart(
-                                labels=[
-                                    f"{key}"
-                                    for key in filtered_avg_system_memory.keys()
-                                ],
+                                labels=[f"{key}" for key in filtered_avg_system_memory],
                                 values=[
                                     val
                                     for key, val in filtered_avg_system_memory.items()
@@ -558,7 +554,7 @@ def generate_html_report(
                                 color="#ff7f0e",
                             ),
                             "system_disk_activity_chart": create_bar_chart(
-                                labels=[f"{key}" for key in avg_system_disk.keys()],
+                                labels=[f"{key}" for key in avg_system_disk],
                                 values=[
                                     val / 1024 for key, val in avg_system_disk.items()
                                 ],
@@ -569,7 +565,7 @@ def generate_html_report(
                                 color="#1f77b4",
                             ),
                             "system_net_activity_chart": create_bar_chart(
-                                labels=[f"{key}" for key in avg_system_net.keys()],
+                                labels=[f"{key}" for key in avg_system_net],
                                 values=[
                                     val / 1024 for key, val in avg_system_net.items()
                                 ],

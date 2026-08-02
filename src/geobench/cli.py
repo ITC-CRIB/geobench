@@ -5,6 +5,7 @@ import ast
 import json
 import logging
 import os
+import sys
 from typing import Any
 
 from .executor import get_executors
@@ -255,7 +256,7 @@ class CLI:
             executor = get_executors()[args.type]()
             help = executor.get_help(args.command)
             print(help)
-            exit()
+            sys.exit()
 
         elif args.command.endswith(".yaml"):
             del kwargs["type"]
