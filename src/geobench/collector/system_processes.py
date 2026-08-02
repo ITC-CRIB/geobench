@@ -9,7 +9,8 @@ from .process_metrics import ProcessMetricsCollector
 class SystemProcessesCollector(SystemCollector):
     """Collector for process metrics for all processes system-wide."""
 
-    def get_metadata() -> CollectorMetadata:
+    @classmethod
+    def get_metadata(cls) -> CollectorMetadata:
         """Return metadata describing the collector."""
         return CollectorMetadata(
             code="system_processes",
