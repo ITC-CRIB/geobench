@@ -1,16 +1,15 @@
 """Command line interface module."""
 
-from typing import Any
 import argparse
 import ast
 import json
+import logging
 import os
+from typing import Any
 
 from .executor import get_executors
 from .executor.program import ProgramExecutor
 from .scenario import Scenario
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -182,8 +181,7 @@ class CLI:
             help="Virtual environment path",
         )
         self.parser.add_argument(
-            "-c",
-            "--clear",
+            "--clear-outdir",
             action="store_true",
             help="Clear the output directory",
         )

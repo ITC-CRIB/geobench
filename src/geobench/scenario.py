@@ -4,6 +4,7 @@ import copy
 import inspect
 import itertools
 import json
+import logging
 import os
 import re
 import shutil
@@ -17,8 +18,6 @@ import yaml
 from .benchmark import Benchmark
 from .executor import get_executors
 from .report import calculate_run_summary, generate_html_report
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +37,7 @@ class Scenario:
         wait: float = 5.0,
         monitor: float | None = None,
         archive: str = "both",
-        clear: bool = False,
+        clear_outdir: bool = False,
         clear_outputs: bool = False,
         clear_cache: bool = True,
         workdir: str | None = None,
@@ -60,7 +59,7 @@ class Scenario:
             wait: Idle wait time before each run, in seconds.
             monitor: Monitoring duration before and after each run, in seconds.
             archive: File types to archive. Options are 'none', 'both', 'input', 'output'.
-            clear: If True, clear the output directory before running the benchmark.
+            clear_outdir: If True, clear the output directory before running the benchmark.
             clear_outputs: If True, clear output files at the end of each run.
             clear_cache: If True, clear system caches before each run.
             workdir: Working directory path. It is also used as the root path of the input files.
@@ -91,7 +90,7 @@ class Scenario:
         self.wait = wait or 0.0
         self.monitor = monitor
         self.archive = archive or "none"
-        self.clear = clear
+        self.clear_outdir = clear_outdir
         self.clear_outputs = clear_outputs
         self.clear_cache = clear_cache
         self.telemetry = Benchmark.get_telemetry(telemetry, duration=monitor)
@@ -148,7 +147,7 @@ class Scenario:
             item = {}
 
             if isinstance(self.inputs, dict):
-                item["inputs"] = [args[key] for key in self.inputs.keys()]
+                item["inputs"] = [args[key] for key in self.inputs]
             else:
                 item["inputs"] = (
                     self.inputs if isinstance(self.inputs, list) else [self.inputs]
@@ -212,7 +211,7 @@ class Scenario:
             print(f"Setting up output directory {self.outdir}.")
             if os.path.exists(self.outdir):
                 if os.path.isdir(self.outdir):
-                    if not self.clear:
+                    if not self.clear_outdir:
                         print("Output directory exists, aborting.")
                         return {"error": "Output directory exists"}
                     else:
@@ -270,7 +269,7 @@ class Scenario:
                         inputs=data["inputs"],
                         outputs=data["outputs"],
                         archive=self.archive,
-                        clear=self.clear,
+                        clear_outdir=self.clear_outdir,
                         clear_cache=self.clear_cache,
                         workdir=self.workdir,
                         basedir=self.basedir,
@@ -288,7 +287,7 @@ class Scenario:
                     # Set input file paths
                     if isinstance(self.inputs, dict):
                         logger.debug("Modifying input paths")
-                        for key in self.inputs.keys():
+                        for key in self.inputs:
                             args[key] = os.path.normpath(
                                 args[key]
                                 if os.path.isabs(args[key])
@@ -298,7 +297,7 @@ class Scenario:
                     # Set output file paths
                     if isinstance(self.outputs, dict):
                         logger.debug("Modifying output paths")
-                        for key in self.outputs.keys():
+                        for key in self.outputs:
                             args[key] = os.path.normpath(
                                 args[key]
                                 if os.path.isabs(args[key])
@@ -314,7 +313,7 @@ class Scenario:
                     try:
                         executor.wait()
 
-                    except Exception as err:
+                    except Exception as err:  # noqa: BLE001
                         print(f"Command '{self.command}' failed with error: {err}")
                         print("Full stack trace:")
                         traceback.print_exception(err)
@@ -324,19 +323,21 @@ class Scenario:
 
                     # Clear outputs if required
                     if self.clear_outputs:
-                        for key in self.outputs.keys():
+                        for key in self.outputs:
                             path = args[key]
                             if not os.path.exists(path):
                                 continue
                             print(f"Removing output file {path}")
-                            for path in benchmark.get_related_files(path):
-                                if not os.path.exists(path):
+                            for related_path in benchmark.get_related_files(path):
+                                if not os.path.exists(related_path):
                                     continue
                                 try:
-                                    os.remove(path)
-                                except Exception as err:
+                                    os.remove(related_path)
+                                except OSError as err:
                                     logger.error(
-                                        "Error removing output file %s: %s", path, err
+                                        "Error removing output file %s: %s",
+                                        related_path,
+                                        err,
                                     )
 
                     # Calculate run summary
@@ -434,7 +435,7 @@ class Scenario:
 
         # Sanitize arguments
         args = {}
-        for key in inspect.signature(Scenario.__init__).parameters.keys():
+        for key in inspect.signature(Scenario.__init__).parameters:
             val = scenario.get(key)
             if key != "self" and val is not None:
                 args[key] = val
@@ -462,7 +463,7 @@ class Scenario:
             "wait": self.wait,
             "monitor": self.monitor,
             "archive": self.archive,
-            "clear": self.clear or None,
+            "clear_outdir": self.clear_outdir or None,
             "clear_outputs": self.clear_outputs or None,
             "clear_cache": self.clear_cache,
             "workdir": self.workdir,

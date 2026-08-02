@@ -26,7 +26,7 @@ class Benchmark:
         inputs: list | None = None,
         outputs: list | None = None,
         archive: str = "both",
-        clear: bool = False,
+        clear_outdir: bool = False,
         clear_cache: bool = True,
         workdir: str | None = None,
         basedir: str | None = None,
@@ -42,7 +42,7 @@ class Benchmark:
             inputs: Optional list of input files.
             outputs: Optional list of output files.
             archive: File types to archive. Options are 'none', 'both', 'input', 'output'.
-            clear: If True, clear the output directory before the run.
+            clear_outdir: If True, clear the output directory before the run.
             clear_cache: If True, clear system caches before the run.
             workdir: Working directory path. It is also used as the root path of the input files.
                 Defaults to the current working directory.
@@ -56,7 +56,7 @@ class Benchmark:
         self.monitor = monitor
         self.telemetry = self.get_telemetry(telemetry, duration=monitor)
         self.archive = archive or "none"
-        self.clear = clear
+        self.clear_outdir = clear_outdir
         self.clear_cache = clear_cache
         self.metadata = metadata or {}
 
@@ -196,7 +196,7 @@ class Benchmark:
         print(f"Setting up output directory {self.outdir}.")
         if os.path.exists(self.outdir):
             if os.path.isdir(self.outdir):
-                if not self.clear:
+                if not self.clear_outdir:
                     raise RuntimeError("Output directory exists")
                 else:
                     logger.debug("Removing existing output directory: %s", self.outdir)
