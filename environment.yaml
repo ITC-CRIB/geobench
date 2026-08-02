@@ -1,0 +1,10 @@
+name: geobench
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - jinja2
+  - psutil
+  - python-dotenv
+  - pyyaml
+  - plotly
