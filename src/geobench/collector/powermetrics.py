@@ -1,11 +1,10 @@
 """powermetrics system collector module."""
 
+import logging
 import shutil
 import subprocess
 
-from . import CollectorInfo, SystemCollector
-
-import logging
+from . import CollectorMetadata, SystemCollector
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +15,9 @@ class PowermetricsCollector(SystemCollector):
     SAMPLE_RATE = 100
 
     @classmethod
-    def get_info(cls) -> CollectorInfo:
-        """Return collector information."""
-        return CollectorInfo(
+    def get_metadata(cls) -> CollectorMetadata:
+        """Return metadata describing the collector."""
+        return CollectorMetadata(
             code="powermetrics",
             name="powermetrics Energy Metrics Collector",
             description="Energy metrics using powermetrics.",
@@ -45,11 +44,11 @@ class PowermetricsCollector(SystemCollector):
         except (subprocess.TimeoutExpired, FileNotFoundError):
             raise RuntimeError("Cannot execute powermetrics")
 
-    def collect(self) -> dict:
-        """Collect energy metrics using powermetrics.
+    def _collect(self) -> dict:
+        """Collect current energy metrics using powermetrics.
 
         Returns:
-            Dictionary containing energy metrics in microjoules (μJ).
+            Dictionary containing collected energy metrics in microjoules (μJ).
         """
         try:
             # Run powermetrics for a short sample (requires sudo privileges)

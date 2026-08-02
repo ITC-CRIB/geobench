@@ -1,10 +1,10 @@
 """System metrics collector module."""
 
+import logging
+
 import psutil
 
-from . import CollectorInfo, SystemCollector
-
-import logging
+from . import CollectorMetadata, CollectorRule, SystemCollector
 
 logger = logging.getLogger(__name__)
 
@@ -13,19 +13,19 @@ class SystemMetricsCollector(SystemCollector):
     """Collector for system metrics."""
 
     @classmethod
-    def get_info(cls) -> CollectorInfo:
-        """Return collector information."""
-        return CollectorInfo(
+    def get_metadata(cls) -> CollectorMetadata:
+        """Return metadata describing the collector."""
+        return CollectorMetadata(
             code="system_metrics",
             name="System Metrics Collector",
             description="System-wide CPU, memory, IO, and network metrics.",
         )
 
-    def collect(self) -> dict:
-        """Collect system metrics.
+    def _collect(self) -> dict:
+        """Collect a data sample.
 
         Returns:
-            Dictionary containing system metrics.
+            Collected data sample.
         """
         return {
             "cpu_times": psutil.cpu_times(percpu=True),
@@ -36,43 +36,43 @@ class SystemMetricsCollector(SystemCollector):
             "disk": psutil.disk_io_counters(),
         }
 
-    def process_item(self, item: dict):
-        """Process collected data item.
+    def _process(self, sample: dict) -> dict:
+        """Process a collected data sample.
 
         Args:
-            item: Data item to be processed.
+            sample: Collected data sample.
+
+        Returns:
+            Processed data sample.
         """
-        item["cpu_times"] = [
-            {"user": item.user, "system": item.system, "idle": item.idle}
-            for item in item["cpu_times"]
-        ]
-        item["cpu_freqs"] = [val._asdict() for val in item["cpu_freqs"]],
-        
-        virtual = item.pop("memory_virtual")
-        item["memory_virtual_used"] = virtual.used
-        item["memory_virtual_free"] = virtual.free
+        return {
+            "cpu_times": [
+                {"user": item.user, "system": item.system, "idle": item.idle}
+                for item in sample["cpu_times"]
+            ],
+            "cpu_freqs": [val._asdict() for val in sample["cpu_freqs"]],
+            "memory_virtual_used": sample["memory_virtual"].used,
+            "memory_virtual_free": sample["memory_virtual"].free,
+            "memory_swap_used": sample["memory_swap"].used,
+            "memory_swap_free": sample["memory_swap"].free,
+            "network_sent": sample["network"].bytes_sent,
+            "network_received": sample["network"].bytes_recv,
+            "disk_read": getattr(sample["disk"], "read_bytes", None),
+            "disk_write": getattr(sample["disk"], "write_bytes", None),
+        }
 
-        swap = item.pop("memory_swap")
-        item["memory_swap_used"] = swap.used
-        item["memory_swap_free"] = swap.free
+    def _postprocess(self, data: list[dict]) -> None:
+        """Postprocess a data series containing processed samples.
 
-        network = item.pop("network")
-        item["network_sent"] = network.bytes_sent
-        item["network_received"] = network.bytes_recv
+        Args:
+            data: Data series containing processed samples.
+        """
+        if len(data) < 2:
+            data.clear()
+            return
 
-        disk = item.pop("disk")
-        item["disk_read"] = getattr(disk, "read_bytes", None)
-        item["disk_write"] = getattr(disk, "write_bytes", None)
-
-        super().process_item(item)
-
-    def process_data(self, data: list[dict]) -> dict:
-        super().process_data(data)
-
-        return self.reduce(
-            data,
+        rules = CollectorRule.get_rules(
             {
-                "timestamp": "pair",
                 "cpu_times:user": "diff",
                 "cpu_times:system": "diff",
                 "cpu_times:idle": "diff",
@@ -84,5 +84,9 @@ class SystemMetricsCollector(SystemCollector):
                 "network_received": "diff",
                 "disk_read": "diff",
                 "disk_write": "diff",
-            },
+            }
         )
+
+        for item in data[1:]:
+            for rule in rules:
+                rule.apply(data[0], item)

@@ -4,26 +4,26 @@ import platform
 
 import psutil
 
-from . import CollectorInfo, SystemCollector
+from . import CollectorMetadata, SystemCollector
 
 
 class SystemInfoCollector(SystemCollector):
     """Collector for system information."""
 
     @classmethod
-    def get_info(cls) -> CollectorInfo:
-        """Return collector information."""
-        return CollectorInfo(
+    def get_metadata(cls) -> CollectorMetadata:
+        """Return metadata describing the collector."""
+        return CollectorMetadata(
             code="system_info",
             name="System Information Collector",
             description="Collects OS, CPU, memory, disk, and network information.",
         )
 
-    def collect(self) -> dict:
-        """Collect system information.
+    def _collect(self) -> dict:
+        """Collect a data sample.
 
         Returns:
-            Dictionary containing system information.
+            Collected data sample.
         """
         out = {
             # Machine information
@@ -56,22 +56,35 @@ class SystemInfoCollector(SystemCollector):
 
         return out
 
-    def process_item(self, item: dict):
-        """Process collected data item.
+    def _process(self, sample: dict) -> dict:
+        """Process a collected data sample.
 
         Args:
-            item: Data item to be processed.
-        """
-        item["cpu_freqs"] = [
-            {"min": freq.min, "max": freq.max} for freq in item["cpu_freqs"]
-        ]
-        item["disk"] = [
-            partition._asdict() | {"size": size} if size is not None else {}
-            for partition, size in item["disk"]
-        ]
-        item["network"] = {
-            name: [item._asdict() for item in info]
-            for name, info in item["network"].items()
-        }
+            sample: Collected data sample.
 
-        super().process_item(item)
+        Returns:
+            Processed data sample.
+        """
+        return {
+            "machine_type": sample["machine_type"],
+            "machine_processor": sample["machine_processor"],
+            "machine_name": sample["machine_name"],
+            "system_name": sample["system_name"],
+            "system_release": sample["system_release"],
+            "system_version": sample["system_version"],
+            "cpu_count_physical": sample["cpu_count_physical"],
+            "cpu_count_logical": sample["cpu_count_logical"],
+            "cpu_freqs": [
+                {"min": freq.min, "max": freq.max} for freq in sample["cpu_freqs"]
+            ],
+            "memory_virtual": sample["memory_virtual"],
+            "memory_swap": sample["memory_swap"],
+            "network": {
+                name: [item._asdict() for item in info]
+                for name, info in sample["network"].items()
+            },
+            "disk": [
+                partition._asdict() | {"size": size} if size is not None else {}
+                for partition, size in sample["disk"]
+            ],
+        }

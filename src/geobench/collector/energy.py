@@ -1,10 +1,10 @@
 """Energy system collector module."""
 
-from . import CollectorInfo, SystemCollector
+import logging
+
+from . import CollectorMetadata, SystemCollector
 from .powermetrics import PowermetricsCollector
 from .rapl import RAPLCollector
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -13,9 +13,9 @@ class EnergyCollector(SystemCollector):
     """Collector for system energy metrics."""
 
     @classmethod
-    def get_info(cls) -> CollectorInfo:
-        """Return collector information."""
-        return CollectorInfo(
+    def get_metadata(cls) -> CollectorMetadata:
+        """Return metadata describing the collector."""
+        return CollectorMetadata(
             code="energy",
             name="Energy Metrics Collector",
             description="Energy consumption metrics using RAPL or powermetrics.",
@@ -35,7 +35,7 @@ class EnergyCollector(SystemCollector):
             return
 
         except Exception:
-            pass
+            logger.debug("RAPL energy collector not found")
 
         # Check if powermetrics collector is available
         try:
@@ -43,14 +43,33 @@ class EnergyCollector(SystemCollector):
             return
 
         except Exception:
-            pass
+            logger.debug("Powermetric energy collector not found")
 
         raise RuntimeError("No suitable energy metrics collector found")
 
-    def collect(self) -> dict:
-        """Collect energy consumption metrics.
+    def _collect(self) -> dict:
+        """Collect current data.
 
         Returns:
-            Dictionary containing energy consumption metrics.
+            Dictionary containing collected data sample.
         """
-        return self.collector.collect()
+        return self.collector._collect()
+
+    def _process(self, item: dict) -> dict:
+        """Process collected data sample.
+
+        Args:
+            data: Collected data sample.
+
+        Returns:
+            Dictionary containing processed data sample.
+        """
+        return self.collector._process(item)
+
+    def _postprocess(self, data: list[dict]):
+        """Postprocess data series of processed samples.
+
+        Args:
+            data: Data series to postprocess.
+        """
+        self.collector._postprocess(data)

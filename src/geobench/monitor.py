@@ -1,11 +1,10 @@
 """Monitoring module."""
 
+import logging
 import threading
 import time
 
-from .collector import get_collector, get_process, Collector, Process
-
-import logging
+from .collector import Collector, Process, get_collector, get_process
 
 logger = logging.getLogger(__name__)
 
@@ -52,15 +51,15 @@ class Monitor(threading.Thread):
         self.name = name
         self.duration = duration
         self.interval = interval
-        self.collectors = {
-            collector.code: collector
+        self.collectors = [
+            collector
             for item in collectors
             for collector in [
                 item
                 if isinstance(item, Collector)
                 else self.get_collector(item, process)
             ]
-        }
+        ]
         self.process = process
         self.stop_event = stop_event
         self.done = False
@@ -71,7 +70,6 @@ class Monitor(threading.Thread):
         self.end_time = None
         self.step = 0
         self.done = False
-        self.data = {code: [] for code in self.collectors.keys()}
 
         logger.debug(
             "[%s] Monitor started (interval: %f s, duration: %f s)",
@@ -96,10 +94,8 @@ class Monitor(threading.Thread):
             elif self.stop_event and self.stop_event.is_set():
                 self.done = True
 
-            for code, collector in self.collectors.items():
-                self.data[code].append(
-                    {"step": self.step, "timestamp": now} | collector.collect()
-                )
+            for collector in self.collectors:
+                collector.collect()
 
             if self.done:
                 self.end_time = now
@@ -134,13 +130,10 @@ class Monitor(threading.Thread):
                 "target": self.interval,
                 "actual": (self.end_time - self.start_time) / self.step,
             },
-            "reference": {},
             "data": {},
         }
 
-        for code, collector in self.collectors.items():
-            reference = collector.process_data(self.data[code])
-            out["data"][code] = self.data[code]
-            out["reference"][code] = reference
+        for collector in self.collectors:
+            out["data"][collector.code] = collector.get_data()
 
         return out

@@ -1,17 +1,16 @@
 """Benchmark module."""
 
-from collections.abc import Callable
 import copy
 import json
+import logging
 import os
 import shutil
 import threading
 import time
+from collections.abc import Callable
 
 from .cache import clear_cache
 from .monitor import Monitor
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -212,8 +211,8 @@ class Benchmark:
         self.result["init"] = {}
         for collector in self.telemetry.get("init", {}).get("collectors", []):
             collector = Monitor.get_collector(collector)
-            self.result["init"][collector.code] = collector.collect()
-            collector.process_item(self.result["init"][collector.code])
+            collector.collect()
+            self.result["init"][collector.code] = collector.get_data()
         self.save()
 
         # Clear system caches, if required
@@ -253,7 +252,7 @@ class Benchmark:
                 collector = Monitor.get_collector(item)
                 self.wrappers.append(collector)
                 self.result["wrap"][collector.code] = [
-                    {"timestamp": now} | collector.collect()
+                    {"timestamp": now} | collector._collect()
                 ]
 
         # Start monitors
@@ -291,12 +290,9 @@ class Benchmark:
         # Collect final information of wrappers, if required
         if self.wrappers:
             print("Collecting final information of wrappers.")
-            now = time.time()
             for collector in self.wrappers:
-                self.result["wrap"][collector.code].append(
-                    {"timestamp": now} | collector.collect()
-                )
-                collector.process_data(self.result["wrap"][collector.code])
+                collector.collect()
+                self.result["wrap"][collector.code] = collector.get_data()
 
         # Aggregate results from all monitors
         for monitor in self.monitors:
@@ -327,18 +323,18 @@ class Benchmark:
                     logger.debug("Input file not found: %s", path)
                     continue
                 print(f"Archiving input file {path}")
-                for path in self.get_related_files(path):
-                    if not os.path.exists(path):
-                        logger.debug("Related input file not found: %s", path)
+                for related_path in self.get_related_files(path):
+                    if not os.path.exists(related_path):
+                        logger.debug("Related input file not found: %s", related_path)
                         continue
                     try:
-                        shutil.copy(path, self.outdir)
+                        shutil.copy(related_path, self.outdir)
                     except shutil.SameFileError:
                         pass
-                    except Exception as err:
+                    except OSError as err:
                         logger.error(
                             "Error copying input file %s to %s: %s",
-                            path,
+                            related_path,
                             self.outdir,
                             err,
                         )
@@ -350,18 +346,18 @@ class Benchmark:
                     logger.debug("Output file not found: %s", path)
                     continue
                 print(f"Archiving output file {path}")
-                for path in self.get_related_files(path):
-                    if not os.path.exists(path):
-                        logger.debug("Related output file not found: %s", path)
+                for related_path in self.get_related_files(path):
+                    if not os.path.exists(related_path):
+                        logger.debug("Related output file not found: %s", related_path)
                         continue
                     try:
-                        shutil.copy(path, self.outdir)
+                        shutil.copy(related_path, self.outdir)
                     except shutil.SameFileError:
                         pass
-                    except Exception as err:
+                    except OSError as err:
                         logger.error(
                             "Error copying output file %s to %s: %s",
-                            path,
+                            related_path,
                             self.outdir,
                             err,
                         )

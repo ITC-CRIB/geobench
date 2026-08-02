@@ -2,16 +2,16 @@
 
 import psutil
 
-from . import CollectorInfo, SystemCollector
+from . import CollectorMetadata, SystemCollector
 from .process_metrics import ProcessMetricsCollector
 
 
 class SystemProcessesCollector(SystemCollector):
     """Collector for process metrics for all processes system-wide."""
 
-    def get_info() -> CollectorInfo:
-        """Return collector information."""
-        return CollectorInfo(
+    def get_metadata() -> CollectorMetadata:
+        """Return metadata describing the collector."""
+        return CollectorMetadata(
             code="system_processes",
             name="System Processes Collector",
             description="Process metrics for all processes system-wide.",
@@ -43,11 +43,11 @@ class SystemProcessesCollector(SystemCollector):
             )
         )
 
-    def collect(self) -> dict:
-        """Collect system processes metrics.
+    def _collect(self) -> dict:
+        """Collect current data.
 
         Returns:
-            Dictionary containing system processes metrics.
+            Dictionary containing collected data sample.
         """
         return {
             "processes": {
@@ -55,13 +55,18 @@ class SystemProcessesCollector(SystemCollector):
             }
         }
 
-    def process_item(self, item: dict):
-        """Process collected data item.
+    def _process(self, sample: dict) -> dict:
+        """Process collected data sample.
 
         Args:
-            item: Data item to be processed.
-        """
-        for info in item["processes"]:
-            ProcessMetricsCollector.process_info(info)
+            data: Collected data sample.
 
-        super().process_item(item)
+        Returns:
+            Dictionary containing processed data sample.
+        """
+        return {
+            "processes": {
+                pid: ProcessMetricsCollector.process_info(info)
+                for pid, info in sample["processes"].items()
+            }
+        }

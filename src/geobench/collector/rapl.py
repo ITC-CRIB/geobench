@@ -1,11 +1,10 @@
 """RAPL system collector module."""
 
 import glob
+import logging
 import os
 
-from . import CollectorInfo, SystemCollector
-
-import logging
+from . import CollectorMetadata, SystemCollector
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +13,9 @@ class RAPLCollector(SystemCollector):
     """Collector for system energy metrics using RAPL."""
 
     @classmethod
-    def get_info(cls) -> CollectorInfo:
-        """Return collector information."""
-        return CollectorInfo(
+    def get_metadata(cls) -> CollectorMetadata:
+        """Return metadata describing the collector."""
+        return CollectorMetadata(
             code="rapl",
             name="RAPL Energy Metrics Collector",
             description="Energy metrics using RAPL.",
@@ -57,7 +56,7 @@ class RAPLCollector(SystemCollector):
                     try:
                         with open(filename, "r") as file:
                             domain["max_energy"] = int(file.read().strip())
-                    except (IOError, ValueError):
+                    except (OSError, ValueError):
                         pass
 
                 domain["energy_file"] = os.path.join(path, "energy_uj")
@@ -65,14 +64,14 @@ class RAPLCollector(SystemCollector):
                 self.domains[id] = domain
                 logger.debug("Found RAPL domain: %s, %s", id, domain["name"])
 
-            except (IOError, PermissionError) as err:
+            except (OSError, PermissionError) as err:
                 logger.warning("Cannot access RAPL domain %s: %s", path, err)
                 continue
 
         if not self.domains:
             raise RuntimeError("No RAPL domain found")
 
-    def collect(self) -> dict:
+    def _collect(self) -> dict:
         """Collect energy counters from all RAPL domains.
 
         Returns:
@@ -90,19 +89,19 @@ class RAPLCollector(SystemCollector):
                     energy_uj = int(file.read().strip())
                     out["energy"][name] = energy_uj
 
-            except (IOError, ValueError) as err:
+            except (OSError, ValueError) as err:
                 logger.warning("Failed to read energy from %s: %s", id, err)
                 continue
 
         return out
 
-    def process_data(self, data: list[dict]):
+    def _postprocess(self, data: list[dict]):
         """Postprocess collected data.
 
         Args:
             data: Collected data.
         """
-        super().process_data(data)
+        super()._postprocess(data)
 
         prev_item = None
 
