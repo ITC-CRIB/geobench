@@ -116,7 +116,7 @@ class Benchmark:
                 "collectors": ["system_metrics"],
             },
             "wrap": {
-                "collectors": ["system_metrics"],
+                "collectors": ["system_metrics", "system_processes"],
             },
         }
 
