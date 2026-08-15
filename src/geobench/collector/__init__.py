@@ -38,7 +38,15 @@ class CollectorRule:
 
     keys: list[str]
     op: Operator
-    ref_first: bool = True
+
+    def _op(self, val: Any, ref_val: Any) -> Any:
+        if callable(self.op):
+            return self.op(val, ref_val)
+
+        elif self.op == "diff":
+            return val - ref_val
+
+        raise ValueError(f"Invalid operator: {self.op}")
 
     def _apply(self, item: dict, ref_item: dict, idx: int = 0) -> None:
         key = self.keys[idx]
@@ -49,17 +57,17 @@ class CollectorRule:
         ref_item = ref_item[key]
 
         if idx == len(self.keys) - 1:
-            if callable(self.op):
-                val = self.op(item, ref_item)
-            elif self.op == "diff":
-                val = item - ref_item
+            if isinstance(item, list) or isinstance(ref_item, list):
+                parent[key] = [
+                    self._op(val, ref_val)
+                    for val, ref_val in zip(item, ref_item, strict=True)
+                ]
             else:
-                raise ValueError(f"Invalid operator: {self.op}")
-            parent[key] = val
+                parent[key] = self._op(item, ref_item)
 
         elif isinstance(item, list) or isinstance(ref_item, list):
-            for lval, rval in zip(item, ref_item, strict=True):
-                self._apply(lval, rval, idx + 1)
+            for val, ref_val in zip(item, ref_item, strict=True):
+                self._apply(val, ref_val, idx + 1)
         else:
             self._apply(item, ref_item, idx + 1)
 
@@ -99,7 +107,7 @@ class CollectorRule:
 
         for rule in rules:
             for i in range(len(data) - 1, -1, -1):
-                rule._apply(data[i], data[0 if (rule.ref_first or not i) else i - 1], 0)
+                rule._apply(data[i], data[0], 0)
 
         return refs
 
