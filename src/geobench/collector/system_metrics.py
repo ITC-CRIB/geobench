@@ -46,10 +46,9 @@ class SystemMetricsCollector(SystemCollector):
             Processed data sample.
         """
         return {
-            "cpu_times": [
-                {"user": item.user, "system": item.system, "idle": item.idle}
-                for item in sample["cpu_times"]
-            ],
+            "cpu_times_user": [val.user for val in sample["cpu_times"]],
+            "cpu_times_system": [val.system for val in sample["cpu_times"]],
+            "cpu_times_idle": [val.idle for val in sample["cpu_times"]],
             "cpu_freqs": [val._asdict() for val in sample["cpu_freqs"]],
             "memory_virtual_used": sample["memory_virtual"].used,
             "memory_virtual_free": sample["memory_virtual"].free,
@@ -73,9 +72,9 @@ class SystemMetricsCollector(SystemCollector):
         return CollectorRule.apply_rules(
             data,
             {
-                "cpu_times:user": "diff",
-                "cpu_times:system": "diff",
-                "cpu_times:idle": "diff",
+                "cpu_times_user": "diff",
+                "cpu_times_system": "diff",
+                "cpu_times_idle": "diff",
                 "memory_virtual_used": "diff",
                 "memory_virtual_free": "diff",
                 "memory_swap_used": "diff",

@@ -74,9 +74,8 @@ class SystemInfoCollector(SystemCollector):
             "system_version": sample["system_version"],
             "cpu_count_physical": sample["cpu_count_physical"],
             "cpu_count_logical": sample["cpu_count_logical"],
-            "cpu_freqs": [
-                {"min": freq.min, "max": freq.max} for freq in sample["cpu_freqs"]
-            ],
+            "cpu_freqs_min": [val.min for val in sample["cpu_freqs"]],
+            "cpu_freqs_max": [val.max for val in sample["cpu_freqs"]],
             "memory_virtual": sample["memory_virtual"],
             "memory_swap": sample["memory_swap"],
             "network": {
