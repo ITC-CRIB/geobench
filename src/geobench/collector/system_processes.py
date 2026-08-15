@@ -51,9 +51,7 @@ class SystemProcessesCollector(SystemCollector):
             Dictionary containing collected data sample.
         """
         return {
-            "processes": {
-                process.pid: process.info for process in psutil.process_iter(self.attrs)
-            }
+            "processes": [process.info for process in psutil.process_iter(self.attrs)],
         }
 
     def _process(self, sample: dict) -> dict:
@@ -66,8 +64,8 @@ class SystemProcessesCollector(SystemCollector):
             Dictionary containing processed data sample.
         """
         return {
-            "processes": {
-                pid: ProcessMetricsCollector.process_info(info)
-                for pid, info in sample["processes"].items()
-            }
+            "processes": [
+                ProcessMetricsCollector.process_info(info)
+                for info in sample["processes"]
+            ]
         }
