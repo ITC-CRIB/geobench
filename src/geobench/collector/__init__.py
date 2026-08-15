@@ -111,6 +111,7 @@ class CollectorRule:
 
         return refs
 
+
 class Collector(ABC):
     """Abstract base class for collectors."""
 
@@ -167,11 +168,10 @@ class Collector(ABC):
     @final
     def collect(self) -> None:
         """Collect and store a data sample."""
-        timestamp = time.time()
-        self._data.append(self._collect() | {"timestamp": timestamp})
+        self._data.append((time.time(), self._collect()))
 
     @abstractmethod
-    def _process(self, sample: dict) -> dict:
+    def _process(self, sample: Any) -> dict:
         """Process a collected data sample.
 
         Args:
@@ -216,7 +216,10 @@ class Collector(ABC):
     @final
     def get_data(self) -> tuple[list[dict], dict]:
         """Return processed and cleaned data series and postprocessing references."""
-        data = [self._process(sample) for sample in self._data]
+        data = [
+            self._process(sample) | {"timestamp": timestamp}
+            for timestamp, sample in self._data
+        ]
 
         refs = self._postprocess(data) or {}
 
