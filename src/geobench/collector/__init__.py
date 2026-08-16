@@ -145,6 +145,16 @@ class Collector(ABC):
 
         return config
 
+    def is_supported(self) -> bool:
+        """Determine whether the collector is supported."""
+        return True
+
+    @final
+    @cached_property
+    def supported(self) -> bool:
+        """Return whether the collector is supported."""
+        return self.is_supported()
+
     @final
     @cached_property
     def metadata(self) -> CollectorMetadata:
