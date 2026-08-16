@@ -112,16 +112,9 @@ class GDALExecutor(ProgramExecutor):
 
         return env
 
-    def get_config(self, args: dict) -> dict:
-        """Return executor configuration considering the arguments.
-
-        Args:
-            args: Configuration arguments.
-
-        Raises:
-            RuntimeError: If GDAL fails.
-        """
-        config = super().get_config(args)
+    def prepare_config(self, config: dict) -> None:
+        """Complete the configuration options."""
+        super().prepare_config(config)
 
         gdal_path = __class__.get_gdal_path()
 
@@ -144,8 +137,6 @@ class GDALExecutor(ProgramExecutor):
 
         except subprocess.SubprocessError as err:
             raise RuntimeError("Error running GDAL") from err
-
-        return config
 
     def get_arguments(self, command: str, args: dict) -> list:
         """Return execution arguments for the specified command and arguments.

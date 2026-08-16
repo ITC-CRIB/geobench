@@ -48,36 +48,29 @@ class QGISPythonExecutor(QGISProcessExecutor):
 
         return path
 
-    def get_config(self, args: dict) -> dict:
-        """Return executor configuration considering the arguments.
+    def prepare_config(self, config: dict) -> None:
+        """Complete the configuration options."""
+        if not config.get("executable"):
+            qgis_python_path = __class__.get_qgis_python_path()
 
-        Args:
-            args: Configuration arguments.
-        """
-        config = super().get_config(args)
-
-        qgis_python_path = __class__.get_qgis_python_path()
-
-        try:
-            result = subprocess.run(
-                [qgis_python_path, "--version"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-            if result.returncode != 0:
-                raise RuntimeError(
-                    f"QGIS Python failed with exit code: {result.returncode}"
+            try:
+                result = subprocess.run(
+                    [qgis_python_path, "--version"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
                 )
 
-            config["executable"] = qgis_python_path
-            config["environment"] = __class__.get_qgis_environment()
+                if result.returncode != 0:
+                    raise RuntimeError(
+                        f"QGIS Python failed with exit code: {result.returncode}"
+                    )
 
-        except subprocess.SubprocessError as err:
-            raise RuntimeError("Error running QGIS Python") from err
+                config["executable"] = qgis_python_path
+                config["environment"] = __class__.get_qgis_environment()
 
-        return config
+            except subprocess.SubprocessError as err:
+                raise RuntimeError("Error running QGIS Python") from err
 
     def get_arguments(self, command: str, args: dict) -> list:
         """Return execution arguments for the specified command and arguments.

@@ -112,42 +112,34 @@ class QGISProcessExecutor(ProgramExecutor):
 
         return env
 
-    def get_config(self, args: dict) -> dict:
-        """Return executor configuration considering the arguments.
+    def prepare_config(self, config: dict) -> None:
+        """Complete the configuration options."""
+        super().prepare_config()
 
-        Args:
-            args: Configuration arguments.
+        if not config.get("executable"):
+            qgis_process_path = __class__.get_qgis_process_path()
 
-        Raises:
-            RuntimeError: If qgis_process fails.
-        """
-        config = super().get_config(args)
-
-        qgis_process_path = __class__.get_qgis_process_path()
-
-        try:
-            result = subprocess.run(
-                [qgis_process_path, "--version"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-            if result.returncode != 0:
-                raise RuntimeError(
-                    f"qgis_process failed with exit code: {result.returncode}"
+            try:
+                result = subprocess.run(
+                    [qgis_process_path, "--version"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
                 )
 
-            config["executable"] = qgis_process_path
-            config["environment"] = __class__.get_qgis_environment()
-            config["versions"] = [
-                line for line in result.stdout.splitlines() if line.strip()
-            ]
+                if result.returncode != 0:
+                    raise RuntimeError(
+                        f"qgis_process failed with exit code: {result.returncode}"
+                    )
 
-        except subprocess.SubprocessError as err:
-            raise RuntimeError("Error running qgis_process") from err
+                config["executable"] = qgis_process_path
+                config["environment"] = __class__.get_qgis_environment()
+                config["versions"] = [
+                    line for line in result.stdout.splitlines() if line.strip()
+                ]
 
-        return config
+            except subprocess.SubprocessError as err:
+                raise RuntimeError("Error running qgis_process") from err
 
     def get_arguments(self, command: str, args: dict) -> list:
         """Return execution arguments for the specified command and arguments.

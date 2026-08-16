@@ -1,9 +1,9 @@
 """Python executor module."""
 
 import os
-import platform
 import shutil
 import subprocess
+from pathlib import Path
 
 from . import ExecutorInfo
 from .program import ProgramExecutor
@@ -20,60 +20,44 @@ class PythonExecutor(ProgramExecutor):
             description="Executes a Python script with arguments.",
         )
 
-    def get_config(self, args: dict) -> dict:
-        """Return executor configuration considering the arguments.
-
-        Args:
-            args: Configuration arguments.
-
-        Raises:
-            FileNotFoundError: If Python executable not found.
-        """
-        config = super().get_config(args)
-
-        venv = args.get("venv")
-
-        if venv:
-            system = platform.system()
-
-            if system == "Windows":
-                names = ["Scripts/python.exe", "Scripts/python3.exe"]
-
-            else:
-                names = ["bin/python", "bin/python3"]
-
-            found = False
-            for name in names:
-                path = os.path.join(venv, name)
-                if os.path.isfile(path) or os.path.islink(path):
-                    found = True
-                    break
-
-            if not found:
-                raise FileNotFoundError(f"Python executable not found in: {venv}")
-
-        else:
-            path = shutil.which("python") or shutil.which("python3")
-            if not path:
-                raise FileNotFoundError("Python executable not found")
-
+    @classmethod
+    def is_python_executable(cls, path: str) -> bool:
         try:
-            result = subprocess.run(
-                [path, "--version"],
-                capture_output=True,
-                text=True,
+            subprocess.run(
+                [path, "-c", "import sys; sys.exit(0)"],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=2,
                 check=True,
             )
+            return True
 
-            config["executable"] = path
-            config["versions"] = [
-                line for line in result.stdout.splitlines() if line.strip()
-            ]
+        except (OSError, subprocess.SubprocessError):
+            return False
 
-        except subprocess.SubprocessError as err:
-            raise RuntimeError("Error running Python") from err
+    def prepare_config(self, config: dict) -> None:
+        """Complete and validate the configuration options."""
+        super().prepare_config(config)
 
-        return config
+        venv = config.get("venv")
+        if venv:
+            executable = os.path.join(venv, 
+                "Scripts/python.exe" if os.name == "nt" else "bin/python"
+            )
+            if not (os.path.isfile(executable) or os.path.islink(executable)):
+                raise FileNotFoundError(
+                    f"Python executable not found in virtual environment: {venv}"
+                )
+
+            config["executable"] = executable
+
+        if not config.get("executable"):
+            executable = shutil.which("python") or shutil.which("python3")
+            if executable is None:
+                raise FileNotFoundError("Python executable not found")
+
+            config["executable"] = executable
 
     def get_arguments(self, command: str, args: dict) -> list:
         """Return execution arguments for the specified command and arguments.

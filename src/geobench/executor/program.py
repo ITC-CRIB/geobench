@@ -6,7 +6,10 @@ import platform
 import subprocess
 from abc import abstractmethod
 
-from . import Executor
+import dotenv
+
+from ..utils import KeyValueAction
+from . import Executor, ExecutorOption
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +48,31 @@ class ProgramExecutor(Executor):
 
         return None
 
+    @classmethod
+    def get_options(self) -> dict[str, ExecutorOption]:
+        """Return executor options."""
+        return {
+            "executable": ExecutorOption(
+                description="Name of the executable",
+                type=str,
+                required=True,
+                positional=True,
+            ),
+            "workdir": ExecutorOption(
+                description="Working directory",
+                type=str,
+            ),
+            "env": ExecutorOption(
+                description="Set environmet variables",
+                type=dict,
+                action=KeyValueAction,
+            ),
+            "env-file": ExecutorOption(
+                description="Read in a file of environment variables.",
+                type=str,
+            ),
+        }
+
     def __init__(self, config: dict | None = None):
         """Initialize the program executor.
 
@@ -55,24 +83,22 @@ class ProgramExecutor(Executor):
             ValueError: if no program executable is found.
         """
         super().__init__(config)
-
-        if not self.config["executable"]:
-            raise ValueError("No program executable found")
-
         self.process = None
 
-    def get_config(self, args: dict) -> dict:
+    def prepare_config(self, config: dict) -> dict:
         """Return executor configuration considering the arguments.
 
         Args:
             args: Configuration arguments.
         """
-        config = {
-            "workdir": args.get("workdir"),
-            "environment": {},
-        }
+        if config.get("env-file"):
+            env = dotenv.dotenv_values(config["env-file"])
+        else:
+            env = {}
 
-        return config
+        env.update(config.get("env", {}))
+
+        config["environment"] = env
 
     @abstractmethod
     def get_arguments(self, command: str, args: dict) -> list:
@@ -86,8 +112,15 @@ class ProgramExecutor(Executor):
             List of execution arguments.
         """
 
-    def get_cli_arguments(self, args: dict) -> list:
-        """Return arguments as command line arguments."""
+    def get_cli_arguments(self, args: dict) -> list[str]:
+        """Return arguments as command line arguments.
+
+        Args:
+            args: Arguments.
+
+        Return:
+            List of command line arguments.
+        """
         out = []
         pos = {}
 
@@ -130,7 +163,15 @@ class ProgramExecutor(Executor):
         return env
 
     def execute(self, command: str, args: dict | None = None) -> int:
-        """Execute program command with the specified arguments."""
+        """Execute program command with the specified arguments.
+
+        Args:
+            command: Program command.
+            args: Optional arguments.
+
+        Returns:
+            Process id of the program.
+        """
         args = [self.config["executable"]] + self.get_arguments(command, args or {})
         logger.debug("Executing process with arguments: %s", args)
 
@@ -144,7 +185,11 @@ class ProgramExecutor(Executor):
         return self.process.pid
 
     def wait(self):
-        """Wait until execution ends."""
+        """Wait until execution ends.
+
+        Raises:
+            RuntimeError: If the program is not running.
+        """
         if not self.process:
             raise RuntimeError("Program is not running")
 

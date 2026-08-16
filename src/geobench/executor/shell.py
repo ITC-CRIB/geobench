@@ -18,25 +18,18 @@ class ShellExecutor(ProgramExecutor):
             description="Executes a shell script.",
         )
 
-    def get_config(self, args: dict) -> dict:
-        """Return executor configuration considering the arguments.
+    def prepare_config(self, config: dict) -> None:
+        """Complete the configuration options."""
+        super().prepare_config(config)
 
-        Args:
-            args: Configuration arguments.
-        """
-        config = super().get_config(args)
+        if not config.get("executable"):
+            system = platform.system()
 
-        system = platform.system()
+            if system == "Windows":
+                config["executable"] = os.environ.get("COMSPEC")
 
-        if system == "Windows":
-            shell = os.environ.get("COMSPEC")
-
-        else:
-            shell = os.environ.get("SHELL")
-
-        config["executable"] = shell
-
-        return config
+            else:
+                config["executable"] = os.environ.get("SHELL")
 
     def get_arguments(self, command: str, args: dict) -> list:
         """Return execution arguments for the specified command and arguments.

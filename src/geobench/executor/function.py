@@ -3,7 +3,7 @@
 import os
 import threading
 
-from . import Executor, ExecutorInfo
+from . import Executor, ExecutorInfo, ExecutorOption
 
 
 class FunctionExecutor(Executor):
@@ -17,6 +17,11 @@ class FunctionExecutor(Executor):
             description="Executes a Python function with arguments.",
         )
 
+    @classmethod
+    def get_options(self) -> dict[str, ExecutorOption]:
+        """Return executor options."""
+        return {}
+
     def __init__(self, config: dict | None = None):
         """Initialize the function executor.
 
@@ -26,14 +31,6 @@ class FunctionExecutor(Executor):
         super().__init__(config)
 
         self.thread = None
-
-    def get_config(self, args: dict) -> dict:
-        """Return executor configuration considering the arguments.
-
-        Args:
-            args: Configuration arguments.
-        """
-        return {}
 
     def execute(self, command: callable, args: dict | None = None) -> int:
         """Execute function with the specified arguments."""
