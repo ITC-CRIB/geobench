@@ -1,15 +1,14 @@
 """Command line interface module."""
 
 import argparse
-import ast
 import logging
 import os
 import sys
-from typing import Any
 
 from .executor import get_executors
 from .executor.program import ProgramExecutor
 from .scenario import Scenario
+from .utils import ConfigOptionAction
 
 logger = logging.getLogger(__name__)
 
@@ -21,42 +20,6 @@ class ArgumentDefaultsHelpFormatterNoNone(argparse.ArgumentDefaultsHelpFormatter
         if action.default is None:
             return action.help
         return super()._get_help_string(action)
-
-
-def parse_key_value(val: str) -> tuple[str, Any]:
-    """Parse a key=value argument from a string."""
-    try:
-        key, val = val.split("=", 1)
-    except ValueError:
-        raise argparse.ArgumentTypeError("Argument must be in key=value format")
-
-    try:
-        val = ast.literal_eval(val)
-    except ValueError:
-        pass
-    except SyntaxError:
-        raise argparse.ArgumentTypeError("Value must be a literal")
-
-    try:
-        key = int(key)
-    except ValueError:
-        pass
-
-    return key, val
-
-
-def parse_args(items: list | None = None) -> dict:
-    """Parse separate argument representations."""
-    args = {}
-    for key, val in items or []:
-        if key not in args:
-            args[key] = set()
-        if isinstance(val, tuple):
-            args[key].update(val)
-        else:
-            args[key].add(val)
-    args = {key: list(val) for key, val in args.items() if isinstance(val, set)}
-    return args
 
 
 class CLI:
@@ -96,22 +59,21 @@ class CLI:
         self.parser.add_argument(
             "-i",
             "--input",
-            type=parse_key_value,
-            action="append",
+            dest="inputs",
+            action=ConfigOptionAction,
             help="Input file as key=value (can be repeated)",
         )
         self.parser.add_argument(
             "-o",
             "--output",
-            type=parse_key_value,
-            action="append",
+            dest="outputs",
+            action=ConfigOptionAction,
             help="Output file as key=value (can be repeated)",
         )
         self.parser.add_argument(
             "-a",
             "--arg",
-            type=parse_key_value,
-            action="append",
+            action=ConfigOptionAction,
             help="Argument as key=value (can be repeated)",
         )
         self.parser.add_argument(
@@ -209,14 +171,10 @@ class CLI:
             key: val
             for key, val in vars(args).items()
             if val is not None
-            and key not in ["command", "arg", "args", "input", "output", "debug"]
+            and key not in ["command", "arg", "args", "debug"]
         }
 
-        kwargs["arguments"] = parse_args(
-            (args.arg or []) + list(enumerate(args.args or []))
-        )
-        kwargs["inputs"] = parse_args(args.input)
-        kwargs["outputs"] = parse_args(args.output)
+        kwargs["arguments"] = (args.arg or {}) | dict(enumerate(args.args or []))
 
         if args.command == "help":
             try:
