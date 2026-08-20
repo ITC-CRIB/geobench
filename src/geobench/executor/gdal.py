@@ -13,7 +13,7 @@ except ImportError:
 
 import dotenv
 
-from . import ExecutorInfo
+from . import ExecutorInfo, ExecutorOption
 from .program import ProgramExecutor
 
 
@@ -24,12 +24,29 @@ class GDALExecutor(ProgramExecutor):
     def get_info(cls) -> ExecutorInfo:
         return ExecutorInfo(
             code="gdal",
-            name="GDAL Executor",
-            description="Executes a GDAL command with arguments.",
+            name="GDAL",
+            description="Executes a GDAL command.",
         )
 
-    @staticmethod
-    def get_gdal_bin_path():
+    @classmethod
+    def get_options(cls) -> dict[str, ExecutorOption]:
+        """Return executor options."""
+        return super().get_options() | {
+            "command": ExecutorOption(
+                description="GDAL command",
+                type=str,
+                required=True,
+                positional=True,
+            ),
+            "subcommand": ExecutorOption(
+                description="Subcommand of the GDAL command",
+                type=str,
+                positional=True,
+            ),
+        }
+
+    @classmethod
+    def get_gdal_bin_path(cls):
         """Return GDAL executable directory path.
 
         Raises:
@@ -83,25 +100,25 @@ class GDALExecutor(ProgramExecutor):
 
         raise RuntimeError("Cannot find GDAL path")
 
-    @staticmethod
-    def get_gdal_path() -> str:
+    @classmethod
+    def get_gdal_path(cls) -> str:
         """Return GDAL executable path.
 
         Raises:
             FileNotFoundError: If GDAL executable not found.
         """
-        bin_path = __class__.get_gdal_bin_path()
-        path = __class__.find_executable(bin_path, "gdal")
+        bin_path = cls.get_gdal_bin_path()
+        path = cls.find_executable(bin_path, "gdal")
 
         if not path:
             raise FileNotFoundError(f"gdal not found in: {bin_path}")
 
         return path
 
-    @staticmethod
-    def get_gdal_environment() -> dict:
+    @classmethod
+    def get_gdal_environment(cls) -> dict:
         """Return GDAL environment variables."""
-        bin_path = __class__.get_gdal_bin_path()
+        bin_path = cls.get_gdal_bin_path()
 
         env = {}
 
@@ -112,11 +129,11 @@ class GDALExecutor(ProgramExecutor):
 
         return env
 
-    def prepare_config(self, config: dict) -> None:
-        """Complete the configuration options."""
-        super().prepare_config(config)
+    def prepare_config(self):
+        """Complete and validate the configuration options."""
+        super().prepare_config()
 
-        gdal_path = __class__.get_gdal_path()
+        gdal_path = self.config.get("executable") or self.get_gdal_path()
 
         try:
             result = subprocess.run(
@@ -129,37 +146,43 @@ class GDALExecutor(ProgramExecutor):
             if result.returncode != 0:
                 raise RuntimeError(f"GDAL failed with exit code: {result.returncode}")
 
-            config["executable"] = gdal_path
-            config["environment"] = __class__.get_gdal_environment()
-            config["versions"] = [
-                line for line in result.stdout.splitlines() if line.strip()
-            ]
-
         except subprocess.SubprocessError as err:
             raise RuntimeError("Error running GDAL") from err
 
-    def get_arguments(self, command: str, args: dict) -> list:
-        """Return execution arguments for the specified command and arguments.
+        self.config["executable"] = gdal_path
+
+        self.metadata |= {
+            "versions": [line for line in result.stdout.splitlines() if line.strip()],
+        }
+
+    def get_arguments(self, arguments: dict) -> list:
+        """Return execution arguments for the specified arguments.
 
         Args:
-            command: Command.
-            args: Arguments.
+            arguments: Arguments.
 
         Returns:
             List of execution arguments.
         """
-        out = command.split(":") + self.get_cli_arguments(args)
+        args = (
+            self.config["command"]
+            + ([self.config["subcommand"]] if self.config.get("subcommand") else [])
+            + self.get_cli_arguments(arguments)
+        )
 
-        return out
+        return args
 
-    def get_help(self, command: str) -> str:
-        """Return help content for the GDAL command.
+    def get_environment(self) -> dict:
+        """Return environment considering the process environment."""
+        return super().get_environment() | self.get_gdal_environment()
 
-        Args:
-            command: GDAL command.
-        """
+    def get_help(self) -> str:
+        """Return help content."""
         result = subprocess.run(
-            [self.config["executable"]] + command.split(":") + ["--help"],
+            [self.config["executable"]]
+            + ([self.config["command"]] if self.config.get("command") else [])
+            + ([self.config["subcommand"]] if self.config.get("subcommand") else [])
+            + ["--help"],
             env=self.get_environment(),
             capture_output=True,
             text=True,

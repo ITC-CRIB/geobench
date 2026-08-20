@@ -3,7 +3,7 @@
 import os
 import platform
 
-from . import ExecutorInfo
+from . import ExecutorInfo, ExecutorOption
 from .program import ProgramExecutor
 
 
@@ -14,12 +14,24 @@ class ShellExecutor(ProgramExecutor):
     def get_info(cls) -> ExecutorInfo:
         return ExecutorInfo(
             code="shell",
-            name="Shell Script Executor",
+            name="Shell Script",
             description="Executes a shell script.",
         )
 
+    @classmethod
+    def get_options(cls) -> dict[str, ExecutorOption]:
+        """Return executor options."""
+        return super().get_options() | {
+            "command": ExecutorOption(
+                description="Shell command",
+                type=str,
+                positional=True,
+                required=True,
+            ),
+        }
+
     def prepare_config(self, config: dict) -> None:
-        """Complete the configuration options."""
+        """Complete and validate the configuration options."""
         super().prepare_config(config)
 
         if not config.get("executable"):
@@ -31,17 +43,16 @@ class ShellExecutor(ProgramExecutor):
             else:
                 config["executable"] = os.environ.get("SHELL")
 
-    def get_arguments(self, command: str, args: dict) -> list:
-        """Return execution arguments for the specified command and arguments.
+    def get_arguments(self, arguments: dict) -> list:
+        """Return execution arguments for the specified arguments.
 
         Args:
-            command: Command.
-            args: Arguments.
+            arguments: Arguments.
 
         Returns:
             List of execution arguments.
         """
-        out = []
+        args = []
 
         system = platform.system()
 
@@ -49,9 +60,9 @@ class ShellExecutor(ProgramExecutor):
             system == "Windows"
             and os.path.basename(self.config["executable"]).lower() == "cmd.exe"
         ):
-            out.append("/C")
+            args.append("/C")
 
-        out.append(command)
-        out.extend(self.get_cli_arguments(args))
+        args.append(self.config["command"])
+        args.extend(self.get_cli_arguments(arguments))
 
-        return out
+        return args

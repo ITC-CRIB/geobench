@@ -1,168 +1,86 @@
 """QGIS process executor module."""
 
-import glob
-import os
-import shlex
-import shutil
 import subprocess
 
-try:
-    import winreg
-except ImportError:
-    winreg = None
-
-import dotenv
-
-from . import ExecutorInfo
-from .program import ProgramExecutor
+from . import ExecutorInfo, ExecutorOption
+from .qgis import QGISExecutor
 
 
-class QGISProcessExecutor(ProgramExecutor):
+class QGISProcessExecutor(QGISExecutor):
     """QGIS process executor class."""
 
     @classmethod
     def get_info(cls) -> ExecutorInfo:
         return ExecutorInfo(
             code="qgis-process",
-            name="QGIS Process Executor",
-            description="Executes a qgis_process command with arguments.",
+            name="QGIS Process",
+            description="Executes a QGIS algorithm.",
         )
 
-    @staticmethod
-    def get_qgis_bin_path():
-        """Return QGIS executable directory path.
+    @classmethod
+    def get_options(cls) -> dict[str, ExecutorOption]:
+        """Return executor options."""
+        return super().get_options() | {
+            "algorithm": ExecutorOption(
+                description="QGIS algorithm id",
+                type=str,
+                required=True,
+                positional=True,
+            ),
+        }
 
-        Raises:
-            RuntimeError: If QGIS installation cannot be found.
-        """
-        # Check the default qgis_process
-        path = shutil.which("qgis_process")
-        if path:
-            return os.path.dirname(os.path.realpath(path))
-
-        # Check Windows registry
-        if winreg is not None:
-            try:
-                with winreg.OpenKey(
-                    winreg.HKEY_CLASSES_ROOT, r"QGIS Project\Shell\open\command"
-                ) as key:
-                    val, _ = winreg.QueryValueEx(key, None)
-                    return os.path.dirname(shlex.split(val)[0])
-            except FileNotFoundError:
-                pass
-
-        # Check OSGeo4W path
-        path = os.environ.get("OSGEO4W_ROOT")
-        if path:
-            return os.path.join(path, "bin")
-
-        # Check common folders
-        for path in ("/usr/bin", "/usr/local/bin", "/opt/homebrew/bin"):
-            if os.path.isfile(os.path.join(path, "qgis_process")):
-                return path
-
-        # Check app bundles under /Applications starting with "QGIS"
-        for app in sorted(glob.glob("/Applications/QGIS*.app"), reverse=True):
-            path = os.path.join(app, "Contents", "MacOS", "bin")
-            if os.path.isdir(path):
-                return path
-
-        # Use explicit prefix if provided
-        path = os.environ.get("QGIS_PREFIX_PATH")
-        if path:
-            path = path.replace("\\", "/").split("/")
-            if (
-                len(path) >= 2
-                and path[-2].lower() == "apps"
-                and path[-1].lower() == "qgis"
-            ):
-                path = path[:-2]
-            path = os.sep.join(path + ["bin"])
-            if os.path.isdir(path):
-                return path
-
-        raise RuntimeError("Cannot find QGIS installation path")
-
-    @staticmethod
-    def get_qgis_process_path() -> str:
-        """Return qgis_process executable path.
-
-        Raises:
-            FileNotFoundError: If qgis_process executable not found.
-        """
-        bin_path = __class__.get_qgis_bin_path()
-        path = __class__.find_executable(bin_path, "qgis_process")
-
-        if not path:
-            raise FileNotFoundError(f"qgis_process not found in: {bin_path}")
-
-        return path
-
-    @staticmethod
-    def get_qgis_environment() -> dict:
-        """Return QGIS environment variables."""
-        bin_path = __class__.get_qgis_bin_path()
-
-        env = {}
-
-        for file in os.listdir(bin_path):
-            if file.endswith(".env"):
-                env = dotenv.dotenv_values(os.path.join(bin_path, file))
-                break
-
-        return env
-
-    def prepare_config(self, config: dict) -> None:
-        """Complete the configuration options."""
+    def prepare_config(self):
+        """Complete and validate the configuration options."""
         super().prepare_config()
 
-        if not config.get("executable"):
-            qgis_process_path = __class__.get_qgis_process_path()
+        qgis_process_path = (
+            self.config.get("executable") or self.get_qgis_process_path()
+        )
 
-            try:
-                result = subprocess.run(
-                    [qgis_process_path, "--version"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
+        try:
+            result = subprocess.run(
+                [qgis_process_path, "--version"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            if result.returncode != 0:
+                raise RuntimeError(
+                    f"qgis_process failed with exit code: {result.returncode}"
                 )
 
-                if result.returncode != 0:
-                    raise RuntimeError(
-                        f"qgis_process failed with exit code: {result.returncode}"
-                    )
+        except subprocess.SubprocessError as err:
+            raise RuntimeError("Error running qgis_process") from err
 
-                config["executable"] = qgis_process_path
-                config["environment"] = __class__.get_qgis_environment()
-                config["versions"] = [
-                    line for line in result.stdout.splitlines() if line.strip()
-                ]
+        self.config["executable"] = qgis_process_path
 
-            except subprocess.SubprocessError as err:
-                raise RuntimeError("Error running qgis_process") from err
+        self.metadata |= {
+            "versions": [line for line in result.stdout.splitlines() if line.strip()]
+        }
 
-    def get_arguments(self, command: str, args: dict) -> list:
-        """Return execution arguments for the specified command and arguments.
+    def get_arguments(self, arguments: dict) -> list:
+        """Return execution arguments for the specified arguments.
 
         Args:
-            command: Command.
-            args: Arguments.
+            arguments: Arguments.
 
         Returns:
             List of execution arguments.
         """
-        out = ["run", command] + self.get_cli_arguments(args)
+        args = ["run", self.config["algorithm"]] + self.get_cli_arguments(arguments)
 
-        return out
+        return args
 
-    def get_help(self, command: str) -> str:
-        """Return help content for the qgis_process algorithm.
-
-        Args:
-            command: qgis_process algorithm.
-        """
+    def get_help(self) -> str:
+        """Return help content."""
         result = subprocess.run(
-            [self.config["executable"], "help", command],
+            [self.config["executable"]]
+            + (
+                ["help", self.config["algorithm"]]
+                if self.config.get("algorithm")
+                else ["list"]
+            ),
             env=self.get_environment(),
             capture_output=True,
             text=True,
@@ -170,4 +88,4 @@ class QGISProcessExecutor(ProgramExecutor):
             check=False,
         )
 
-        return result.stdout
+        return result.stderr or result.stdout

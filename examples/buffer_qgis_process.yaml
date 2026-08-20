@@ -1,12 +1,10 @@
 name: Buffer QGIS Process
-type: qgis-process
-command: native:buffer
-repeat: 1
-inputs:
-  INPUT: data/enschede/point.shp
-outputs:
-  OUTPUT: output.shp
+executor: qgis-process
+config:
+  algorithm: native:buffer
 arguments:
+  INPUT: data/enschede/point.shp
+  OUTPUT: output.shp
   distance_units: meters
   area_units: m2
   ellipsoid: EPSG:7030
@@ -19,3 +17,8 @@ arguments:
   DISTANCE:
     - 0.001
     - 0.002
+repeat: 1
+inputs:
+  - INPUT
+outputs:
+  - OUTPUT

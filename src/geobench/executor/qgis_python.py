@@ -1,88 +1,76 @@
 """QGIS Python executor module."""
 
 import os
-import platform
 import subprocess
 import tempfile
 
 import jinja2
 
-from . import ExecutorInfo
-from .qgis_process import QGISProcessExecutor
+from . import ExecutorInfo, ExecutorOption
+from .qgis import QGISExecutor
 
 
-class QGISPythonExecutor(QGISProcessExecutor):
+class QGISPythonExecutor(QGISExecutor):
     """QGIS Python executor class."""
 
     @classmethod
     def get_info(cls) -> ExecutorInfo:
         return ExecutorInfo(
             code="qgis-python",
-            name="QGIS Python Script Executor",
+            name="QGIS Python Script",
             description="Executes a QGIS Python script.",
         )
 
-    @staticmethod
-    def get_qgis_python_path() -> str | None:
-        """Return QGIS Python executable path if available."""
-        bin_path = QGISProcessExecutor.get_qgis_bin_path()
+    @classmethod
+    def get_options(cls) -> dict[str, ExecutorOption]:
+        """Return executor options."""
+        return super().get_options() | {
+            "filename": ExecutorOption(
+                description="Script filename",
+                type=str,
+                required=True,
+                positional=True,
+            ),
+        }
 
-        system = platform.system()
+    def prepare_config(self) -> None:
+        """Complete and validate the configuration options."""
 
-        if system == "Windows":
-            qgis_apps_path = os.path.join(bin_path, "..", "apps")
+        qgis_python_path = self.config.get("executable") or self.get_qgis_python_path()
 
-            matches = [
-                entry.name
-                for entry in os.scandir(qgis_apps_path)
-                if entry.is_dir() and entry.name.lower().startswith("python")
-            ]
-            if not matches:
-                return None
+        try:
+            result = subprocess.run(
+                [qgis_python_path, "--version"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
 
-            bin_path = os.path.join(qgis_apps_path, matches[0])
-
-        path = QGISProcessExecutor.find_executable(bin_path, "python3")
-        if not path:
-            raise FileNotFoundError("QGIS Python executable not found")
-
-        return path
-
-    def prepare_config(self, config: dict) -> None:
-        """Complete the configuration options."""
-        if not config.get("executable"):
-            qgis_python_path = __class__.get_qgis_python_path()
-
-            try:
-                result = subprocess.run(
-                    [qgis_python_path, "--version"],
-                    capture_output=True,
-                    text=True,
-                    check=False,
+            if result.returncode != 0:
+                raise RuntimeError(
+                    f"QGIS python failed with exit code: {result.returncode}"
                 )
 
-                if result.returncode != 0:
-                    raise RuntimeError(
-                        f"QGIS Python failed with exit code: {result.returncode}"
-                    )
+        except subprocess.SubprocessError as err:
+            raise RuntimeError("Error running QGIS python") from err
 
-                config["executable"] = qgis_python_path
-                config["environment"] = __class__.get_qgis_environment()
+        self.config["executable"] = qgis_python_path
 
-            except subprocess.SubprocessError as err:
-                raise RuntimeError("Error running QGIS Python") from err
+        self.metadata |= {
+            "versions": self.get_qgis_versions(os.path.dirname(qgis_python_path)),
+        }
 
-    def get_arguments(self, command: str, args: dict) -> list:
-        """Return execution arguments for the specified command and arguments.
+    def get_arguments(self, arguments: dict) -> list:
+        """Return execution arguments for the specified arguments.
 
         Args:
-            command: Command.
             args: Arguments.
 
         Returns:
             List of execution arguments.
         """
-        qgis_code = f'processing.run("{command}", {args})'
+        with open(self.config["filename"], "r", encoding="utf-8") as file:
+            qgis_code = file.read()
 
         template_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
         env = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir))
@@ -91,9 +79,12 @@ class QGISPythonExecutor(QGISProcessExecutor):
             qgis_path=os.path.dirname(self.get_qgis_bin_path()),
             qgis_bin_path=os.path.dirname(self.config["executable"]),
             qgis_code=qgis_code,
+            **arguments,
         )
 
-        with tempfile.NamedTemporaryFile(mode="w+t", delete=False) as file:
+        with tempfile.NamedTemporaryFile(
+            mode="w+t", delete=False, encoding="utf-8"
+        ) as file:
             file.write(script)
 
         return [file.name]

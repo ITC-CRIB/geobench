@@ -1,16 +1,17 @@
 name: Count Primes Python with energy monitoring
-type: python
-command: count_primes.py
+executor: python
+config:
+  filename: count_primes.py
 arguments:
-    cores:
+  cores:
     - 4
     - 8
-    num:
+  num:
     - 1000000
     - 2000000
 repeat: 2
 telemetry:
-    wrap:
-      collectors:
+  wrap:
+    collectors:
       - type: system_metrics
       - type: energy

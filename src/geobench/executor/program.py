@@ -8,7 +8,6 @@ from abc import abstractmethod
 
 import dotenv
 
-from ..utils import KeyValueAction
 from . import Executor, ExecutorOption
 
 logger = logging.getLogger(__name__)
@@ -17,8 +16,8 @@ logger = logging.getLogger(__name__)
 class ProgramExecutor(Executor):
     """Program executor class."""
 
-    @staticmethod
-    def find_executable(path: str, name: str) -> str | None:
+    @classmethod
+    def find_executable(cls, path: str, name: str) -> str | None:
         """Find executable with the specified path and name.
 
         Args:
@@ -49,31 +48,29 @@ class ProgramExecutor(Executor):
         return None
 
     @classmethod
-    def get_options(self) -> dict[str, ExecutorOption]:
+    def get_options(cls) -> dict[str, ExecutorOption]:
         """Return executor options."""
-        return {
+        return super().get_options() | {
             "executable": ExecutorOption(
-                description="Name of the executable",
+                description="Executable name",
                 type=str,
                 required=True,
-                positional=True,
             ),
             "workdir": ExecutorOption(
-                description="Working directory",
+                description="Set working directory",
                 type=str,
             ),
             "env": ExecutorOption(
-                description="Set environmet variables",
+                description="Set environment variables (can be repeated)",
                 type=dict,
-                action=KeyValueAction,
             ),
-            "env-file": ExecutorOption(
+            "env_file": ExecutorOption(
                 description="Read in a file of environment variables.",
                 type=str,
             ),
         }
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict | None = None, no_check: bool = False):
         """Initialize the program executor.
 
         Args:
@@ -82,41 +79,25 @@ class ProgramExecutor(Executor):
         Raises:
             ValueError: if no program executable is found.
         """
-        super().__init__(config)
+        super().__init__(config, no_check=no_check)
         self.process = None
 
-    def prepare_config(self, config: dict) -> dict:
-        """Return executor configuration considering the arguments.
-
-        Args:
-            args: Configuration arguments.
-        """
-        if config.get("env-file"):
-            env = dotenv.dotenv_values(config["env-file"])
-        else:
-            env = {}
-
-        env.update(config.get("env", {}))
-
-        config["environment"] = env
-
     @abstractmethod
-    def get_arguments(self, command: str, args: dict) -> list:
-        """Return execution arguments for the specified command and arguments.
+    def get_arguments(self, arguments: dict) -> list:
+        """Return execution arguments for the specified arguments.
 
         Args:
-            command: Command.
-            args: Arguments.
+            arguments: Arguments.
 
         Returns:
             List of execution arguments.
         """
 
-    def get_cli_arguments(self, args: dict) -> list[str]:
+    def get_cli_arguments(self, arguments: dict) -> list[str]:
         """Return arguments as command line arguments.
 
         Args:
-            args: Arguments.
+            arguments: Arguments.
 
         Return:
             List of command line arguments.
@@ -124,7 +105,7 @@ class ProgramExecutor(Executor):
         out = []
         pos = {}
 
-        for key, val in args.items():
+        for key, val in arguments.items():
             try:
                 key = int(key)
             except ValueError:
@@ -159,20 +140,24 @@ class ProgramExecutor(Executor):
     def get_environment(self) -> dict:
         """Return environment considering the process environment."""
         env = os.environ.copy()
-        env.update(self.config.get("environment", {}))
+
+        if self.config.get("env_file"):
+            env.update(dotenv.dotenv_values(self.config["env_file"]))
+
+        env.update(self.config.get("env") or {})
+
         return env
 
-    def execute(self, command: str, args: dict | None = None) -> int:
-        """Execute program command with the specified arguments.
+    def execute(self, arguments: dict | None = None) -> int:
+        """Execute program with the specified arguments.
 
         Args:
-            command: Program command.
-            args: Optional arguments.
+            arguments: Optional arguments.
 
         Returns:
             Process id of the program.
         """
-        args = [self.config["executable"]] + self.get_arguments(command, args or {})
+        args = [self.config["executable"]] + self.get_arguments(arguments or {})
         logger.debug("Executing process with arguments: %s", args)
 
         self.process = subprocess.Popen(

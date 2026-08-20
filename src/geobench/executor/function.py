@@ -13,38 +13,44 @@ class FunctionExecutor(Executor):
     def get_info(cls) -> ExecutorInfo:
         return ExecutorInfo(
             code="function",
-            name="Function Executor",
+            name="Function",
             description="Executes a Python function with arguments.",
         )
 
     @classmethod
-    def get_options(self) -> dict[str, ExecutorOption]:
-        """Return executor options."""
-        return {}
+    def get_options(cls) -> dict[str, ExecutorOption]:
+        return super().get_options() | {
+            "function": ExecutorOption(
+                description="Function to be executed",
+                type=callable,
+            )
+        }
 
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict | None = None, no_check: bool = False):
         """Initialize the function executor.
 
         Args:
             config: Optional configuration.
         """
-        super().__init__(config)
+        super().__init__(config, no_check=no_check)
 
         self.thread = None
 
-    def execute(self, command: callable, args: dict | None = None) -> int:
+    def execute(self, arguments: dict | None = None) -> int:
         """Execute function with the specified arguments."""
-        pargs, kwargs = {}, {}
+        args, kwargs = {}, {}
 
-        for key, val in (args or {}).items():
+        for key, val in (arguments or {}).items():
             try:
-                pargs[int(key)] = val
+                args[int(key)] = val
             except (TypeError, ValueError):
                 kwargs[key] = val
 
-        pargs = [val for _, val in sorted(pargs.items())]
+        args = [val for _, val in sorted(args.items())]
 
-        self.thread = threading.Thread(target=command, args=pargs, kwargs=kwargs)
+        self.thread = threading.Thread(
+            target=self.config["function"], args=args, kwargs=kwargs
+        )
         self.thread.start()
 
         return os.getpid()

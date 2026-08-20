@@ -28,8 +28,8 @@ def geobench(name: str | None = None, **kwargs) -> callable:
 
             scenario = Scenario(
                 name=name or func.__name__,
-                type="function",
-                command=func,
+                executor="function",
+                config={"function": func},
                 arguments=arguments,
                 **kwargs,
             )

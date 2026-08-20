@@ -9,20 +9,20 @@ from dataclasses import dataclass
 from functools import cache
 from typing import Any
 
+from ..utils import is_empty
+
 logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
 class ExecutorOption:
-    """Describes a configuration option supported by an executor.
+    """Describes an executor configuration option.
 
     Attributes:
         description: A human-readable description of the option.
         type: The expected type of the option value.
         default: The default value when the options is not specified
         required: Whether the option is required.
-        action: The argparse action to use.
-        nargs: The number of command-line argument to consume.
         positional: Whether the option is a positional command-line argument.
     """
 
@@ -30,8 +30,6 @@ class ExecutorOption:
     type: type
     default: Any = None
     required: bool = False
-    action: str | None = None
-    nargs: str | int | None = None
     positional: bool = False
 
 
@@ -53,48 +51,47 @@ class Executor(ABC):
         """Return executor information."""
 
     @classmethod
-    @abstractmethod
-    def get_options(self) -> dict[str, ExecutorOption]:
+    def get_options(cls) -> dict[str, ExecutorOption]:
         """Return executor options."""
+        return {}
 
-    @staticmethod
-    def _is_empty(val: Any) -> bool:
-        return (
-            val is None
-            or (isinstance(val, str) and not val.strip())
-            or (isinstance(val, (dict, list, set)) and not val)
-        )
-
-    def __init__(self, config: dict | None = None):
+    def __init__(self, config: dict | None = None, no_check: bool = False):
         """Initialize the executor.
 
         Args:
             config: Optional configuration.
         """
+        config = config or {}
         opts = self.get_options()
-        args = {}
+
+        self.config = {}
+        self.metadata = {}
 
         for key, val in config.items():
             if key not in opts:
                 logger.debug("Invalid configuration option: %s=%s", key, val)
                 continue
             # TODO: Add validation
-            args[key] = val
+            self.config[key] = val
 
-        self.prepare_config(args)
+        self.prepare_config()
+
+        if no_check:
+            return
 
         for key, opt in opts.items():
-            if opt.required and self._is_empty(args.get(key)):
+            if opt.required and is_empty(self.config.get(key)):
                 raise ValueError(f"Missing configuration option: {key}")
 
-        self.config = args
-
-    def prepare_config(self, config: dict) -> None:
-        """Complete the configuration options."""
+    def prepare_config(self):
+        """Complete and validate the configuration options."""
 
     @abstractmethod
-    def execute(self, command, args: dict | None = None) -> int:
-        """Execute command with the specified arguments.
+    def execute(self, arguments: dict | None = None) -> int:
+        """Start execution.
+
+        Args:
+            arguments: Optional arguments.
 
         Returns:
             Process id.
@@ -102,11 +99,7 @@ class Executor(ABC):
 
     @abstractmethod
     def wait(self):
-        """Wait until command execution ends."""
-
-    def get_help(self, command) -> str:
-        """Return help content for the command."""
-        return f"Help not found for: {command}"
+        """Wait until execution ends."""
 
 
 @cache
