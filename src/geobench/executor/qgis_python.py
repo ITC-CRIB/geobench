@@ -1,12 +1,12 @@
 """QGIS Python executor module."""
 
 import os
-import subprocess
 import tempfile
 
 import jinja2
 
 from . import ExecutorInfo, ExecutorOption
+from .python import PythonExecutor
 from .qgis import QGISExecutor
 
 
@@ -36,28 +36,16 @@ class QGISPythonExecutor(QGISExecutor):
     def prepare_config(self) -> None:
         """Complete and validate the configuration options."""
 
-        qgis_python_path = self.config.get("executable") or self.get_qgis_python_path()
+        executable = self.config.get("executable") or self.get_qgis_python_path()
 
-        try:
-            result = subprocess.run(
-                [qgis_python_path, "--version"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
+        if not PythonExecutor.is_python_executable(executable):
+            raise RuntimeError(f"Invalid Python executable: {executable}")
 
-            if result.returncode != 0:
-                raise RuntimeError(
-                    f"QGIS python failed with exit code: {result.returncode}"
-                )
+        self.config["executable"] = executable
 
-        except subprocess.SubprocessError as err:
-            raise RuntimeError("Error running QGIS python") from err
-
-        self.config["executable"] = qgis_python_path
-
+        self.metadata |= PythonExecutor.get_python_metadata(executable)
         self.metadata |= {
-            "versions": self.get_qgis_versions(os.path.dirname(qgis_python_path)),
+            "qgis_versions": self.get_qgis_versions(os.path.dirname(executable)),
         }
 
     def get_arguments(self, arguments: dict) -> list:
