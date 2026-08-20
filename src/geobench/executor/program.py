@@ -169,8 +169,11 @@ class ProgramExecutor(Executor):
 
         return self.process.pid
 
-    def wait(self):
+    def wait(self) -> int:
         """Wait until execution ends.
+
+        Returns:
+            Process exit code.
 
         Raises:
             RuntimeError: If the program is not running.
@@ -178,4 +181,4 @@ class ProgramExecutor(Executor):
         if not self.process:
             raise RuntimeError("Program is not running")
 
-        self.process.wait()
+        return self.process.wait()

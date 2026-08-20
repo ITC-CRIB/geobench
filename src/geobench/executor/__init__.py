@@ -98,8 +98,12 @@ class Executor(ABC):
         """
 
     @abstractmethod
-    def wait(self):
-        """Wait until execution ends."""
+    def wait(self) -> Any:
+        """Wait until execution ends.
+
+        Returns:
+            Result of the execution.
+        """
 
 
 @cache

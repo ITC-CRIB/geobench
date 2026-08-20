@@ -2,6 +2,7 @@
 
 import os
 import threading
+from typing import Any
 
 from . import Executor, ExecutorInfo, ExecutorOption
 
@@ -35,6 +36,8 @@ class FunctionExecutor(Executor):
         super().__init__(config, no_check=no_check)
 
         self.thread = None
+        self.result = None
+        self.exception = None
 
     def execute(self, arguments: dict | None = None) -> int:
         """Execute function with the specified arguments."""
@@ -48,16 +51,36 @@ class FunctionExecutor(Executor):
 
         args = [val for _, val in sorted(args.items())]
 
-        self.thread = threading.Thread(
-            target=self.config["function"], args=args, kwargs=kwargs
-        )
+        self.result = None
+        self.exception = None
+
+        def _execute():
+            try:
+                self.result = self.config["function"](*args, **kwargs)
+            except BaseException as exception:  # noqa: BLE001
+                self.exception = exception
+
+        self.thread = threading.Thread(target=_execute)
         self.thread.start()
 
         return os.getpid()
 
-    def wait(self):
-        """Wait until execution ends."""
+    def wait(self) -> Any:
+        """Wait until execution ends.
+
+        Returns:
+            Return value of the function.
+
+        Raises:
+            RuntimeError: If function is not running.
+            Exception: If function raises exception.
+        """
         if not self.thread:
             raise RuntimeError("Function is not running")
 
         self.thread.join()
+
+        if self.exception:
+            raise self.exception
+
+        return self.result
