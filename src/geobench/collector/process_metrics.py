@@ -104,7 +104,15 @@ class ProcessMetricsCollector(ProcessCollector):
         Returns:
             Collected data sample.
         """
-        return self.process.as_dict(self.attrs)
+        sample = {self.process.pid: self.process.as_dict(self.attrs)}
+
+        for process in self.process.children(recursive=True):
+            try:
+                sample[process.pid] = process.as_dict(self.attrs, ad_value=None)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+        return sample
 
     def _process(self, sample: dict) -> dict:
         """Process a collected data sample.
@@ -115,4 +123,4 @@ class ProcessMetricsCollector(ProcessCollector):
         Returns:
             Processed data sample.
         """
-        return self.process_info(sample)
+        return {key: self.process_info(val) for key, val in sorted(sample.items())}
