@@ -71,13 +71,12 @@ class PythonExecutor(ProgramExecutor):
             "import platform;"
             "import sys;"
             "print(json.dumps({"
-            '    "version": platform.python_version(),'
-            '    "sys_version": sys.version,'
-            '    "implementation": platform.python_implementation(),'
-            '    "compiler": platform.python_compiler(),'
-            '    "build": ", ".join(platform.python_build()),'
-            '    "machine": platform.machine(),'
-            '    "platform": platform.platform(),'
+            '    "python_version": platform.python_version(),'
+            '    "python_revision": platform.python_revision(),'
+            '    "python_long_version": sys.version,'
+            '    "python_implementation": platform.python_implementation(),'
+            '    "python_compiler": platform.python_compiler(),'
+            '    "python_build": ", ".join(platform.python_build()),'
             "}))"
         )
 
