@@ -56,7 +56,7 @@ class QGISProcessExecutor(QGISExecutor):
         self.config["executable"] = qgis_process_path
 
         self.metadata |= {
-            "versions": [line for line in result.stdout.splitlines() if line.strip()]
+            "qgis_versions": [line for line in result.stdout.splitlines() if line.strip()]
         }
 
     def get_arguments(self, arguments: dict) -> list:
