@@ -4,9 +4,9 @@ import multiprocessing
 import time
 
 
-def count_primes(n):
+def count_primes(num):
     count = 0
-    for i in range(2, n):
+    for i in range(2, num):
         if all(i % j != 0 for j in range(2, int(math.sqrt(i)) + 1)):
             count += 1
     return count
