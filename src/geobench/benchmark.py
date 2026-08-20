@@ -193,7 +193,7 @@ class Benchmark:
         self.result = copy.deepcopy(self.metadata)
 
         # Set up output directory
-        print(f"Setting up output directory {self.outdir}.")
+        print(f"Setting up output directory: {self.outdir}")
         if os.path.exists(self.outdir):
             if os.path.isdir(self.outdir):
                 if not self.clear_outdir:

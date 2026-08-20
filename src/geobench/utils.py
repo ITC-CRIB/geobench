@@ -3,17 +3,30 @@
 from typing import Any
 
 
-def is_empty(val: Any) -> bool:
+def is_empty(value: Any) -> bool:
     return (
-        val is None
-        or (isinstance(val, str) and not val.strip())
-        or (isinstance(val, (dict, list, set)) and not val)
+        value is None
+        or (isinstance(value, str) and not value.strip())
+        or (isinstance(value, (dict, list, set)) and not value)
     )
 
 
-def prune_dict(val: dict) -> dict:
+def prune_dict(value: dict) -> dict:
     return {
         key: prune_dict(val) if isinstance(val, dict) else val
-        for key, val in val.items()
+        for key, val in value.items()
         if not is_empty(val)
     }
+
+
+def serialize_dict(value: dict) -> dict:
+    out = {}
+    for key, val in prune_dict(value).items():
+        if callable(val):
+            outval = val.__name__
+        elif isinstance(val, dict):
+            outval = serialize_dict(val)
+        else:
+            outval = val
+        out[key] = outval
+    return out

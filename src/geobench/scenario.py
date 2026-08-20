@@ -18,7 +18,7 @@ import yaml
 from .benchmark import Benchmark
 from .executor import get_executors
 from .report import calculate_run_summary, generate_html_report
-from .utils import prune_dict
+from .utils import serialize_dict
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +170,7 @@ class Scenario:
             executor = executor_cls(self.config)
 
             # Set up output directory
-            print(f"Setting up output directory {self.outdir}.")
+            print(f"Setting up output directory: {self.outdir}")
             if os.path.exists(self.outdir):
                 if os.path.isdir(self.outdir):
                     if not self.clear_outdir:
@@ -192,8 +192,8 @@ class Scenario:
 
             # Store executor configuration
             print("Storing executor configuration.")
-            result["config"] = prune_dict(executor.config)
-            result["metadata"] = prune_dict(executor.metadata)
+            result["config"] = serialize_dict(executor.config)
+            result["metadata"] = serialize_dict(executor.metadata)
             self._store("result.json", result)
 
             # Start execution loop
@@ -267,11 +267,11 @@ class Scenario:
                             )
 
                     # Start benchmarking
-                    benchmark.start(process=lambda: executor.execute(args))
+                    benchmark.start(process=lambda args=args: executor.execute(args))
 
                     # Wait execution to finish
                     try:
-                        executor.wait()
+                        result["result"] = executor.wait()
 
                     except Exception as err:  # noqa: BLE001
                         print(f"Executor failed with error: {err}")
@@ -410,7 +410,7 @@ class Scenario:
             path: Path of the YAML file.
         """
         # Serialize scenario
-        out = prune_dict(
+        out = serialize_dict(
             {
                 "name": self.name,
                 "executor": self.executor,
