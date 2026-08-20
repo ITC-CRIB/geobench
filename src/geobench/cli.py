@@ -10,6 +10,7 @@ from typing import Any
 from .executor import get_executors
 from .executor.program import ProgramExecutor
 from .scenario import Scenario
+from .utils import prune_dict
 
 logger = logging.getLogger(__name__)
 
@@ -283,11 +284,13 @@ class CLI:
 
         if args.cli_command == "help":
             executor_cls = get_executors().get(args.executor)
-            config = {
-                key: getattr(args, key)
-                for key in executor_cls.get_options()
-                if hasattr(args, key)
-            }
+            config = prune_dict(
+                {
+                    key: getattr(args, key)
+                    for key in executor_cls.get_options()
+                    if hasattr(args, key)
+                }
+            )
             executor = executor_cls(config, no_check=True)
             help = executor.get_help()
             print(help)
@@ -309,11 +312,13 @@ class CLI:
                 level=logging.INFO, format="%(levelname)s - %(message)s"
             )
 
-        kwargs = {
-            key: value
-            for key, value in vars(args).items()
-            if not key.startswith("cli_")
-        }
+        kwargs = prune_dict(
+            {
+                key: value
+                for key, value in vars(args).items()
+                if not key.startswith("cli_")
+            }
+        )
 
         if args.executor == "scenario":
             del kwargs["executor"]
@@ -323,14 +328,17 @@ class CLI:
         else:
             logger.debug("Creating scenario from command line arguments")
             executor_cls = get_executors().get(args.executor)
-            config = {
-                key: getattr(args, key)
-                for key in executor_cls.get_options()
-                if hasattr(args, key)
-            }
+            config = prune_dict(
+                {
+                    key: getattr(args, key)
+                    for key in executor_cls.get_options()
+                    if hasattr(args, key)
+                }
+            )
             for key in config:
                 del kwargs[key]
             kwargs["config"] = config
+
             scenario = Scenario(**kwargs)
 
         try:
