@@ -162,6 +162,13 @@ class CLI:
             default=[],
         )
         common_parser.add_argument(
+            "-a",
+            "--arg",
+            dest="arguments",
+            action=ConfigOptionAction,
+            help="Argument as key=value (can be repeated)",
+        )
+        common_parser.add_argument(
             "-o",
             "--output",
             dest="outputs",
@@ -170,17 +177,10 @@ class CLI:
             default=[],
         )
         common_parser.add_argument(
-            "-a",
-            "--arg",
-            dest="arguments",
-            action=ConfigOptionAction,
-            help="Argument as key=value (can be repeated)",
-        )
-        common_parser.add_argument(
             "--archive",
             type=str,
             choices=["none", "both", "input", "output"],
-            help="File types to archive (default: both)",
+            help="File types to archive (default: output)",
         )
         common_parser.add_argument(
             "--basedir",
@@ -224,9 +224,7 @@ class CLI:
         )
 
         run_subparsers = run_parser.add_subparsers(
-            dest="executor",
-            required=True,
-            metavar="EXECUTOR"
+            dest="executor", required=True, metavar="EXECUTOR"
         )
 
         # Scenario subcommand
