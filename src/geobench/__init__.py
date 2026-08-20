@@ -2,13 +2,13 @@
 GeoBench - A benchmarking tool for geospatial operations.
 """
 
-from .benchmark import Benchmark as GeoBench
+from .benchmark import Benchmark
 from .scenario import Scenario
 
-__all__ = ["GeoBench", "geobench"]
+__all__ = ["Benchmark", "Scenario", "benchmark"]
 
 
-def geobench(name: str | None = None, **kwargs) -> callable:
+def benchmark(name: str | None = None, **kwargs) -> callable:
     """Create a decorator that benchmarks the execution of a function.
 
     Args:
