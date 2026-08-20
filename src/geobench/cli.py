@@ -154,19 +154,19 @@ class CLI:
             help="Monitoring duration before and after each run, in seconds (default: 5.0)",
         )
         common_parser.add_argument(
+            "-a",
+            "--arg",
+            dest="arguments",
+            action=ConfigOptionAction,
+            help="Argument as key=value (can be repeated)",
+        )
+        common_parser.add_argument(
             "-i",
             "--input",
             dest="inputs",
             action="append",
             help="Input file argument or position (can be repeated)",
             default=[],
-        )
-        common_parser.add_argument(
-            "-a",
-            "--arg",
-            dest="arguments",
-            action=ConfigOptionAction,
-            help="Argument as key=value (can be repeated)",
         )
         common_parser.add_argument(
             "-o",

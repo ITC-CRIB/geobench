@@ -223,7 +223,6 @@ class Scenario:
                     )
 
                     abs_path = os.path.join(self.outdir, path)
-                    os.makedirs(abs_path, exist_ok=True)
 
                     benchmark = Benchmark(
                         wait=self.wait,
