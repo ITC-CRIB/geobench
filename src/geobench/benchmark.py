@@ -25,7 +25,7 @@ class Benchmark:
         telemetry: dict | None = None,
         inputs: list | None = None,
         outputs: list | None = None,
-        archive: str = "both",
+        archive: str = "output",
         clear_outdir: bool = False,
         clear_cache: bool = True,
         workdir: str | None = None,
