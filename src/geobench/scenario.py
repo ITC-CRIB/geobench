@@ -416,7 +416,10 @@ class Scenario:
                 "name": self.name,
                 "executor": self.executor,
                 "config": self.config,
-                "arguments": self.arguments,
+                "arguments": {
+                    key: val if (not isinstance(val, list) or len(val) > 1) else val[0]
+                    for key, val in self.arguments.items()
+                },
                 "inputs": self.inputs,
                 "outputs": self.outputs,
                 "repeat": self.repeat,
