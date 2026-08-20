@@ -165,7 +165,7 @@ class GDALExecutor(ProgramExecutor):
             List of execution arguments.
         """
         args = (
-            self.config["command"]
+            [self.config["command"]]
             + ([self.config["subcommand"]] if self.config.get("subcommand") else [])
             + self.get_cli_arguments(arguments)
         )
