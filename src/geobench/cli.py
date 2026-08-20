@@ -226,6 +226,7 @@ class CLI:
         run_subparsers = run_parser.add_subparsers(
             dest="executor",
             required=True,
+            metavar="EXECUTOR"
         )
 
         # Scenario subcommand
