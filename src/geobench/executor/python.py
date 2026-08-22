@@ -140,4 +140,4 @@ class PythonExecutor(ProgramExecutor):
 
     def get_config_code(self) -> str:
         """Return a code identifying the configuration."""
-        return os.path.basename(self.config["filename"])
+        return os.path.splitext(os.path.basename(self.config["filename"]))[0]
