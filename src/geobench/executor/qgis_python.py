@@ -76,3 +76,7 @@ class QGISPythonExecutor(QGISExecutor):
             file.write(script)
 
         return [file.name]
+
+    def get_config_code(self) -> str:
+        """Return a code identifying the configuration."""
+        return os.path.basename(self.config["filename"])

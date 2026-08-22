@@ -191,3 +191,9 @@ class GDALExecutor(ProgramExecutor):
         )
 
         return result.stdout
+
+    def get_config_code(self) -> str:
+        """Return a code identifying the configuration."""
+        return self.config["command"] + (
+            (":" + self.config["subcommand"]) if self.config.get("subcommand") else ""
+        )

@@ -1,5 +1,7 @@
 """Utilities module."""
 
+import re
+import unicodedata
 from typing import Any
 
 
@@ -30,3 +32,10 @@ def serialize_dict(value: dict) -> dict:
             outval = val
         out[key] = outval
     return out
+
+def slugify(value: str) -> str:
+    value = unicodedata.normalize("NFKD", value)
+    value = value.encode("ascii", "ignore").decode("ascii").lower()
+    value = re.sub(r"[^\w]", "_", value)
+    value = re.sub(r"_+", "_", value)
+    return value.strip("_")

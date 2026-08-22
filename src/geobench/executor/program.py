@@ -182,3 +182,7 @@ class ProgramExecutor(Executor):
             raise RuntimeError("Program is not running")
 
         return self.process.wait()
+
+    def get_config_code(self) -> str:
+        """Return a code identifying the configuration."""
+        return os.path.basename(self.config["executable"])

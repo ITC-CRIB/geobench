@@ -137,3 +137,7 @@ class PythonExecutor(ProgramExecutor):
         args = [filename] + self.get_cli_arguments(arguments)
 
         return args
+
+    def get_config_code(self) -> str:
+        """Return a code identifying the configuration."""
+        return os.path.basename(self.config["filename"])

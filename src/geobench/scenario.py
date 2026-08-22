@@ -6,19 +6,17 @@ import itertools
 import json
 import logging
 import os
-import re
 import shutil
 import statistics
 import time
 import traceback
-import unicodedata
 
 import yaml
 
 from .benchmark import Benchmark
 from .executor import get_executors
 from .report import calculate_run_summary, generate_html_report
-from .utils import serialize_dict
+from .utils import serialize_dict, slugify
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +28,10 @@ class Scenario:
         self,
         executor: str,
         config: dict | None = None,
+        arguments: list | dict | None = None,
         name: str | None = None,
         inputs: list | None = None,
         outputs: list | None = None,
-        arguments: list | dict | None = None,
         repeat: int = 1,
         wait: float = 5.0,
         monitor: float | None = None,
@@ -51,10 +49,10 @@ class Scenario:
         Args:
             executor: Executor.
             config: Executor configuration.
+            arguments: Optional list or dictionary of arguments.
             name: Optional scenario name.
             inputs: Optional list of input file attributes.
             outputs: Optional list of of output file attributes.
-            arguments: Optional list or dictionary of arguments.
             repeat: Number of repeats.
             wait: Idle wait time before each run, in seconds.
             monitor: Monitoring duration before and after each run, in seconds.
@@ -73,7 +71,16 @@ class Scenario:
             ValueError: if invalid working directory.
             ValueError: if invalid base directory.
         """
-        self.name = name or f"{executor} Scenario"
+        executor_cls = get_executors().get(executor)
+        if not executor_cls:
+            raise ValueError(f"Invalid executor: {executor}")
+
+        self._executor = executor_cls(config)
+
+        self.name = (
+            name
+            or f"{self._executor.get_info().name} {self._executor.get_config_code()} Scenario"
+        )
         self.executor = executor
         self.config = config or {}
         self.inputs = inputs or []
@@ -97,7 +104,8 @@ class Scenario:
             raise ValueError(f"Invalid base directory: {basedir}")
 
         self.outdir = Benchmark.get_path(
-            outdir or self.slugify(self.name), self.basedir
+            outdir or slugify(f"{executor}_{self._executor.get_config_code()}"),
+            self.basedir,
         )
 
         if isinstance(self.arguments, list):
@@ -123,14 +131,6 @@ class Scenario:
                     "arguments": args,
                 }
             )
-
-    @classmethod
-    def slugify(cls, text: str) -> str:
-        text = unicodedata.normalize("NFKD", text)
-        text = text.encode("ascii", "ignore").decode("ascii").lower()
-        text = re.sub(r"[^\w]", "_", text)
-        text = re.sub(r"_+", "_", text)
-        return text.strip("_")
 
     def _store(self, filename: str, content: dict):
         path = os.path.join(self.outdir, filename)
@@ -161,14 +161,6 @@ class Scenario:
                 )
             )
 
-            # Create executor
-            print(f"Creating {self.executor} executor.")
-            executor_cls = get_executors().get(self.executor)
-            if not executor_cls:
-                raise ValueError(f"Invalid executor: {self.executor}")
-
-            executor = executor_cls(self.config)
-
             # Set up output directory
             print(f"Setting up output directory: {self.outdir}")
             if os.path.exists(self.outdir):
@@ -192,8 +184,8 @@ class Scenario:
 
             # Store executor configuration
             print("Storing executor configuration.")
-            result["config"] = serialize_dict(executor.config)
-            result["metadata"] = serialize_dict(executor.metadata)
+            result["config"] = serialize_dict(self._executor.config)
+            result["metadata"] = serialize_dict(self._executor.metadata)
             self._store("result.json", result)
 
             # Start execution loop
@@ -267,11 +259,11 @@ class Scenario:
                             )
 
                     # Start benchmarking
-                    benchmark.start(process=lambda args=args: executor.execute(args))
+                    benchmark.start(process=lambda args=args: self._executor.execute(args))
 
                     # Wait execution to finish
                     try:
-                        result["result"] = executor.wait()
+                        result["result"] = self._executor.wait()
 
                     except Exception as err:  # noqa: BLE001
                         print(f"Executor failed with error: {err}")

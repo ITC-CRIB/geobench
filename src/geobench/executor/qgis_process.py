@@ -56,7 +56,9 @@ class QGISProcessExecutor(QGISExecutor):
         self.config["executable"] = qgis_process_path
 
         self.metadata |= {
-            "qgis_versions": [line for line in result.stdout.splitlines() if line.strip()]
+            "qgis_versions": [
+                line for line in result.stdout.splitlines() if line.strip()
+            ]
         }
 
     def get_arguments(self, arguments: dict) -> list:
@@ -89,3 +91,7 @@ class QGISProcessExecutor(QGISExecutor):
         )
 
         return result.stderr or result.stdout
+
+    def get_config_code(self) -> str:
+        """Return a code identifying the configuration."""
+        return self.config["algorithm"]

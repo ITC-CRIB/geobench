@@ -84,3 +84,7 @@ class FunctionExecutor(Executor):
             raise self.exception
 
         return self.result
+
+    def get_config_code(self) -> str:
+        """Return a code identifying the configuration."""
+        return self.config["function"].__name__

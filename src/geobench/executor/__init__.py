@@ -69,9 +69,8 @@ class Executor(ABC):
 
         for key, val in config.items():
             if key not in opts:
-                logger.debug("Invalid configuration option: %s=%s", key, val)
+                logger.debug("Invalid configuration option: %s", key)
                 continue
-            # TODO: Add validation
             self.config[key] = val
 
         self.prepare_config()
@@ -82,6 +81,7 @@ class Executor(ABC):
         for key, opt in opts.items():
             if opt.required and is_empty(self.config.get(key)):
                 raise ValueError(f"Missing configuration option: {key}")
+            # TODO: Add validation
 
     def prepare_config(self):
         """Complete and validate the configuration options."""
@@ -105,6 +105,9 @@ class Executor(ABC):
             Result of the execution.
         """
 
+    @abstractmethod
+    def get_config_code(self) -> str:
+        """Return a code identifying the configuration."""
 
 @cache
 def get_executors() -> dict[str, type[Executor]]:
