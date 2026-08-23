@@ -224,7 +224,7 @@ class Benchmark:
         self.result = copy.deepcopy(self.metadata)
 
         # Set up output directory
-        print(f"Setting up output directory: {self.outdir}")
+        logger.info("Setting up output directory: %s", self.outdir)
         if os.path.exists(self.outdir):
             if os.path.isdir(self.outdir):
                 if not self.clear_outdir:
@@ -238,7 +238,7 @@ class Benchmark:
         os.makedirs(self.outdir)
 
         # Store initial information
-        print("Storing initial information.")
+        logger.info("Storing initial information")
         self.result["init"] = {}
         for collector in self.telemetry.get("init", {}).get("collectors", []):
             collector = Monitor.get_collector(collector)
@@ -252,17 +252,17 @@ class Benchmark:
 
         # Clear output files, if required
         if self.clear_outputs:
-            print("Clearing output files")
+            logger.info("Clearing output files")
             self._remove_files(self.outputs)
 
         # Clear system caches, if required
         if self.clear_cache:
-            print("Clearing system caches.")
+            logger.info("Clearing system caches")
             clear_cache()
 
         # Idle wait, if required
         if self.wait:
-            print(f"Waiting for {self.wait} s.")
+            logger.info("Waiting for %.2f s", self.wait)
             time.sleep(self.wait)
 
         # Perform baseline monitoring, if required
@@ -271,7 +271,7 @@ class Benchmark:
             self.monitor if self.monitor is not None else baseline.get("duration")
         )
         if baseline and duration:
-            print(f"Baseline monitoring for {duration} s.")
+            logger.info("Baseline monitoring for %.2f s", duration)
             monitor = Monitor(
                 name="baseline",
                 collectors=baseline.get("collectors", []),
@@ -285,14 +285,14 @@ class Benchmark:
         # Collect initial information of wrappers, if required
         self.wrappers = []
         if self.telemetry.get("wrap"):
-            print("Collecting initial information of wrappers.")
+            logger.info("Collecting initial information of wrappers")
             for item in self.telemetry["wrap"].get("collectors", []):
                 self.wrappers.append(Monitor.get_collector(item))
             for collector in self.wrappers:
                 collector.collect()
 
         # Start monitors
-        print("Starting monitoring.")
+        logger.info("Starting monitoring")
 
         self.monitors = []
         self.stop_event = threading.Event()
@@ -325,7 +325,7 @@ class Benchmark:
             - Store output files*.
             - Clear output files*.
         """
-        print("Stopping monitoring.")
+        logger.info("Stopping monitoring")
 
         # Signal all monitors to stop
         self.stop_event.set()
@@ -336,7 +336,7 @@ class Benchmark:
 
         # Collect final information of wrappers, if required
         if self.wrappers:
-            print("Collecting final information of wrappers.")
+            logger.info("Collecting final information of wrappers")
             self.result["wrap"] = {}
             for collector in self.wrappers:
                 collector.collect()
@@ -357,7 +357,7 @@ class Benchmark:
         endline = self.telemetry.get("endline", {})
         duration = self.monitor if self.monitor is not None else endline.get("duration")
         if endline and duration:
-            print(f"Endline monitoring for {duration} s.")
+            logger.info("Endline monitoring for %.2f s", duration)
             monitor = Monitor(
                 name="endline",
                 collectors=endline.get("collectors", []),
@@ -370,15 +370,15 @@ class Benchmark:
 
         # Store input files in the output directory, if required
         if self.archive in ["both", "input"]:
-            print("Saving input files")
+            logger.info("Saving input files")
             self._save_files(self.inputs)
 
         # Store output files in the output directory, if required
         if self.archive in ["both", "output"]:
-            print("Saving output files")
+            logger.info("Saving output files")
             self._save_files(self.outputs)
 
         # Clear output files, if required
         if self.clear_outputs:
-            print("Clearing output files")
+            logger.info("Clearing output files")
             self._remove_files(self.outputs)

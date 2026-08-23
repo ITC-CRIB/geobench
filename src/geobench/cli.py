@@ -219,7 +219,7 @@ class CLI:
 
         run_parser = subparsers.add_parser(
             "run",
-            help="Run a benchmark.",
+            help="Run a benchmark",
             parents=[common_parser],
         )
 
@@ -258,7 +258,7 @@ class CLI:
 
         help_parser = subparsers.add_parser(
             "help",
-            help="Display help on a specific executor.",
+            help="Display help on a specific executor",
         )
 
         help_subparsers = help_parser.add_subparsers(
@@ -307,9 +307,7 @@ class CLI:
 
             logger.debug("Debugging enabled")
         else:
-            logging.basicConfig(
-                level=logging.INFO, format="%(levelname)s - %(message)s"
-            )
+            logging.basicConfig(level=logging.INFO, format="%(message)s")
 
         kwargs = prune_dict(
             {

@@ -17,7 +17,7 @@ class PythonExecutor(ProgramExecutor):
         return ExecutorInfo(
             code="python",
             name="Python Script",
-            description="Executes a Python script with arguments.",
+            description="Executes a Python script.",
         )
 
     @classmethod

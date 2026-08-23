@@ -65,7 +65,7 @@ class ProgramExecutor(Executor):
                 type=dict,
             ),
             "env_file": ExecutorOption(
-                description="Read in a file of environment variables.",
+                description="Read in a file of environment variables",
                 type=str,
             ),
         }

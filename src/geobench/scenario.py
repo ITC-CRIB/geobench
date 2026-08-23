@@ -16,7 +16,7 @@ import yaml
 from .benchmark import Benchmark
 from .executor import get_executors
 from .report import calculate_run_summary, generate_html_report
-from .utils import is_empty, is_filename, get_abs_path, serialize_dict, slugify
+from .utils import get_abs_path, is_empty, is_filename, serialize_dict, slugify
 
 logger = logging.getLogger(__name__)
 
@@ -160,27 +160,26 @@ class Scenario:
         result = {}
 
         try:
-            print(f"Running scenario: {self.name}.")
+            logger.info("Running scenario: %s", self.name)
 
             num_sets = len(self.sets)
             num_runs = num_sets * self.repeat
-            print(
-                "{} scenario {} with {} {}, {} {} in total.".format(
-                    num_sets,
-                    "sets" if num_sets > 1 else "set",
-                    self.repeat,
-                    "repeats" if self.repeat > 1 else "repeat",
-                    num_runs,
-                    "runs" if num_runs > 1 else "run",
-                )
+            logger.info(
+                "%d scenario %s with %d %s, %d %s in total",
+                num_sets,
+                "sets" if num_sets > 1 else "set",
+                self.repeat,
+                "repeats" if self.repeat > 1 else "repeat",
+                num_runs,
+                "runs" if num_runs > 1 else "run",
             )
 
             # Set up output directory
-            print(f"Setting up output directory: {self.outdir}")
+            logger.info("Setting up output directory: %s", self.outdir)
             if os.path.exists(self.outdir):
                 if os.path.isdir(self.outdir):
                     if not self.clear_outdir:
-                        print("Output directory exists, aborting.")
+                        logger.info("Output directory exists, aborting")
                         return {"error": "Output directory exists"}
                     else:
                         logger.debug(
@@ -188,22 +187,22 @@ class Scenario:
                         )
                         shutil.rmtree(self.outdir)
                 else:
-                    print("Invalid output directory, aborting.")
+                    logger.info("Invalid output directory, aborting")
                     return {"error": "Invalid output directory"}
             os.makedirs(self.outdir)
 
             # Store scenario
-            print("Storing scenario.")
+            logger.info("Storing scenario")
             self.save(os.path.join(self.outdir, "scenario.yaml"))
 
             # Store executor configuration
-            print("Storing executor configuration.")
+            logger.info("Storing executor configuration")
             result["config"] = serialize_dict(self._executor.config)
             result["metadata"] = serialize_dict(self._executor.metadata)
             self._store("result.json", result)
 
             # Start execution loop
-            print("Executing the runs.")
+            logger.info("Executing the runs")
             start_time = time.time()
 
             len_sets = len(str(num_sets))
@@ -221,7 +220,7 @@ class Scenario:
                 for j in range(self.repeat):
                     run_id = j + 1
 
-                    print(f"Scenario set {set_id}, run {run_id}:")
+                    logger.info("Scenario set %d, run %d:", set_id, run_id)
 
                     path = os.path.join(
                         f"set_{set_id:0{len_sets}d}",
@@ -275,10 +274,8 @@ class Scenario:
                     try:
                         result["result"] = self._executor.wait()
 
-                    except Exception as err:  # noqa: BLE001
-                        print(f"Executor failed with error: {err}")
-                        print("Full stack trace:")
-                        traceback.print_exception(err)
+                    except Exception:
+                        logger.exception("Executor failed with error")
 
                     # Stop benchmarking
                     benchmark.stop()
@@ -327,7 +324,7 @@ class Scenario:
 
             duration = time.time() - start_time
 
-            print(f"{num_sets} run(s) completed in {duration} s.")
+            logger.info("%d run(s) completed in %0.2f s", num_sets, duration)
 
             # TODO: Generate summary of all runs.
             # TODO: Store summary of all runs.
@@ -339,7 +336,7 @@ class Scenario:
             # )
 
         except KeyboardInterrupt:
-            print("Benchmark run interrupted by user.")
+            logger.info("Benchmark run interrupted by user")
 
         except Exception:
             raise
