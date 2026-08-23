@@ -1,5 +1,6 @@
 """Utilities module."""
 
+import os
 import re
 import unicodedata
 from typing import Any
@@ -33,9 +34,33 @@ def serialize_dict(value: dict) -> dict:
         out[key] = outval
     return out
 
+
 def slugify(value: str) -> str:
     value = unicodedata.normalize("NFKD", value)
     value = value.encode("ascii", "ignore").decode("ascii").lower()
     value = re.sub(r"[^\w]", "_", value)
     value = re.sub(r"_+", "_", value)
     return value.strip("_")
+
+
+def is_filename(value: str) -> bool:
+    return bool(re.match(r"^.+\.[^.]+$", os.path.basename(value)))
+
+
+def get_abs_path(path: str, root: str | None = None) -> str:
+    """Return normalized absolute path.
+
+    Args:
+        path: Path.
+        root: Optional root path.
+
+    Returns:
+        Normalized absolute path.
+    """
+    path = path or ""
+    if not os.path.isabs(path):
+        if root:
+            return get_abs_path(os.path.join(root, path))
+        else:
+            return os.path.abspath(path or os.getcwd())
+    return os.path.normpath(path)

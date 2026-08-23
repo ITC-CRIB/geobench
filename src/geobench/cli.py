@@ -199,8 +199,8 @@ class CLI:
         )
         common_parser.add_argument(
             "--clear-outputs",
-            action="store_true",
-            help="Clear the output files",
+            action=argparse.BooleanOptionalAction,
+            help="Clear the output files (default: True)",
         )
         common_parser.add_argument(
             "--clear-cache",

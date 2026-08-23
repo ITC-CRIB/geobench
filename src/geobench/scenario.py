@@ -16,7 +16,7 @@ import yaml
 from .benchmark import Benchmark
 from .executor import get_executors
 from .report import calculate_run_summary, generate_html_report
-from .utils import serialize_dict, slugify
+from .utils import is_empty, is_filename, get_abs_path, serialize_dict, slugify
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class Scenario:
         monitor: float | None = None,
         archive: str = "both",
         clear_outdir: bool = False,
-        clear_outputs: bool = False,
+        clear_outputs: bool = True,
         clear_cache: bool = True,
         workdir: str | None = None,
         basedir: str | None = None,
@@ -95,15 +95,15 @@ class Scenario:
         self.clear_cache = clear_cache
         self.telemetry = Benchmark.get_telemetry(telemetry, duration=monitor)
 
-        self.workdir = Benchmark.get_path(workdir)
+        self.workdir = get_abs_path(workdir)
         if not os.path.isdir(self.workdir):
             raise ValueError(f"Invalid working directory: {workdir}")
 
-        self.basedir = Benchmark.get_path(basedir)
+        self.basedir = get_abs_path(basedir)
         if not os.path.isdir(self.basedir):
             raise ValueError(f"Invalid base directory: {basedir}")
 
-        self.outdir = Benchmark.get_path(
+        self.outdir = get_abs_path(
             outdir or slugify(f"{executor}_{self._executor.get_config_code()}"),
             self.basedir,
         )
@@ -143,6 +143,20 @@ class Scenario:
         Returns:
             Benchmarking results.
         """
+
+        def _get_filenames(args: dict, vals: list[str]) -> list[str]:
+            filenames = []
+
+            for val in vals:
+                filename = val if is_filename(val) else args.get(val)
+
+                if is_empty(filename):
+                    raise ValueError(f"Invalid filename argument: {val}")
+
+                filenames.append(filename)
+
+            return filenames
+
         result = {}
 
         try:
@@ -220,10 +234,11 @@ class Scenario:
                         wait=self.wait,
                         monitor=self.monitor,
                         telemetry=self.telemetry,
-                        inputs=[data["arguments"][key] for key in self.inputs],
-                        outputs=[data["arguments"][key] for key in self.outputs],
+                        inputs=_get_filenames(data["arguments"], self.inputs),
+                        outputs=_get_filenames(data["arguments"], self.outputs),
                         archive=self.archive,
                         clear_outdir=self.clear_outdir,
+                        clear_outputs=self.clear_outputs,
                         clear_cache=self.clear_cache,
                         workdir=self.workdir,
                         basedir=self.basedir,
@@ -238,28 +253,23 @@ class Scenario:
                     # Modify run-specific arguments
                     args = copy.deepcopy(data["arguments"])
 
-                    # Set input file paths
-                    if self.inputs:
-                        logger.debug("Modifying input paths")
-                        for key in self.inputs:
-                            args[key] = os.path.normpath(
-                                args[key]
-                                if os.path.isabs(args[key])
-                                else os.path.join(benchmark.workdir, args[key])
-                            )
-
-                    # Set output file paths
-                    if self.outputs:
-                        logger.debug("Modifying output paths")
-                        for key in self.outputs:
-                            args[key] = os.path.normpath(
-                                args[key]
-                                if os.path.isabs(args[key])
-                                else os.path.join(benchmark.workdir, args[key])
-                            )
+                    # Set input and output file arguments
+                    for key, values in {
+                        "input": self.inputs,
+                        "output": self.outputs,
+                    }.items():
+                        logger.debug("Modifying %s arguments", key)
+                        for val in values:
+                            if is_filename(val):
+                                continue
+                            if is_empty(args.get(val)):
+                                raise ValueError(f"Invalid {key} argument: {val}")
+                            args[val] = get_abs_path(args[val], benchmark.workdir)
 
                     # Start benchmarking
-                    benchmark.start(process=lambda args=args: self._executor.execute(args))
+                    benchmark.start(
+                        process_factory=lambda args=args: self._executor.execute(args)
+                    )
 
                     # Wait execution to finish
                     try:
@@ -272,25 +282,6 @@ class Scenario:
 
                     # Stop benchmarking
                     benchmark.stop()
-
-                    # Clear outputs if required
-                    if self.clear_outputs:
-                        for key in self.outputs:
-                            path = args[key]
-                            if not os.path.exists(path):
-                                continue
-                            print(f"Removing output file {path}")
-                            for related_path in benchmark.get_related_files(path):
-                                if not os.path.exists(related_path):
-                                    continue
-                                try:
-                                    os.remove(related_path)
-                                except OSError as err:
-                                    logger.error(
-                                        "Error removing output file %s: %s",
-                                        related_path,
-                                        err,
-                                    )
 
                     # Calculate run summary
                     run_summary = calculate_run_summary(benchmark.result)
